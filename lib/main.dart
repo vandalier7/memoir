@@ -1,9 +1,9 @@
-
-
 import 'package:flutter/material.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'my_scaffold.dart';
 import 'map_body.dart';
+import 'screens/sign_in.dart';
+import 'app_theme.dart';
 
 
 
@@ -19,9 +19,12 @@ class Root extends StatelessWidget {
   Widget build(BuildContext context) {
     pixelRatio = MediaQuery.of(context).devicePixelRatio;
     return MaterialApp(
+      theme: ThemeData(
+        colorScheme: memoirTheme
+      ),
       debugShowCheckedModeBanner: false,
-        title: "Memoir",
-        home: MyScaffold(),
+      title: "Memoir",
+       home: SignInCard(),
     );
   }
 }
