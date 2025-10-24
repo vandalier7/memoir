@@ -1,3 +1,3 @@
 # Memoir
 
-A Flutter project. JAESEL
+A Flutter project.
