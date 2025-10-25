@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "504809133297",
+    "project_id": "memoir-e284a",
+    "storage_bucket": "memoir-e284a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:504809133297:android:9ab2f31c695fb9a692c550",
+        "android_client_info": {
+          "package_name": "com.example.presentation"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCB84R5pJBs1lyylJK1AifT7s_iIZ0SrbQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

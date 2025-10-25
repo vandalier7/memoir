@@ -3,6 +3,8 @@ import 'dart:core';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:presentation/objects/unfocus_on_tap.dart';
 
+import '../processes/auth.dart';
+
 // the ui design
 class SignInCard extends StatelessWidget {
   const SignInCard({super.key});
@@ -62,6 +64,13 @@ class SignInState extends State<SignIn> with SingleTickerProviderStateMixin{
   late TabController _tabController;
   final _logInKey = GlobalKey<FormState>();
   final _signUpKey = GlobalKey<FormState>();
+
+  final _signUpEmailController = TextEditingController();
+  final _signUpPasswordController = TextEditingController();
+  final _signUpUsernameController = TextEditingController();
+
+  final _logInEmailController = TextEditingController();
+  final _logInPasswordController = TextEditingController();
 
   @override
   void initState() {
@@ -143,8 +152,8 @@ class SignInState extends State<SignIn> with SingleTickerProviderStateMixin{
             TabBarView(
               controller: _tabController,
               children: [
-              LogIn(formKey: _logInKey,),
-              SignUp(formKey: _signUpKey,),
+              LogIn(formKey: _logInKey, emailController: _logInEmailController, passwordController: _logInPasswordController,),
+              SignUp(formKey: _signUpKey, usernameController: _signUpUsernameController, emailController: _signUpEmailController, passwordController: _signUpPasswordController,),
             ])
           )
         ],
@@ -155,8 +164,10 @@ class SignInState extends State<SignIn> with SingleTickerProviderStateMixin{
 
 class LogIn extends StatelessWidget {
   final GlobalKey<FormState> formKey;
+  final TextEditingController emailController;
+  final TextEditingController passwordController;
 
-  const LogIn({super.key, required this.formKey});
+  const LogIn({super.key, required this.formKey, required this.emailController, required this.passwordController});
 
 
   @override
@@ -177,6 +188,7 @@ class LogIn extends StatelessWidget {
             child: SizedBox(
               height: 55,
               child: TextFormField(
+                controller: emailController,
                 style: TextStyle(
                     fontSize: 14
                 ),
@@ -235,7 +247,7 @@ class LogIn extends StatelessWidget {
             child: SizedBox(
               height: 55,
               child: TextFormField(
-                
+                controller: passwordController,
                 validator:(value) => validatePassword(value),
                 obscureText: true,
                 style: TextStyle(
@@ -305,9 +317,12 @@ class LogIn extends StatelessWidget {
                   ],
                 ),
                 child: ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
                     if (formKey.currentState!.validate()) {
-                      // all fields are valid — proceed with sign-in/up
+                      await loginUser(
+                        emailController.text.trim(),
+                        passwordController.text.trim()
+                      );
                     }
 
                   },
@@ -344,8 +359,11 @@ class LogIn extends StatelessWidget {
 
 class SignUp extends StatelessWidget {
   final GlobalKey<FormState> formKey;
+  final TextEditingController emailController;
+  final TextEditingController passwordController;
+  final TextEditingController usernameController;
 
-  const SignUp({super.key, required this.formKey});
+  const SignUp({super.key, required this.formKey, required this.usernameController, required this.emailController, required this.passwordController});
 
 
   @override
@@ -365,6 +383,7 @@ class SignUp extends StatelessWidget {
             child: SizedBox(
               height: 53,
               child: TextFormField(
+                controller: usernameController,
                 validator: (value) => validateLength(value, 0, "username"),
                 style: TextStyle(
                     fontSize: 14
@@ -413,6 +432,7 @@ class SignUp extends StatelessWidget {
             child: SizedBox(
               height: 53,
               child: TextFormField(
+                controller: emailController,
                 validator: (value) => validateEmail(value),
                 style: TextStyle(
                     fontSize: 14
@@ -461,6 +481,7 @@ class SignUp extends StatelessWidget {
             child: SizedBox(
               height: 53,
               child: TextFormField(
+                controller: passwordController,
                 validator: (value) => validatePassword(value),
                 obscureText: true,
                 style: TextStyle(
@@ -531,9 +552,13 @@ class SignUp extends StatelessWidget {
                   ],
                 ),
                 child: ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
                     if (formKey.currentState!.validate()) {
-                      // all fields are valid — proceed with sign-in/up
+                      await registerUser(
+                        usernameController.text.trim(),
+                        emailController.text.trim(),
+                        passwordController.text.trim()
+                      );
                     }
                   },
                   style: ElevatedButton.styleFrom(
