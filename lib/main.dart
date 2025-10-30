@@ -7,9 +7,8 @@ import 'app_theme.dart';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart'; 
-import 'package:firebase_auth/firebase_auth.dart';
 
-import 'processes/auth.dart';
+import 'processes/locator.dart';
 
 void main() async {
 
@@ -20,7 +19,7 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  registerUser("hi", "a@joke.com", "1234qweQ");
+  geo = await GeoLocator.loadFromAssets("assets/geojson/brgy.json");
 
 
   MapLibreMap.useHybridComposition = true;
@@ -39,7 +38,7 @@ class Root extends StatelessWidget {
       ),
       debugShowCheckedModeBanner: false,
       title: "Memoir",
-       home: SignInCard(),
+       home: MyScaffold(),
     );
   }
 }
