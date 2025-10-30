@@ -75,8 +75,8 @@ class MyState extends State<MyScaffold> {
                   borderSide: BorderSide.none
                 ),
                 suffixIcon: Container(
-                  child: CircleAvatar(),
                   margin: EdgeInsets.fromLTRB(0, 0, 12, 0),
+                  child: CircleAvatar(),
                 ),
                 fillColor: Colors.white
               )

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'dart:core';
-import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:presentation/objects/unfocus_on_tap.dart';
 
 import '../processes/auth.dart';
@@ -632,11 +631,11 @@ String? validateEmail(String? value) {
 
 String? validateLength(String? value, int length, String fieldName) {
   if (value == null || value.isEmpty) {
-    return 'Please enter your ' + fieldName;
+    return 'Please enter your $fieldName';
   }
 
   if (value.length < length) {
-    return fieldName + ' is not long enough lol';
+    return '$fieldName is not long enough lol';
   }
 
   return null; // ✅ Valid

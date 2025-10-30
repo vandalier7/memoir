@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
-import 'my_scaffold.dart';
 import 'map_body.dart';
-import 'screens/sign_in.dart';
 import 'app_theme.dart';
+import 'screens/camera_screen.dart';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart'; 
-import 'package:firebase_auth/firebase_auth.dart';
 
 import 'processes/auth.dart';
+
+import 'package:camera/camera.dart';
+
+List<CameraDescription> cameras = [];
 
 void main() async {
 
@@ -22,6 +24,7 @@ void main() async {
 
   registerUser("hi", "a@joke.com", "1234qweQ");
 
+  cameras = await availableCameras();
 
   MapLibreMap.useHybridComposition = true;
   runApp(Root());
@@ -39,7 +42,7 @@ class Root extends StatelessWidget {
       ),
       debugShowCheckedModeBanner: false,
       title: "Memoir",
-       home: SignInCard(),
+       home: CameraScreen(cameras: cameras),
     );
   }
 }
