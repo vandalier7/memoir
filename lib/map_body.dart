@@ -4,11 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:geolocator/geolocator.dart';
 import 'objects/pin.dart';
+import 'objects/memory.dart';
+import 'objects/globals.dart';
 
-import 'processes/locator.dart';
 import 'processes/location_iq.dart';
 
-num? pixelRatio;
+
 
 class MapBody extends StatefulWidget {
   const MapBody({super.key});
@@ -19,12 +20,13 @@ class MapBody extends StatefulWidget {
 
 class MapState extends State<MapBody> {
   LatLng currentPosition = LatLng(14.5995, 120.9842);
-  LatLng? targetPosition;
   String? currentAddress = "...";
   late MapLibreMapController mapController;
   Point? screenPoint;
   bool isHoldingMap = false;
   bool considerTapAsDouble = false;
+
+  List<MemoryData> memories = [];
 
   final locIQ = LocationIQService('pk.2e56aa59169aa53b63093b78aff0e291'); 
 
@@ -84,7 +86,7 @@ double pinAlpha = 1;
   }
 
   Future<void> _updateAddress() async {
-    final info = await getAddressFromLocation(currentPosition!, locIQ);
+    final info = await getAddressFromLocation(currentPosition, locIQ);
     debugPrint(info);
 
     setState(() {
@@ -93,8 +95,7 @@ double pinAlpha = 1;
   }
 
   Future<void> _updateScreenPoint() async {
-    if (currentPosition == null) return;
-    final point = await mapController.toScreenLocation(currentPosition!);
+    final point = await mapController.toScreenLocation(currentPosition);
     setState(() {
       screenPoint = point;
       updateMapHold(false);
@@ -102,10 +103,21 @@ double pinAlpha = 1;
     // print(screenPoint);
   }
 
+  void _addMemory(LatLng position) async {
+    final info = await getAddressFromLocation(position, locIQ);
+    setState(() {
+      memories.add(MemoryData(
+        position: position,
+        addressString: info,
+        mood: Mood.happy
+      ));
+    });
+    updateMapHold(false);
+
+  }
+
   @override
   Widget build(BuildContext context) {
-    final start = currentPosition;
-    final end = targetPosition ?? currentPosition;
     return Stack(
       children: [
         
@@ -145,18 +157,12 @@ double pinAlpha = 1;
             onCameraMove: (pos) {
               updateMapHold(true);
             },
-
-            
-
-            onMapLongClick: (point, latLng) async {
+            onMapLongClick: (point, latLng) {
               // currentPosition = latLng;
               // await _updateAddress();
               // _updateScreenPoint();
-
+              _addMemory(latLng);
             },
-
-            
-
             initialCameraPosition: CameraPosition(
               target: LatLng(14.5995, 120.9842), // Manila
               zoom: 16.0,
@@ -168,11 +174,12 @@ double pinAlpha = 1;
               left: screenPoint!.x/pixelRatio! - 75, // adjust to center icon
               top: screenPoint!.y/pixelRatio! - 50,
               child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
                 onTap: () async {
                   updateMapHold(true);
                   await mapController.animateCamera(
                     CameraUpdate.newLatLngZoom(
-                      LatLng(currentPosition!.latitude, currentPosition!.longitude),
+                      LatLng(currentPosition.latitude, currentPosition.longitude),
                       14
                     ),
                     duration: Duration(milliseconds: 1000)
@@ -187,6 +194,15 @@ double pinAlpha = 1;
                   ),
                 )
               ),
+            ),
+            for (final memory in memories)
+            MemoryPin(
+              position: memory.position,
+              addressString: memory.addressString,
+              mapController: mapController,
+              isHoldingMap: isHoldingMap,
+              mood: memory.mood,
+              holdingCallback: updateMapHold,
             ),
       ]
     );

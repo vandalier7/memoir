@@ -10,6 +10,8 @@ import 'firebase_options.dart';
 
 import 'processes/locator.dart';
 
+import 'objects/globals.dart';
+
 void main() async {
 
   WidgetsFlutterBinding.ensureInitialized();
