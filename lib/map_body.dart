@@ -77,7 +77,7 @@ double pinAlpha = 1;
   Future<void> updateLocation() async {
     
     var pos = await getUserLocation();
-    targetPosition = LatLng(pos!.latitude, pos.longitude);
+    currentPosition = LatLng(pos!.latitude, pos.longitude);
     
     _updateScreenPoint();
     _updateAddress();
@@ -149,11 +149,9 @@ double pinAlpha = 1;
             
 
             onMapLongClick: (point, latLng) async {
-              currentPosition = latLng;
-              
-              await _updateAddress();
-
-              _updateScreenPoint();
+              // currentPosition = latLng;
+              // await _updateAddress();
+              // _updateScreenPoint();
 
             },
 
