@@ -34,8 +34,9 @@ Future<List<BinItem>> fetchBinImages() async {
     final binItems = <BinItem>[];
 
     for (FileObject file in fileList) { 
-      if (file.id != null) { 
-        final fullSupabasePath = '$binPath/${file.name!}';
+      print(file.name);
+      if (file.name != null) { 
+        final fullSupabasePath = '$binPath/${file.name}';
         
         final publicUrl = _supabase.storage
             .from(supabaseBucket)
@@ -89,5 +90,26 @@ Future<List<BinItem>> fetchBinImages() async {
       if (kDebugMode) print("Supabase Storage Error deleting image: ${e.message}");
       rethrow;
     }
+  }
+}
+
+Future<void> testBucketConnection() async {
+  final SupabaseClient supabase = Supabase.instance.client;
+  const String bucketName = 'images';
+  const String testPath = ''; // empty string for root folder
+
+  try {
+    final List<FileObject> files = await supabase.storage.from(bucketName).list(path: testPath);
+    
+    if (files.isEmpty) {
+      print('No files found in bucket "$bucketName" at path "$testPath".');
+    } else {
+      print('Files in bucket "$bucketName" at path "$testPath":');
+      for (var file in files) {
+        print('- ${file.name} (updated: ${file.updatedAt})');
+      }
+    }
+  } catch (e) {
+    print('Error accessing bucket: $e');
   }
 }
