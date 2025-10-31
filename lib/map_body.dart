@@ -26,6 +26,8 @@ class MapState extends State<MapBody> {
   bool isHoldingMap = false;
   bool considerTapAsDouble = false;
 
+  double mapZoom = 16;
+
   List<MemoryData> memories = [];
 
   final locIQ = LocationIQService('pk.2e56aa59169aa53b63093b78aff0e291'); 
@@ -94,6 +96,12 @@ double pinAlpha = 1;
     });
   }
 
+  void updateZoom(value) {
+    setState(() {
+      mapZoom = value;
+    });
+  }
+
   Future<void> _updateScreenPoint() async {
     final point = await mapController.toScreenLocation(currentPosition);
     setState(() {
@@ -109,7 +117,8 @@ double pinAlpha = 1;
       memories.add(MemoryData(
         position: position,
         addressString: info,
-        mood: Mood.happy
+        mood: Mood.happy,
+        prominence: mapZoom
       ));
     });
     updateMapHold(false);
@@ -137,6 +146,8 @@ double pinAlpha = 1;
               updateMapHold(true);
             }
           },
+
+          
           
           child: MapLibreMap(
             compassEnabled: false,
@@ -147,15 +158,21 @@ double pinAlpha = 1;
 
               await updateLocation();
             },
-            onCameraIdle: () {
+            onCameraIdle: () async {
               _updateScreenPoint();
               updateMapHold(false);
+              var pos = await mapController.queryCameraPosition();
+              updateZoom(pos!.zoom);
+              // debugPrint("${pos.zoom}");
             },
 
             onCameraTrackingChanged: (mode) => updateMapHold(true),
 
+            
+
             onCameraMove: (pos) {
               updateMapHold(true);
+
             },
             onMapLongClick: (point, latLng) {
               // currentPosition = latLng;
@@ -185,12 +202,15 @@ double pinAlpha = 1;
                     duration: Duration(milliseconds: 1000)
     );
                 },
-                child: AnimatedOpacity(
-                  opacity: isHoldingMap ? 0.0 : 1.0, 
-                  duration: Duration(milliseconds: 100),
-                  child: UserPin(
-                    color: Colors.purple.shade300,
-                    addressString: currentAddress!,
+                child: IgnorePointer(
+                  ignoring: true,
+                  child: AnimatedOpacity(
+                    opacity: isHoldingMap ? 0.0 : 1.0, 
+                    duration: Duration(milliseconds: 100),
+                    child: UserPin(
+                      color: Colors.purple.shade300,
+                      addressString: currentAddress!,
+                    ),
                   ),
                 )
               ),
@@ -199,10 +219,12 @@ double pinAlpha = 1;
             MemoryPin(
               position: memory.position,
               addressString: memory.addressString,
+              prominence: memory.prominence,
               mapController: mapController,
               isHoldingMap: isHoldingMap,
               mood: memory.mood,
               holdingCallback: updateMapHold,
+              mapZoom: mapZoom,
             ),
       ]
     );
