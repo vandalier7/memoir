@@ -3,15 +3,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart';
 import '../models/bin_item.dart';
 
-// 🛑 UPDATE THESE CONSTANTS 
-const String supabaseBucket = 'images'; // <-- Use your actual bucket name
+const String supabaseBucket = 'images';
 const String postedFolder = 'posted';
 const String binFolder = 'bin';
 
 class StorageService {
-  // Uses Firebase for User ID (Access Key)
   final FirebaseAuth _auth = FirebaseAuth.instance; 
-  // Uses Supabase for File Operations
   final SupabaseClient _supabase = Supabase.instance.client; 
 
   String? get currentUserId => _auth.currentUser?.uid;
@@ -19,48 +16,34 @@ class StorageService {
   String _getUserFolderPath(String folder) {
     final userId = currentUserId;
     if (userId == null) {
-      // This ensures no operation runs if the user is not authenticated.
       throw Exception("Authentication Error: User is not logged in."); 
     }
-    // Storage Path Format: 'user_id/folder/'
     return '$userId/$folder';
   }
 
-  // --- A. FETCH IMAGES FROM BIN ---
-// lib/processes/storage_service.dart (Replace existing fetchBinImages function)
-
-// --- A. FETCH IMAGES FROM BIN ---
 Future<List<BinItem>> fetchBinImages() async {
   final binPath = _getUserFolderPath(binFolder);
-  
+
   try {
-    // 1. List files in the user's bin folder (List<FileObject> type is explicit)
     final List<FileObject> fileList = await _supabase.storage
         .from(supabaseBucket)
         .list(
           path: binPath,  
         );
 
-    
     final binItems = <BinItem>[];
 
-    // 2. Iterate through the list to construct BinItem objects
-    for (FileObject file in fileList) { // Explicitly define FileObject
-      // Supabase list can include folder objects (name is null for folders), skip if not a file
+    for (FileObject file in fileList) { 
       if (file.id != null) { 
-        // Construct the full Supabase file path
-        final fullSupabasePath = '$binPath/${file.name}';
+        final fullSupabasePath = '$binPath/${file.name!}';
         
-        // 3. Get the public URL for display
         final publicUrl = _supabase.storage
             .from(supabaseBucket)
             .getPublicUrl(fullSupabasePath);
 
-        // 4. Create the BinItem using the retrieved metadata and URL
-        binItems.add(BinItem.fromSupabaseFileObject( // <--- NEW FACTORY NAME
-          file, // <--- Pass the FileObject directly
-          publicUrl
-        ));
+        binItems.add(BinItem.fromSupabaseFileObject( 
+          file,
+          publicUrl));
       }
     }
     return binItems;
@@ -74,18 +57,14 @@ Future<List<BinItem>> fetchBinImages() async {
   }
 }
 
-  // --- B. RESTORE IMAGE (Move Operation) ---
   Future<void> restoreImage(BinItem item) async {
     final userId = currentUserId;
     if (userId == null) return;
     
-    // Original path: {user_id}/bin/{filename}
     final sourcePath = '${_getUserFolderPath(binFolder)}/${item.fileName}';
-    // New path: {user_id}/posted/{filename}
     final destinationPath = '${_getUserFolderPath(postedFolder)}/${item.fileName}';
     
     try {
-      // Supabase supports a direct MOVE operation to simulate restoration/posting
       await _supabase.storage.from(supabaseBucket).move(
         sourcePath, 
         destinationPath,
@@ -97,16 +76,13 @@ Future<List<BinItem>> fetchBinImages() async {
     }
   }
 
-  // --- C. DELETE IMAGE (Remove Operation) ---
   Future<void> deleteImage(BinItem item) async {
     final userId = currentUserId;
     if (userId == null) return;
 
-    // The path to delete is the full path stored in the BinItem
     final filePathToDelete = item.storagePath;
 
     try {
-      // Supabase remove takes a list of file paths to delete
       await _supabase.storage.from(supabaseBucket).remove([filePathToDelete]);
       if (kDebugMode) print('✅ Image ${item.fileName} permanently deleted via Supabase.');
     } on StorageException catch (e) {

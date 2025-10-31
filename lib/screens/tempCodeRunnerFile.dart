@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../processes/storage_service.dart'; 
 import '../models/bin_item.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class BinScreen extends StatefulWidget {
   const BinScreen({super.key});
@@ -29,12 +30,25 @@ class _BinScreenState extends State<BinScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 239, 206, 217),
       appBar: AppBar(
         title: const Text('Bin'),
-        centerTitle: true,
-        backgroundColor: const Color.fromARGB(255, 239, 175, 196),
-        ),
+        backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.vpn_key),
+            onPressed: () {
+              final userUid = FirebaseAuth.instance.currentUser?.uid;
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('UID: ${userUid ?? "Not Logged In"}'),
+                  duration: const Duration(seconds: 5),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
       body: FutureBuilder<List<BinItem>>(
         future: _binImagesFuture,
         builder: (context, snapshot) {
@@ -56,16 +70,14 @@ class _BinScreenState extends State<BinScreen> {
               ),
             );
           }
-
-          // Grid Based View (High-Priority)
           return GridView.builder(
             padding: const EdgeInsets.all(8.0),
             itemCount: images.length,
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 3, 
-              crossAxisSpacing: 5.0,
-              mainAxisSpacing: 10.0,
-              childAspectRatio: 0.6, 
+              crossAxisSpacing: 8.0,
+              mainAxisSpacing: 8.0,
+              childAspectRatio: 1.0, 
             ),
             itemBuilder: (context, index) {
               final item = images[index];
@@ -82,9 +94,6 @@ class _BinScreenState extends State<BinScreen> {
   }
 }
 
-// -----------------------------------------------------------------------------
-// 2. The Individual Grid Item and Action Handler
-// -----------------------------------------------------------------------------
 class _BinGridTile extends StatelessWidget {
   final BinItem item;
   final StorageService storageService;
@@ -100,23 +109,18 @@ class _BinGridTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () => _showOptionsDialog(context),
-      
-      // ✅ NEW: Added ClipRRect to create rounded corners
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(12.0), // Adjust the radius as needed
+        borderRadius: BorderRadius.circular(12.0),
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // Image Display using CachedNetworkImage
             CachedNetworkImage(
               imageUrl: item.imageUrl,
               fit: BoxFit.cover,
               placeholder: (context, url) => Container(color: Theme.of(context).colorScheme.surfaceVariant),
               errorWidget: (context, url, error) => const Icon(Icons.error),
             ),
-            
-            // Lifetime Memory Display
-            Align(
+           Align(
               alignment: Alignment.bottomCenter,
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
@@ -133,7 +137,6 @@ class _BinGridTile extends StatelessWidget {
     );
   }
 
-  // Dialog for Restore/Delete Actions
   void _showOptionsDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -143,10 +146,9 @@ class _BinGridTile extends StatelessWidget {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Restore Button (calls Supabase move operation)
               ListTile(
                 leading: const Icon(Icons.restore_from_trash),
-                title: const Text('Restore'),
+                title: const Text('Restore (Post)'),
                 onTap: () async {
                   Navigator.of(context).pop(); 
                   await _handleAction(
