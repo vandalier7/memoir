@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+import 'preview_screen.dart';
 
 class CameraScreen extends StatefulWidget {
   final List<CameraDescription> cameras;
@@ -20,6 +21,9 @@ class _CameraScreenState extends State<CameraScreen>
   int _selectedTimer = 0;
   bool _isRearCamera = true;
   bool _isInitialized = false;
+  bool _shutterPressed = false;
+  int _countdown = 0;
+  bool _showGlow = false; // trigger for glow
 
   @override
   void initState() {
@@ -65,12 +69,42 @@ class _CameraScreenState extends State<CameraScreen>
     });
   }
 
-  void _takePhoto() async {
+  Future<void> _takePhoto() async {
     if (_controller == null || !_controller!.value.isInitialized) return;
+
     if (_selectedTimer > 0) {
-      await Future.delayed(Duration(seconds: _selectedTimer));
+      setState(() {
+        _countdown = _selectedTimer;
+      });
+
+      while (_countdown > 0) {
+        await Future.delayed(const Duration(seconds: 1));
+        if (!mounted) return;
+        setState(() {
+          _countdown -= 1;
+        });
+      }
     }
-    await _controller!.takePicture();
+
+    setState(() {
+      _countdown = 0;
+      _showGlow = true;
+    });
+
+    // Glow fade out after a short delay
+    Future.delayed(const Duration(milliseconds: 400), () {
+      if (mounted) setState(() => _showGlow = false);
+    });
+
+    final image = await _controller!.takePicture();
+
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PreviewScreen(imagePath: image.path),
+      ),
+    );
   }
 
   @override
@@ -84,6 +118,7 @@ class _CameraScreenState extends State<CameraScreen>
     required VoidCallback onTap,
     bool active = false,
     double size = 40,
+    Widget? child,
   }) {
     return GestureDetector(
       onTap: onTap,
@@ -105,7 +140,7 @@ class _CameraScreenState extends State<CameraScreen>
                   ]
                 : [],
           ),
-          child: Icon(icon, color: Colors.white, size: 22),
+          child: child ?? Icon(icon, color: Colors.white, size: 22),
         ),
       ),
     );
@@ -129,7 +164,8 @@ class _CameraScreenState extends State<CameraScreen>
                     color: Colors.white.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(40),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: items
@@ -151,10 +187,20 @@ class _CameraScreenState extends State<CameraScreen>
     return _buildHorizontalMenu(
       timers
           .map((sec) => _buildCircularButton(
-                icon: sec == 0 ? Icons.timer_off : Icons.timer,
+                icon: Icons.timer,
                 onTap: () => _setTimer(sec),
                 active: _selectedTimer == sec,
                 size: 38,
+                child: Center(
+                  child: Text(
+                    sec == 0 ? 'Off' : '$sec',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
               ))
           .toList(),
       _isTimerMenuOpen,
@@ -189,13 +235,55 @@ class _CameraScreenState extends State<CameraScreen>
 
   @override
   Widget build(BuildContext context) {
+    final bottomPadding = 25.0;
+    final captureWidth = 80.0;
+    final captureHeight = 80.0;
+    final historySize = 60.0;
+
     return Scaffold(
       body: _isInitialized
           ? Stack(
               children: [
-                Positioned.fill(
-                  child: CameraPreview(_controller!),
+                Positioned.fill(child: CameraPreview(_controller!)),
+
+                // Magical glow effect
+                AnimatedOpacity(
+                  opacity: _showGlow ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 200),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.8),
+                        width: 8,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.white.withOpacity(0.4),
+                          blurRadius: 30,
+                          spreadRadius: 10,
+                        )
+                      ],
+                    ),
+                  ),
                 ),
+
+                // Countdown
+                if (_countdown > 0)
+                  Positioned(
+                    top: 100,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: Text(
+                        '$_countdown',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 48,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
 
                 // Top-right controls
                 Positioned(
@@ -254,41 +342,55 @@ class _CameraScreenState extends State<CameraScreen>
                   ),
                 ),
 
-                // Bottom-left bin
+                // Bottom-left history
                 Positioned(
-                  bottom: 40,
-                  left: 20,
+                  bottom: bottomPadding + (captureHeight / 2 - historySize / 2),
+                  left: 25,
                   child: _buildCircularButton(
-                    icon: Icons.delete,
+                    icon: Icons.history,
                     onTap: () {},
+                    size: historySize,
                   ),
                 ),
 
-                // Bottom-center capture button
+                // Bottom-center capture
                 Positioned(
-                  bottom: 25,
+                  bottom: bottomPadding,
                   left: 0,
                   right: 0,
                   child: Center(
                     child: GestureDetector(
-                      onTap: _takePhoto,
-                      child: Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.9),
-                            width: 5,
+                      onTapDown: (_) {
+                        setState(() => _shutterPressed = true);
+                      },
+                      onTapUp: (_) {
+                        setState(() => _shutterPressed = false);
+                        _takePhoto();
+                      },
+                      onTapCancel: () {
+                        setState(() => _shutterPressed = false);
+                      },
+                      child: AnimatedScale(
+                        scale: _shutterPressed ? 0.85 : 1.0,
+                        duration: const Duration(milliseconds: 100),
+                        child: Container(
+                          width: captureWidth,
+                          height: captureHeight,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.9),
+                              width: 5,
+                            ),
                           ),
-                        ),
-                        child: Center(
-                          child: Container(
-                            width: 55,
-                            height: 55,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white.withOpacity(0.85),
+                          child: Center(
+                            child: Container(
+                              width: 55,
+                              height: 55,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.white.withOpacity(0.85),
+                              ),
                             ),
                           ),
                         ),
