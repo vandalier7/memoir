@@ -57,7 +57,6 @@ class _BinScreenState extends State<BinScreen> {
             );
           }
 
-          // Grid Based View (High-Priority)
           return GridView.builder(
             padding: const EdgeInsets.all(8.0),
             itemCount: images.length,
@@ -82,9 +81,6 @@ class _BinScreenState extends State<BinScreen> {
   }
 }
 
-// -----------------------------------------------------------------------------
-// 2. The Individual Grid Item and Action Handler
-// -----------------------------------------------------------------------------
 class _BinGridTile extends StatelessWidget {
   final BinItem item;
   final StorageService storageService;
@@ -100,22 +96,17 @@ class _BinGridTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () => _showOptionsDialog(context),
-      
-      // ✅ NEW: Added ClipRRect to create rounded corners
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(12.0), // Adjust the radius as needed
+        borderRadius: BorderRadius.circular(12.0), 
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // Image Display using CachedNetworkImage
             CachedNetworkImage(
               imageUrl: item.imageUrl,
               fit: BoxFit.cover,
               placeholder: (context, url) => Container(color: Theme.of(context).colorScheme.surfaceVariant),
               errorWidget: (context, url, error) => const Icon(Icons.error),
             ),
-            
-            // Lifetime Memory Display
             Align(
               alignment: Alignment.bottomCenter,
               child: Container(
@@ -133,7 +124,6 @@ class _BinGridTile extends StatelessWidget {
     );
   }
 
-  // Dialog for Restore/Delete Actions
   void _showOptionsDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -143,7 +133,6 @@ class _BinGridTile extends StatelessWidget {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Restore Button (calls Supabase move operation)
               ListTile(
                 leading: const Icon(Icons.restore_from_trash),
                 title: const Text('Restore'),
