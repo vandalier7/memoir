@@ -1,8 +1,9 @@
 import 'dart:io';
 import 'dart:ui';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
-import 'preview_screen.dart';
+import 'package:presentation/screens/preview_screen.dart'; // adjust package/path if needed
 
 class CameraScreen extends StatefulWidget {
   final List<CameraDescription> cameras;
@@ -23,12 +24,29 @@ class _CameraScreenState extends State<CameraScreen>
   bool _isInitialized = false;
   bool _shutterPressed = false;
   int _countdown = 0;
-  bool _showGlow = false; // trigger for glow
+
+  late AnimationController _glowController;
+  late Animation<double> _glowAnimation;
+  bool _showGlow = false;
 
   @override
   void initState() {
     super.initState();
     _initializeCamera();
+
+    // Glow animation setup
+    _glowController =
+        AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
+    _glowAnimation =
+        CurvedAnimation(parent: _glowController, curve: Curves.easeInOutCubic);
+
+    _glowController.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        _glowController.reverse();
+      } else if (status == AnimationStatus.dismissed) {
+        if (mounted) setState(() => _showGlow = false);
+      }
+    });
   }
 
   Future<void> _initializeCamera() async {
@@ -73,28 +91,21 @@ class _CameraScreenState extends State<CameraScreen>
     if (_controller == null || !_controller!.value.isInitialized) return;
 
     if (_selectedTimer > 0) {
-      setState(() {
-        _countdown = _selectedTimer;
-      });
+      setState(() => _countdown = _selectedTimer);
 
       while (_countdown > 0) {
         await Future.delayed(const Duration(seconds: 1));
         if (!mounted) return;
-        setState(() {
-          _countdown -= 1;
-        });
+        setState(() => _countdown -= 1);
       }
     }
 
     setState(() {
       _countdown = 0;
-      _showGlow = true;
+      _showGlow = true; // Trigger glow
     });
 
-    // Glow fade out after a short delay
-    Future.delayed(const Duration(milliseconds: 400), () {
-      if (mounted) setState(() => _showGlow = false);
-    });
+    _glowController.forward(from: 0);
 
     final image = await _controller!.takePicture();
 
@@ -110,6 +121,7 @@ class _CameraScreenState extends State<CameraScreen>
   @override
   void dispose() {
     _controller?.dispose();
+    _glowController.dispose();
     super.dispose();
   }
 
@@ -170,7 +182,8 @@ class _CameraScreenState extends State<CameraScreen>
                     mainAxisSize: MainAxisSize.min,
                     children: items
                         .map((item) => Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 4),
                               child: item,
                             ))
                         .toList(),
@@ -225,7 +238,8 @@ class _CameraScreenState extends State<CameraScreen>
                     _isFlashMenuOpen = false;
                   });
                 },
-                active: (_controller?.value.flashMode == f['mode'] as FlashMode),
+                active:
+                    (_controller?.value.flashMode == f['mode'] as FlashMode),
                 size: 38,
               ))
           .toList(),
@@ -235,10 +249,10 @@ class _CameraScreenState extends State<CameraScreen>
 
   @override
   Widget build(BuildContext context) {
-    final bottomPadding = 25.0;
-    final captureWidth = 80.0;
-    final captureHeight = 80.0;
-    final historySize = 60.0;
+    const bottomPadding = 25.0;
+    const captureWidth = 80.0;
+    const captureHeight = 80.0;
+    const historySize = 60.0;
 
     return Scaffold(
       body: _isInitialized
@@ -246,28 +260,6 @@ class _CameraScreenState extends State<CameraScreen>
               children: [
                 Positioned.fill(child: CameraPreview(_controller!)),
 
-                // Magical glow effect
-                AnimatedOpacity(
-                  opacity: _showGlow ? 1.0 : 0.0,
-                  duration: const Duration(milliseconds: 200),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.8),
-                        width: 8,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.white.withOpacity(0.4),
-                          blurRadius: 30,
-                          spreadRadius: 10,
-                        )
-                      ],
-                    ),
-                  ),
-                ),
-
-                // Countdown
                 if (_countdown > 0)
                   Positioned(
                     top: 100,
@@ -277,15 +269,29 @@ class _CameraScreenState extends State<CameraScreen>
                       child: Text(
                         '$_countdown',
                         style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 48,
-                          fontWeight: FontWeight.bold,
-                        ),
+                            color: Colors.white,
+                            fontSize: 48,
+                            fontWeight: FontWeight.bold),
                       ),
                     ),
                   ),
 
-                // Top-right controls
+                // ✨ Fluid glow
+                if (_showGlow)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: AnimatedBuilder(
+                        animation: _glowController,
+                        builder: (context, child) {
+                          return CustomPaint(
+                            painter: _GlowPainter(_glowAnimation.value),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+
+                // controls
                 Positioned(
                   top: 50,
                   right: 20,
@@ -332,7 +338,6 @@ class _CameraScreenState extends State<CameraScreen>
                   ),
                 ),
 
-                // Top-left close
                 Positioned(
                   top: 50,
                   left: 20,
@@ -342,9 +347,9 @@ class _CameraScreenState extends State<CameraScreen>
                   ),
                 ),
 
-                // Bottom-left history
                 Positioned(
-                  bottom: bottomPadding + (captureHeight / 2 - historySize / 2),
+                  bottom:
+                      bottomPadding + (captureHeight / 2 - historySize / 2),
                   left: 25,
                   child: _buildCircularButton(
                     icon: Icons.history,
@@ -353,7 +358,6 @@ class _CameraScreenState extends State<CameraScreen>
                   ),
                 ),
 
-                // Bottom-center capture
                 Positioned(
                   bottom: bottomPadding,
                   left: 0,
@@ -403,4 +407,77 @@ class _CameraScreenState extends State<CameraScreen>
           : const Center(child: CircularProgressIndicator()),
     );
   }
+}
+
+// 🌫️ Smooth magical glow painter
+class _GlowPainter extends CustomPainter {
+  final double progress;
+  _GlowPainter(this.progress);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withOpacity(0.8 * (1 - progress)) // brighter glow
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, 60) // stronger blur for softer edge
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 18; // thicker border for bolder glow
+
+    final double waveAmplitude = 14.0 * (1 - progress);
+    final double waveFrequency = 2.8 + 1.5 * progress;
+    final double step = math.max(1.0, size.width / 150);
+    const double inset = -25.0; // keeps edges offscreen
+
+    final topPath = Path();
+    for (double x = inset; x <= size.width - inset; x += step) {
+      final t = (x / size.width) * waveFrequency * math.pi;
+      final y = inset + waveAmplitude * (0.5 + 0.5 * math.sin(t));
+      if (x == inset) {
+        topPath.moveTo(x, y);
+      } else {
+        topPath.lineTo(x, y);
+      }
+    }
+
+    final rightPath = Path();
+    for (double y = inset; y <= size.height - inset; y += step) {
+      final t = (y / size.height) * waveFrequency * math.pi + 1.0;
+      final x = size.width - inset - waveAmplitude * (0.5 + 0.5 * math.sin(t));
+      if (y == inset) {
+        rightPath.moveTo(x, y);
+      } else {
+        rightPath.lineTo(x, y);
+      }
+    }
+
+    final bottomPath = Path();
+    for (double x = inset; x <= size.width - inset; x += step) {
+      final t = (x / size.width) * waveFrequency * math.pi + 2.0;
+      final y = size.height - inset - waveAmplitude * (0.5 + 0.5 * math.sin(t));
+      if (x == inset) {
+        bottomPath.moveTo(x, y);
+      } else {
+        bottomPath.lineTo(x, y);
+      }
+    }
+
+    final leftPath = Path();
+    for (double y = inset; y <= size.height - inset; y += step) {
+      final t = (y / size.height) * waveFrequency * math.pi + 3.0;
+      final x = inset + waveAmplitude * (0.5 + 0.5 * math.sin(t));
+      if (y == inset) {
+        leftPath.moveTo(x, y);
+      } else {
+        leftPath.lineTo(x, y);
+      }
+    }
+
+    // Draw all sides
+    canvas.drawPath(topPath, paint);
+    canvas.drawPath(rightPath, paint);
+    canvas.drawPath(bottomPath, paint);
+    canvas.drawPath(leftPath, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _GlowPainter oldDelegate) => true;
 }

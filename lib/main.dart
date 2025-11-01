@@ -3,9 +3,10 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 import 'map_body.dart';
 import 'app_theme.dart';
 import 'screens/camera_screen.dart';
+import 'screens/journal_screen.dart';
 
 import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart'; 
+import 'firebase_options.dart';
 
 import 'processes/auth.dart';
 
@@ -14,7 +15,6 @@ import 'package:camera/camera.dart';
 List<CameraDescription> cameras = [];
 
 void main() async {
-
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize Firebase before the app runs
@@ -27,26 +27,36 @@ void main() async {
   cameras = await availableCameras();
 
   MapLibreMap.useHybridComposition = true;
-  runApp(Root());
+  runApp(const Root());
 }
 
 class Root extends StatelessWidget {
-    const Root({super.key});
+  const Root({super.key});
 
-    @override
+  @override
   Widget build(BuildContext context) {
     pixelRatio = MediaQuery.of(context).devicePixelRatio;
     return MaterialApp(
-      theme: ThemeData(
-        colorScheme: memoirTheme
-      ),
+      theme: ThemeData(colorScheme: memoirTheme),
       debugShowCheckedModeBanner: false,
       title: "Memoir",
-       home: CameraScreen(cameras: cameras),
-    );
+      home: CameraScreen(cameras: cameras),
+
+      // 🔗 Routes for navigation
+      routes: {
+        '/journal': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments;
+          if (args is String) {
+            // ✅ Pass the imagePath and cameras to JournalScreen
+            return JournalScreen(imagePath: args, cameras: cameras);
+          } else {
+            // 🛠 Fallback (in case no image was passed)
+            return JournalScreen(imagePath: '', cameras: cameras);
+          }
+        },
+      });
   }
 }
-
 
 class FirebaseCheckScreen extends StatelessWidget {
   const FirebaseCheckScreen({super.key});
