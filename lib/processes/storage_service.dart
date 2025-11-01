@@ -27,10 +27,10 @@ class StorageService {
 
     try {
       final List<FileObject> fileList = await _supabase.storage
-          .from(supabaseBucket)
-          .list(
-            path: binPath,  
-          );
+        .from(supabaseBucket)
+        .list(
+          path: binPath,  
+        );
 
       final binItems = <BinItem>[];
 
@@ -39,8 +39,8 @@ class StorageService {
           final fullSupabasePath = '$binPath/${file.name!}';
           
           final publicUrl = _supabase.storage
-              .from(supabaseBucket)
-              .getPublicUrl(fullSupabasePath);
+            .from(supabaseBucket)
+            .getPublicUrl(fullSupabasePath);
 
           binItems.add(BinItem.fromSupabaseFileObject( 
             file,
@@ -110,17 +110,11 @@ class StorageService {
     }
   }
 
-
-// lib/processes/storage_service.dart (Inside StorageService class)
-
-// --- G. FETCH PENDING DELETE IMAGES ---
 Future<List<BinItem>> fetchPendingDeleteImages() async {
-  // Use the constant you defined for the pending folder
   const String pendingDelete = 'pending_delete'; 
   final pendingPath = _getUserFolderPath(pendingDelete);
   
   try {
-    // 1. List files in the user's pending delete folder
     final List<FileObject> fileList = await _supabase.storage
         .from(supabaseBucket)
         .list(
@@ -132,8 +126,6 @@ Future<List<BinItem>> fetchPendingDeleteImages() async {
     for (FileObject file in fileList) { 
       if (file.id != null) { 
         final fullSupabasePath = '$pendingPath/${file.name!}';
-        
-        // Use the working getPublicUrl method
         final publicUrl = _supabase.storage
             .from(supabaseBucket)
             .getPublicUrl(fullSupabasePath); 
@@ -159,14 +151,10 @@ Future<void> softDeleteFromPosted(BinItem item) async {
     final userId = currentUserId;
     if (userId == null) return;
     
-    // 1. Source is the posted folder (where the file currently resides)
     final sourcePath = '${_getUserFolderPath(postedFolder)}/${item.fileName}'; 
-    
-    // 2. Destination is the pending_delete folder
     final destinationPath = '${_getUserFolderPath(pendingDelete)}/${item.fileName}';
 
     try {
-      // Core Logic: Move the file path internally
       await _supabase.storage.from(supabaseBucket).move(
         sourcePath, 
         destinationPath,
@@ -179,22 +167,15 @@ Future<void> softDeleteFromPosted(BinItem item) async {
     }
   }
 
-// lib/processes/storage_service.dart (Inside StorageService class)
-
-// --- J. RESTORE FROM PENDING DELETE (Move back to Posted) ---
 Future<void> restoreFromPending(BinItem item) async {
     final userId = currentUserId;
     if (userId == null) return;
     
-    // 1. Source is the pending_delete folder (staging area)
     const String pendingDelete = 'pending_delete';
     final sourcePath = '${_getUserFolderPath(pendingDelete)}/${item.fileName}'; 
-    
-    // 2. Destination is the posted folder
     final destinationPath = '${_getUserFolderPath(postedFolder)}/${item.fileName}';
 
     try {
-      // Core Logic: Move the file path internally from PENDING back to POSTED
       await _supabase.storage.from(supabaseBucket).move(
         sourcePath, 
         destinationPath,
@@ -211,12 +192,10 @@ Future<void> restoreFromPending(BinItem item) async {
     final userId = currentUserId;
     if (userId == null) return;
 
-    // The file's path is defined by where it currently sits (Pending Delete folder)
     const String pendingDelete = 'pending_delete';
     final filePathToDelete = '${_getUserFolderPath(pendingDelete)}/${item.fileName}';
 
     try {
-      // ✅ CORE LOGIC: Supabase removes the file permanently.
       await _supabase.storage.from(supabaseBucket).remove([filePathToDelete]);
       if (kDebugMode) print('✅ Image ${item.fileName} permanently removed from storage.');
     } on StorageException catch (e) {

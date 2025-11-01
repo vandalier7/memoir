@@ -117,7 +117,7 @@ class _BinGridTile extends StatelessWidget {
             CachedNetworkImage(
               imageUrl: item.imageUrl,
               fit: BoxFit.cover,
-              placeholder: (context, url) => Container(color: Theme.of(context).colorScheme.surfaceVariant),
+              placeholder: (context, url) => Container(color: Theme.of(context).colorScheme.onPrimaryContainer),
               errorWidget: (context, url, error) => const Icon(Icons.error),
             ),
            Align(
