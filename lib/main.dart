@@ -8,8 +8,6 @@ import 'app_theme.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart'; 
 
-import 'processes/locator.dart';
-
 import 'objects/globals.dart';
 
 void main() async {
@@ -20,9 +18,6 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-
-  geo = await GeoLocator.loadFromAssets("assets/geojson/brgy.json");
-
 
   MapLibreMap.useHybridComposition = true;
   runApp(Root());
