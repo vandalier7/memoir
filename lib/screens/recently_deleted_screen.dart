@@ -17,7 +17,6 @@ class _RecentlyDeletedScreenState extends State<RecentlyDeletedScreen> {
   @override
   void initState() {
     super.initState();
-    // Fetch files from the /pending_delete/ folder
     _deletedImagesFuture = _storageService.fetchPendingDeleteImages(); 
   }
 
@@ -27,7 +26,6 @@ class _RecentlyDeletedScreenState extends State<RecentlyDeletedScreen> {
     });
   }
 
-  // Handle the action feedback and refresh (Used by the tile)
   Future<void> _handleAction(
     BuildContext context, 
     Future<void> Function() action,
@@ -35,13 +33,12 @@ class _RecentlyDeletedScreenState extends State<RecentlyDeletedScreen> {
   ) async {
     try {
       await action();
-      // Add a small delay to ensure state change is ready before refresh (optional safety)
       await Future.delayed(const Duration(milliseconds: 200)); 
       
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(successMessage)));
       }
-      _refreshImages(); // Refresh the list
+      _refreshImages();
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -58,7 +55,7 @@ class _RecentlyDeletedScreenState extends State<RecentlyDeletedScreen> {
       appBar: AppBar(
         title: const Text('Recently Deleted'),
         centerTitle: true,
-        backgroundColor:    Color.fromARGB(255, 250, 132, 154), // Distinct color for deletion stage
+        backgroundColor:    Color.fromARGB(255, 250, 132, 154),
       ),
       body: FutureBuilder<List<BinItem>>(
         future: _deletedImagesFuture,
@@ -106,7 +103,6 @@ class _RecentlyDeletedScreenState extends State<RecentlyDeletedScreen> {
   }
 }
 
-// Helper Widget for Deleted Grid Tile
 class _DeletedGridTile extends StatelessWidget {
   final BinItem item;
   final StorageService storageService;
@@ -118,7 +114,6 @@ class _DeletedGridTile extends StatelessWidget {
     required this.handleAction,
   });
 
-  // Function to show the action management dialog
   void _showActionDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -126,7 +121,6 @@ class _DeletedGridTile extends StatelessWidget {
         return AlertDialog(
           title: Text(' ${item.fileName} '),
           actions: [
-            // RESTORE BUTTON (Moves file back to Bin folder)
             TextButton(
               onPressed: () async {
                 Navigator.of(context).pop(); 
@@ -141,11 +135,10 @@ class _DeletedGridTile extends StatelessWidget {
 
             const SizedBox(width: 10),
 
-            // Permanent Delete Button (Triggers the final confirmation step)
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(); // Close initial dialog
-                _showPermanentDeleteConfirm(context); // Open the second confirmation dialog
+                Navigator.of(context).pop(); 
+                _showPermanentDeleteConfirm(context); 
               },
               child: const Text('Delete Permanently', style: TextStyle(color: Colors.red)),
             ),
@@ -155,7 +148,6 @@ class _DeletedGridTile extends StatelessWidget {
     );
 }
 
-// Function for the final, destructive confirmation (REQUIRED by the prompt)
 void _showPermanentDeleteConfirm(BuildContext context) {
     showDialog(
         context: context,
@@ -173,10 +165,9 @@ void _showPermanentDeleteConfirm(BuildContext context) {
                     ),
                     TextButton(
                         onPressed: () async {
-                            Navigator.of(context).pop(); // Close dialog
+                            Navigator.of(context).pop(); 
                             await handleAction(
                                 context,
-                                // Calls the destructive permanent delete method
                                 () => storageService.permanentlyDeleteImage(item), 
                                 'Image permanently deleted.',
                             );
@@ -193,20 +184,18 @@ void _showPermanentDeleteConfirm(BuildContext context) {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () => _showActionDialog(context), // Tapping triggers the action dialog
+      onTap: () => _showActionDialog(context), 
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12.0),
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // Image Display
             CachedNetworkImage(
               imageUrl: item.imageUrl,
               fit: BoxFit.cover,
               placeholder: (context, url) => Container(color: Theme.of(context).colorScheme.surfaceVariant),
               errorWidget: (context, url, error) => const Icon(Icons.error),
             ),
-            // Overlay Text
             Align(
               alignment: Alignment.bottomCenter,
               child: Container(
