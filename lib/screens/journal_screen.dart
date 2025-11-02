@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'camera_screen.dart';
 
 class JournalScreen extends StatefulWidget {
@@ -112,12 +113,88 @@ class _JournalScreenState extends State<JournalScreen>
 
   Future<void> saveToSupabase() async {
     final snack = ScaffoldMessenger.of(context);
-    snack.showSnackBar(const SnackBar(content: Text('Saving...')));
-    await Future.delayed(const Duration(seconds: 1));
-    snack.hideCurrentSnackBar();
-    snack.showSnackBar(
-      const SnackBar(content: Text('Saved to Supabase (placeholder)!')),
-    );
+    
+    // Validate required fields
+    if (selectedMood.isEmpty) {
+      snack.showSnackBar(
+        const SnackBar(content: Text('Please select a mood first!')),
+      );
+      return;
+    }
+
+    snack.showSnackBar(const SnackBar(content: Text('Uploading...')));
+
+    try {
+      final supabase = Supabase.instance.client;
+      
+      // 1. Upload image to Supabase Storage
+      final fileName = 'memory_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final file = File(widget.imagePath);
+      final fileBytes = await file.readAsBytes();
+      
+      await supabase.storage
+          .from('memories')
+          .uploadBinary(fileName, fileBytes);
+
+      // Get public URL of uploaded image
+      final imageUrl = supabase.storage
+          .from('memories')
+          .getPublicUrl(fileName);
+
+      // Convert overlays to JSON format
+      final overlaysJson = overlays.map((overlay) => {
+        'id': overlay.id,
+        'isText': overlay.isText,
+        'text': overlay.text,
+        'emoji': overlay.emoji,
+        'dx': overlay.dx,
+        'dy': overlay.dy,
+        'scale': overlay.scale,
+      }).toList();
+
+      // 2. Save memory data to database
+      final memoryData = {
+        'image_url': imageUrl,
+        'mood': selectedMood,
+        'description': whatsController.text.trim(),
+        'tags': tags,
+        'overlays': overlaysJson, // ✅ Now saving overlays
+        'created_at': DateTime.now().toIso8601String(),
+      };
+
+      await supabase
+          .from('memories')
+          .insert(memoryData);
+
+      snack.hideCurrentSnackBar();
+      snack.showSnackBar(
+        const SnackBar(
+          content: Text('Memory saved successfully! ✨'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      // Navigate back after successful save
+      await Future.delayed(const Duration(seconds: 1));
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => CameraScreen(cameras: widget.cameras),
+          ),
+        );
+      }
+    } catch (e) {
+      snack.hideCurrentSnackBar();
+      snack.showSnackBar(
+        SnackBar(
+          content: Text('Error saving memory: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+      print('Supabase error: $e'); // For debugging
+    }
   }
 
   void _showTextOverlayDialog() {
@@ -514,7 +591,7 @@ class _JournalScreenState extends State<JournalScreen>
     final bottomSafe = MediaQuery.of(context).padding.bottom;
     return Positioned(
       left: 20,
-      bottom: 184 + bottomSafe, // Connected to mood button
+      bottom: 184 + bottomSafe,
       child: SizeTransition(
         sizeFactor: _moodDrawerController,
         axisAlignment: -1.0,
@@ -560,7 +637,6 @@ class _JournalScreenState extends State<JournalScreen>
                 ),
               ),
             ),
-            // Connector line
             Container(
               width: 2,
               height: 4,
@@ -761,7 +837,6 @@ class _OverlayItem {
   }
 }
 
-// Draggable and resizable overlay widget
 class _DraggableResizableOverlay extends StatefulWidget {
   final _OverlayItem item;
   final Size parentSize;
@@ -808,11 +883,9 @@ class _DraggableResizableOverlayState extends State<_DraggableResizableOverlay> 
     final itemY = dy * screenHeight;
     final itemX = dx * screenWidth;
     
-    // Trash is at bottom center
-    final trashY = screenHeight - 55; // Approximate trash position
+    final trashY = screenHeight - 55;
     final trashX = screenWidth / 2;
     
-    // Check if overlay is near trash (within 80 pixels)
     final distance = ((itemX - trashX).abs() + (itemY - trashY).abs());
     return distance < 80;
   }
@@ -833,11 +906,9 @@ class _DraggableResizableOverlayState extends State<_DraggableResizableOverlay> 
         },
         onScaleUpdate: (details) {
           setState(() {
-            // Always handle position changes
             dx += details.focalPointDelta.dx / widget.parentSize.width;
             dy += details.focalPointDelta.dy / widget.parentSize.height;
             
-            // If scale is changing significantly, we're also resizing
             if ((details.scale - 1.0).abs() > 0.05) {
               isResizing = true;
               scale = baseScale * details.scale;
@@ -849,7 +920,6 @@ class _DraggableResizableOverlayState extends State<_DraggableResizableOverlay> 
         onScaleEnd: (details) {
           widget.onDragEnd();
           
-          // Check if over trash
           if (_isOverTrash() && isDragging && !isResizing) {
             widget.onRemove();
           }
