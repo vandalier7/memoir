@@ -204,4 +204,18 @@ Future<void> restoreFromPending(BinItem item) async {
     }
   }
 
+  Future<void> permanentlyDeleteFromBin(BinItem item) async {
+    final userId = currentUserId;
+    if (userId == null) return;
+
+    final filePathToDelete = '${_getUserFolderPath(binFolder)}/${item.fileName}';
+
+    try {
+      await _supabase.storage.from(supabaseBucket).remove([filePathToDelete]);
+      if (kDebugMode) print('✅ Image ${item.fileName} permanently removed from BIN storage.');
+    } on StorageException catch (e) {
+      if (kDebugMode) print("Supabase Storage Error during hard delete from bin: ${e.message}");
+      rethrow;
+    }
+  }
 }

@@ -93,7 +93,7 @@ class _RecentlyDeletedScreenState extends State<RecentlyDeletedScreen> {
               return _DeletedGridTile(
                 item: item,
                 storageService: _storageService,
-                handleAction: _handleAction, // Pass handler down
+                handleAction: _handleAction, 
               );
             },
           );
@@ -146,9 +146,9 @@ class _DeletedGridTile extends StatelessWidget {
         );
       },
     );
-}
+  }
 
-void _showPermanentDeleteConfirm(BuildContext context) {
+  void _showPermanentDeleteConfirm(BuildContext context) {
     showDialog(
         context: context,
         builder: (context) {
@@ -178,7 +178,7 @@ void _showPermanentDeleteConfirm(BuildContext context) {
             );
         },
     );
-}
+  }
 
 
   @override

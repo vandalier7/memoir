@@ -57,7 +57,7 @@ class _PostedScreenState extends State<PostedScreen> {
         backgroundColor: Color.fromARGB(255, 248, 217, 174),
         actions: [
           IconButton(
-            icon: const Icon(Icons.restore_from_trash, color: Colors.white), 
+            icon: const Icon(Icons.restore_from_trash, color: Color.fromARGB(255, 230, 35, 35)), 
             onPressed: () {
               Navigator.push(
                 context,
@@ -137,7 +137,7 @@ class _PostedGridTile extends StatelessWidget {
       child: Card(
         elevation: 4,
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(8.0),
+          borderRadius: BorderRadius.circular(4.0),
           child: Stack(
             fit: StackFit.expand,
             children: [

@@ -3,10 +3,8 @@ import '../processes/storage_service.dart';
 import '../models/bin_item.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'posted_screen.dart'; // Navigation
-import 'package:firebase_auth/firebase_auth.dart'; 
 
-// Constants for Design and Logic
-const Color _kPrimarySelectionColor = Color.fromARGB(255, 33, 150, 243); // Blue for selection overlay
+const Color _kPrimarySelectionColor = Color.fromARGB(255, 33, 150, 243); 
 const Color _kDarkBackground = Color.fromARGB(255, 32, 28, 29);
 
 class BinScreen extends StatefulWidget {
@@ -20,7 +18,6 @@ class _BinScreenState extends State<BinScreen> {
   final StorageService _storageService = StorageService(); 
   late Future<List<BinItem>> _binImagesFuture;
   
-  // State to track selected items
   Set<String> _selectedIds = {}; 
 
   @override
@@ -32,11 +29,10 @@ class _BinScreenState extends State<BinScreen> {
   void _refreshImages() {
     setState(() {
       _binImagesFuture = _storageService.fetchBinImages();
-      _selectedIds = {}; // Clear selection on refresh
+      _selectedIds = {}; 
     });
   }
 
-  // Toggles selection state (called by the grid item)
   void _toggleSelection(String id) {
     setState(() {
       if (_selectedIds.contains(id)) {
@@ -46,52 +42,42 @@ class _BinScreenState extends State<BinScreen> {
       }
     });
   }
-  
-  // Selects all visible images
-  void _selectAll(List<BinItem> images) {
-    setState(() {
-      _selectedIds = Set.from(images.map((img) => img.fileName));
-    });
-  }
 
-  // Deselects all visible images
   void _deselectAll() {
     setState(() {
       _selectedIds.clear();
     });
   }
 
-  // Handler for bulk POST action (Restore to Posted)
-  // lib/screens/bin_screen.dart (Inside _BinScreenState class)
-
-  void _handlePostBulk() async { // MUST be async now
+  void _handlePostBulk() async {
     if (_selectedIds.isEmpty) return;
     
-    // 🛑 FIX: Safely await the Future to get the list of images
-    // This is the functional equivalent of the failed .value attempt, but correct.
     final images = await _binImagesFuture; 
-    
-    // Now you can safely use the images list:
     final selectedImages = images.where((img) => _selectedIds.contains(img.fileName)).toList();
     
-    // Execute logic...
     for (var item in selectedImages) {
         await _storageService.restoreImage(item); 
     }
 
+    if (!context.mounted) return; 
+    
     _selectedIds.clear(); 
     _refreshImages(); 
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${selectedImages.length} images posted successfully!')));
-} 
+  }
 
-  // Handler for bulk DELETE action (Soft Delete to Pending)
-  void _handleDeleteBulk(List<BinItem> images) {
+  void _handleDeleteBulk() async {
     if (_selectedIds.isEmpty) return;
+
+    final images = await _binImagesFuture;
+    
+    // Check mounted status before showing dialog
+    if (!mounted) return;
     
     final selectedImages = images.where((img) => _selectedIds.contains(img.fileName)).toList();
 
     showDialog(
-      context: context,
+      context: context, 
       builder: (context) => AlertDialog(
         title: const Text('Delete Images Permanently?'),
         content: Text('Are you sure you want to delete ${selectedImages.length} images permanently?'),
@@ -99,24 +85,36 @@ class _BinScreenState extends State<BinScreen> {
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           TextButton(
             onPressed: () async {
-              // Execute soft deletion (move to PENDING_DELETE)
+              
+              // 1. EXECUTE DELETION LOOP (AWAIT)
               for (var item in selectedImages) {
-                  await _storageService.permanentlyDeleteImage(item);
+                  // Assuming this permanentlyDeleteImage call performs the soft delete (move)
+                  await _storageService.permanentlyDeleteFromBin(item);
               }
               
-              Navigator.pop(context); // Close dialog
+              // 2. CHECK MOUNTED STATUS BEFORE UI/NAVIGATION
+              if (context.mounted) {
+                  Navigator.pop(context); // Close dialog
+              }
+              
+              // 3. SYNCHRONOUS STATE UPDATE
+              // Ensure these are NOT placed inside an internal setState() call,
+              // but rely on the subsequent _refreshImages() to trigger the UI update.
               _selectedIds.clear(); 
-              _refreshImages(); 
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${selectedImages.length} images deleted permanently.')));
+              _refreshImages(); // <-- This runs setState and re-fetches data
+
+              // 4. SHOW FEEDBACK
+              if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${selectedImages.length} images deleted permanently.')));
+              }
             },
-            child: const Text('Delete Permanently', style: TextStyle(color: Colors.red)),
+            child: const Text('Confirm Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
-  }
+}
   
-  // Helper for displaying shadowed icons (copied from previous steps)
   Widget _shadowedIcon(IconData iconData, {required Color color, required double size}) {
     return Text(
       String.fromCharCode(iconData.codePoint),
@@ -133,36 +131,20 @@ class _BinScreenState extends State<BinScreen> {
   
   @override
   Widget build(BuildContext context) {
-    // We use the custom dark header structure
     return Scaffold(
-        backgroundColor: _kDarkBackground,
-        body: Container(
-            decoration: const BoxDecoration(
-                gradient: RadialGradient(
-                    colors: [ 
-                        Color.fromARGB(255, 250, 227, 194), 
-                        Color.fromARGB(255, 253, 192, 203), 
-                        _kDarkBackground, 
-                    ],
-                    radius: 1.5, 
-                ),
-            ),
+        backgroundColor: const Color.fromARGB(255, 239, 220, 224),
+        body: Container(   
             child: SafeArea ( 
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                        // HEADER WITH MULTI-SELECT ACTIONS
                         _buildHeader(context),
-                        
-                        // RECENTS BAR
                         _buildRecentsBar(context),
 
-                        // GRID VIEW AREA
                         Expanded(
                             child: FutureBuilder<List<BinItem>>(
                                 future: _binImagesFuture,
                                 builder: (context, snapshot) {
-                                    // ... (Error and loading handling) ...
                                     final images = snapshot.data ?? [];
                                     
                                     if (snapshot.connectionState == ConnectionState.waiting) { return const Center(child: CircularProgressIndicator(color: Colors.white)); }
@@ -180,7 +162,7 @@ class _BinScreenState extends State<BinScreen> {
                                         ),
                                         itemBuilder: (context, index) {
                                             final item = images[index];
-                                            return _BinGridTile( // Updated tile
+                                            return _BinGridTile( 
                                                 item: item,
                                                 isSelected: _selectedIds.contains(item.fileName),
                                                 onToggleSelect: _toggleSelection,
@@ -197,7 +179,6 @@ class _BinScreenState extends State<BinScreen> {
     );
   }
   
-  // Custom Header Builder (Matches video functionality)
   Widget _buildHeader(BuildContext context) {
     final isSelecting = _selectedIds.isNotEmpty;
     return Container(
@@ -206,35 +187,31 @@ class _BinScreenState extends State<BinScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Left Side: Close or Deselect/Select All Button
           isSelecting
               ? TextButton.icon(
                   onPressed: _deselectAll,
-                  icon: const Icon(Icons.close, color: Colors.white, size: 20),
-                  label: const Text('Deselect All', style: TextStyle(color: Colors.white)),
+                  icon: const Icon(Icons.close, color: Color.fromARGB(255, 250, 132, 154), size: 20),
+                  label: const Text('Deselect All', style: TextStyle(color: Color.fromARGB(255, 250, 132, 154))),
                 )
-              : IconButton( // Close Button (X)
-                  icon: _shadowedIcon(Icons.close, color: Colors.black, size: 25),
+              : IconButton( 
+                  icon: _shadowedIcon(Icons.close, color: Color.fromARGB(255, 37, 6, 6), size: 25),
                   onPressed: () async {},
                 ),
           
-          // Right Side: Post and Delete Buttons
           Row(
             children: [
-              // Post Button
               ElevatedButton.icon(
                 onPressed: isSelecting ? _handlePostBulk : null,
                 icon: const Icon(Icons.upload, size: 18),
                 label: Text('Post (${_selectedIds.length})'),
-                style: ElevatedButton.styleFrom(backgroundColor: _kPrimarySelectionColor),
+                style: ElevatedButton.styleFrom(backgroundColor: Color.fromARGB(255, 250, 132, 154), foregroundColor: Colors.white,),
               ),
               const SizedBox(width: 8),
-              // Delete Button
               ElevatedButton.icon(
-                onPressed: isSelecting ? _handlePostBulk : null,
+                onPressed: isSelecting ? _handleDeleteBulk : null,
                 icon: const Icon(Icons.delete_forever, size: 18),
                 label: Text('Delete (${_selectedIds.length})'),
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.red[700]),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red[700], foregroundColor: Colors.white,),
               ),
             ],
           ),
@@ -243,7 +220,6 @@ class _BinScreenState extends State<BinScreen> {
     );
   }
 
-  // Custom Recents Bar Builder
   Widget _buildRecentsBar(BuildContext context) {
     return Container(
       color: Colors.transparent,
@@ -251,10 +227,9 @@ class _BinScreenState extends State<BinScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text('Recents', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
-          // Navigation to Posted Screen
+          const Text('Recents', style: TextStyle(color: Color.fromARGB(255, 37, 6, 6), fontWeight: FontWeight.bold, fontSize: 18)),
           IconButton(
-            icon: const Icon(Icons.outbox, color: Colors.white),
+            icon: const Icon(Icons.outbox, color: Color.fromARGB(255, 37, 6, 6)),
             onPressed: () {
               Navigator.push(context, MaterialPageRoute(builder: (context) => const PostedScreen()));
             },
@@ -265,9 +240,6 @@ class _BinScreenState extends State<BinScreen> {
   }
 }
 
-// -----------------------------------------------------------------------------
-// _BinGridTile (Modified for Selection and Visuals)
-// -----------------------------------------------------------------------------
 class _BinGridTile extends StatelessWidget {
   final BinItem item;
   final bool isSelected;
@@ -281,14 +253,12 @@ class _BinGridTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector( // Handles tapping for selection
-      onTap: () => onToggleSelect(item.fileName), // Use file name as the unique ID
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(5.0), // Subtle rounded corners
+    return GestureDetector( 
+      onTap: () => onToggleSelect(item.fileName), 
+      child: ClipRRect( 
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // Image Display
             CachedNetworkImage(
               imageUrl: item.imageUrl,
               fit: BoxFit.cover,
@@ -296,12 +266,10 @@ class _BinGridTile extends StatelessWidget {
               errorWidget: (context, url, error) => const Icon(Icons.error),
             ),
 
-            // 1. Selection Overlay (Dark Blue Tint when selected)
             Container(
               color: isSelected ? _kPrimarySelectionColor.withOpacity(0.4) : Colors.transparent,
             ),
             
-            // 2. Checkbox and Top Right Corner
             Positioned(
               top: 5,
               right: 5,
@@ -317,13 +285,11 @@ class _BinGridTile extends StatelessWidget {
               ),
             ),
             
-            // 3. Status/Title Overlay
             Positioned(
               bottom: 5,
               left: 5,
               child: Text(
-                // Use file name as a visible identifier
-                isSelected ? 'Selected' : item.fileName, 
+                isSelected ? '' : item.fileName, 
                 style: TextStyle(color: isSelected ? Colors.white : Colors.white70, fontSize: 10),
               ),
             ),
