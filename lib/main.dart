@@ -4,10 +4,9 @@ import 'my_scaffold.dart';
 import 'map_body.dart';
 import 'screens/sign_in.dart';
 import 'app_theme.dart';
-
+import './objects/map_buttons.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart'; 
-
 import 'processes/locator.dart';
 
 void main() async {

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'map_body.dart';
+import 'objects/map_buttons.dart';
+import 'objects/search_bar.dart';
 
 class MyScaffold extends StatefulWidget {
   const MyScaffold({super.key});
@@ -60,31 +62,10 @@ class MyState extends State<MyScaffold> {
         ),
       ),
     ),
-          Container(
-            margin: EdgeInsets.fromLTRB(10, 40, 10, 0),
-            child: TextField(
-              focusNode: _textFocusNode,
-              decoration: InputDecoration(
-                hintText: "Search",
-                hintStyle: TextStyle(
-                  color: Colors.grey
-                ),
-                filled: true,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(100),
-                  borderSide: BorderSide.none
-                ),
-                suffixIcon: Container(
-                  child: CircleAvatar(),
-                  margin: EdgeInsets.fromLTRB(0, 0, 12, 0),
-                ),
-                fillColor: Colors.white
-              )
-              
-            )),
+          const SearchBarWidget(),
+          const MapButtons(),
         ],
       )
-      
       
     ,
     )
