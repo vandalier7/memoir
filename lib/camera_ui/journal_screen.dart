@@ -207,12 +207,7 @@ class _JournalScreenState extends State<JournalScreen>
       // Navigate back after successful save
       await Future.delayed(const Duration(seconds: 1));
       if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => CameraScreen(cameras: widget.cameras),
-          ),
-        );
+        Navigator.pop(context);
       }
     } catch (e) {
       snack.hideCurrentSnackBar();
@@ -371,12 +366,8 @@ class _JournalScreenState extends State<JournalScreen>
               left: 20,
               child: GestureDetector(
                 onTap: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => CameraScreen(cameras: widget.cameras),
-                    ),
-                  );
+                  // This pops back to camera
+                  Navigator.pop(context);
                 },
                 child: Container(
                   padding: const EdgeInsets.all(10),

@@ -77,7 +77,10 @@ class PreviewScreen extends StatelessWidget {
                       // ❌ Discard button
                       Expanded(
                         child: ElevatedButton(
-                          onPressed: () => Navigator.pop(context),
+                          onPressed: () {
+                            // TODO: add the image to the bin of the user
+                            Navigator.pop(context);
+                          },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.grey.shade800,
                             padding: const EdgeInsets.symmetric(
@@ -110,7 +113,7 @@ class PreviewScreen extends StatelessWidget {
                       Expanded(
                         child: ElevatedButton(
                           onPressed: () {
-                            Navigator.pushNamed(
+                            Navigator.pushReplacementNamed(
                               context,
                               '/journal',
                               arguments: imagePath,

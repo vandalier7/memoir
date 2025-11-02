@@ -322,6 +322,9 @@ class LogIn extends StatelessWidget {
                         emailController.text.trim(),
                         passwordController.text.trim()
                       );
+                      if (!context.mounted) return;
+                      
+                      Navigator.pushNamed(context, '/map');
                     }
 
                   },
@@ -558,6 +561,10 @@ class SignUp extends StatelessWidget {
                         emailController.text.trim(),
                         passwordController.text.trim()
                       );
+                      // Check if still in the widget tree
+                      if (!context.mounted) return;
+                      
+                      Navigator.pushNamed(context, '/map');
                     }
                   },
                   style: ElevatedButton.styleFrom(

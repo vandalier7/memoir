@@ -1,23 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
-import 'map_body.dart';
+import 'package:presentation/camera_ui/preview_screen.dart';
 import 'app_theme.dart';
-import 'camera_ui/camera_screen.dart';
-import 'camera_ui/journal_screen.dart';
+
 
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
-
+import 'my_scaffold.dart';
 import 'processes/auth.dart';
 
-import 'package:camera/camera.dart';
+import 'screens/sign_in.dart';
 
-List<CameraDescription> cameras = [];
+import 'package:camera/camera.dart';
+import 'package:firebase_auth/firebase_auth.dart' as fbauth;
+
+import 'objects/globals.dart';
+
+import 'screens/bin_screen.dart';
+import 'camera_ui/camera_screen.dart';
+import 'camera_ui/journal_screen.dart';
+
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  pixelRatio = WidgetsBinding.instance.platformDispatcher.views.first.devicePixelRatio;
 
   try {
     // Initialize Firebase before the app runs
@@ -37,8 +46,7 @@ void main() async {
     cameras = await availableCameras();
     print('✅ Cameras initialized: ${cameras.length} camera(s) found');
 
-    // Register user (consider moving this elsewhere, not in main)
-    registerUser("hi", "a@joke.com", "1234qweQ");
+    
 
   } catch (e) {
     print('❌ Initialization error: $e');
@@ -54,15 +62,16 @@ class Root extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    pixelRatio = MediaQuery.of(context).devicePixelRatio;
+    // pixelRatio = MediaQuery.of(context).devicePixelRatio;
     return MaterialApp(
       theme: ThemeData(colorScheme: memoirTheme),
       debugShowCheckedModeBanner: false,
       title: "Memoir",
-      home: CameraScreen(cameras: cameras),
-
+      // Directly show the main map screen wrapper (MyScaffold)
+      home: MyScaffold(), 
       // 🔗 Routes for navigation
       routes: {
+        '/map': (context) => const MyScaffold(),
         '/journal': (context) {
           final args = ModalRoute.of(context)!.settings.arguments;
           if (args is String) {
@@ -73,6 +82,15 @@ class Root extends StatelessWidget {
             return JournalScreen(imagePath: '', cameras: cameras);
           }
         },
+        '/bin': (context) => const BinScreen(),
+        '/camera': (context) => CameraScreen(cameras: cameras,),
+        '/preview': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments;
+          if (true) {
+            // ✅ Pass the imagePath and cameras to JournalScreen
+            return PreviewScreen(imagePath: args.toString());
+          }
+        }
       },
     );
   }

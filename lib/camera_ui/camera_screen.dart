@@ -62,7 +62,14 @@ class _CameraScreenState extends State<CameraScreen>
     }
   }
 
-  void _switchCamera() async {
+  bool _isSwitchingCamera = false;
+
+void _switchCamera() async {
+  if (_isSwitchingCamera) return; // Prevent double-taps
+  
+  setState(() => _isSwitchingCamera = true);
+  
+  try {
     final lensDirection =
         _isRearCamera ? CameraLensDirection.front : CameraLensDirection.back;
     final newCamera = widget.cameras.firstWhere(
@@ -70,15 +77,23 @@ class _CameraScreenState extends State<CameraScreen>
       orElse: () => widget.cameras.first,
     );
 
-    setState(() {
-      _isRearCamera = !_isRearCamera;
-    });
-
     await _controller?.dispose();
     _controller = CameraController(newCamera, ResolutionPreset.high);
     await _controller!.initialize();
-    if (mounted) setState(() {});
+    
+    if (mounted) {
+      setState(() {
+        _isRearCamera = !_isRearCamera;
+        _isSwitchingCamera = false;
+      });
+    }
+  } catch (e) {
+    print('Error switching camera: $e');
+    if (mounted) {
+      setState(() => _isSwitchingCamera = false);
+    }
   }
+}
 
   void _setTimer(int seconds) {
     setState(() {
@@ -110,12 +125,8 @@ class _CameraScreenState extends State<CameraScreen>
     final image = await _controller!.takePicture();
 
     if (!mounted) return;
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => PreviewScreen(imagePath: image.path),
-      ),
-    );
+    // Use pushReplacement so going back from journal returns to camera, not preview
+    Navigator.pushNamed(context, '/preview', arguments: image.path);
   }
 
   @override
@@ -258,7 +269,23 @@ class _CameraScreenState extends State<CameraScreen>
       body: _isInitialized
           ? Stack(
               children: [
-                Positioned.fill(child: CameraPreview(_controller!)),
+                Positioned.fill(
+                  child: _isSwitchingCamera
+                  ? Container(
+                      color: Colors.black,
+                      child: const Center(
+                        child: CircularProgressIndicator(color: Colors.white),
+                      ),
+                    )
+                  : FittedBox(
+                      fit: BoxFit.cover,
+                      child: SizedBox(
+                        width: _controller!.value.previewSize!.height,
+                        height: _controller!.value.previewSize!.width,
+                        child: CameraPreview(_controller!),
+                      ),
+                    ),
+                ),
 
                 if (_countdown > 0)
                   Positioned(
@@ -481,3 +508,4 @@ class _GlowPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _GlowPainter oldDelegate) => true;
 }
+

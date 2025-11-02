@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'map_body.dart';
+import 'objects/map_buttons.dart';
+import 'objects/search_bar.dart';
+import 'objects/memory.dart';
+import 'objects/memory_card.dart';
 
 class MyScaffold extends StatefulWidget {
   const MyScaffold({super.key});
@@ -9,8 +13,30 @@ class MyScaffold extends StatefulWidget {
 }
 
 class MyState extends State<MyScaffold> {
+  MemoryData? activeMemory;
+  bool isClosing = false;
+
+
   final _textFocusNode = FocusNode();
 
+  void showMemory(MemoryData memory) {
+    setState(() {
+      activeMemory = memory;
+      isClosing = false;
+    });
+  }
+
+  void closeMemory() {
+    setState(() {
+    isClosing = true;
+    });
+  }
+
+  void setMemoryInactive() {
+    setState(() {
+      activeMemory = null;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +67,10 @@ class MyState extends State<MyScaffold> {
       resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
-          MapBody()
+          MapBody(
+            propagateMemory: showMemory,
+            closeMemory: closeMemory
+          )
           ,       
           IgnorePointer( // so touches go to the map
       child: Container(
@@ -60,31 +89,20 @@ class MyState extends State<MyScaffold> {
         ),
       ),
     ),
-          Container(
-            margin: EdgeInsets.fromLTRB(10, 40, 10, 0),
-            child: TextField(
-              focusNode: _textFocusNode,
-              decoration: InputDecoration(
-                hintText: "Search",
-                hintStyle: TextStyle(
-                  color: Colors.grey
-                ),
-                filled: true,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(100),
-                  borderSide: BorderSide.none
-                ),
-                suffixIcon: Container(
-                  margin: EdgeInsets.fromLTRB(0, 0, 12, 0),
-                  child: CircleAvatar(),
-                ),
-                fillColor: Colors.white
-              )
-              
-            )),
+          SearchBarWidget(focusNode: _textFocusNode),
+          const MapButtons(),
+
+            if (activeMemory != null)
+              MemoryCard(
+                description: "Lorem ipsum dolor sit amet.",
+                addressString: activeMemory!.addressString,
+                borderColor: const Color.fromARGB(255, 219, 198, 9),
+                borderWidth: 2,
+                onClose: () => setMemoryInactive(),
+                isClosing: isClosing,
+              ),
         ],
       )
-      
       
     ,
     )
