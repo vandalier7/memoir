@@ -1,9 +1,13 @@
 // lib/screens/journal_screen.dart
 import 'dart:io';
 import 'dart:ui';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:camera/camera.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'camera_screen.dart';
 
 class JournalScreen extends StatefulWidget {
@@ -61,6 +65,8 @@ class _JournalScreenState extends State<JournalScreen>
   List<String> tags = [];
   List<_OverlayItem> overlays = [];
   bool isDraggingOverlay = false;
+  
+  final GlobalKey _screenshotKey = GlobalKey();
 
   late final AnimationController _bottomDrawerController;
   late final AnimationController _moodDrawerController;
@@ -111,6 +117,19 @@ class _JournalScreenState extends State<JournalScreen>
     });
   }
 
+  Future<Uint8List?> _captureScreenshot() async {
+    try {
+      RenderRepaintBoundary boundary = _screenshotKey.currentContext!
+          .findRenderObject() as RenderRepaintBoundary;
+      var image = await boundary.toImage(pixelRatio: 3.0);
+      ByteData? byteData = await image.toByteData(format: ImageByteFormat.png);
+      return byteData?.buffer.asUint8List();
+    } catch (e) {
+      print('Error capturing screenshot: $e');
+      return null;
+    }
+  }
+
   Future<void> saveToSupabase() async {
     final snack = ScaffoldMessenger.of(context);
     
@@ -125,46 +144,57 @@ class _JournalScreenState extends State<JournalScreen>
     snack.showSnackBar(const SnackBar(content: Text('Uploading...')));
 
     try {
-      final supabase = Supabase.instance.client;
+      // 1. Capture screenshot with overlays
+      final imageBytes = await _captureScreenshot();
       
-      // 1. Upload image to Supabase Storage
-      final fileName = 'memory_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final file = File(widget.imagePath);
-      final fileBytes = await file.readAsBytes();
+      if (imageBytes == null) {
+        throw Exception('Failed to capture image');
+      }
+
+      // ===== SUPABASE PLACEHOLDER =====
+      // TODO: implement Supabase Storage upload here
+      // This is where the image with overlays will be uploaded to Supabase
+      // Expected output: imageUrl (public URL of the uploaded image)
+      
+      String imageUrl = 'PLACEHOLDER_IMAGE_URL'; // Replace with actual Supabase URL
+      
+      // Example Supabase implementation:
+      /*
+      final supabase = Supabase.instance.client;
+      final fileName = 'memory_${DateTime.now().millisecondsSinceEpoch}.png';
       
       await supabase.storage
           .from('memories')
-          .uploadBinary(fileName, fileBytes);
+          .uploadBinary(fileName, imageBytes);
 
-      // Get public URL of uploaded image
-      final imageUrl = supabase.storage
+      imageUrl = supabase.storage
           .from('memories')
           .getPublicUrl(fileName);
+      */
+      // ===== END SUPABASE PLACEHOLDER =====
 
-      // Convert overlays to JSON format
-      final overlaysJson = overlays.map((overlay) => {
-        'id': overlay.id,
-        'isText': overlay.isText,
-        'text': overlay.text,
-        'emoji': overlay.emoji,
-        'dx': overlay.dx,
-        'dy': overlay.dy,
-        'scale': overlay.scale,
-      }).toList();
-
-      // 2. Save memory data to database
-      final memoryData = {
+      // 2. Get current authenticated user from Firebase Auth
+      final currentUser = FirebaseAuth.instance.currentUser;
+      
+      if (currentUser == null) {
+        throw Exception('No user logged in');
+      }
+      
+      final userId = currentUser.uid;
+      final userEmail = currentUser.email ?? 'no-email';
+      
+      // 3. Save metadata to Cloud Firestore
+      final firestore = FirebaseFirestore.instance;
+      
+      await firestore.collection('memories').add({
         'image_url': imageUrl,
         'mood': selectedMood,
         'description': whatsController.text.trim(),
         'tags': tags,
-        'overlays': overlaysJson, // ✅ Now saving overlays
-        'created_at': DateTime.now().toIso8601String(),
-      };
-
-      await supabase
-          .from('memories')
-          .insert(memoryData);
+        'user_id': userId,
+        'user_email': userEmail,
+        'created_at': FieldValue.serverTimestamp(),
+      });
 
       snack.hideCurrentSnackBar();
       snack.showSnackBar(
@@ -193,7 +223,7 @@ class _JournalScreenState extends State<JournalScreen>
           duration: const Duration(seconds: 5),
         ),
       );
-      print('Supabase error: $e'); // For debugging
+      print('Error: $e');
     }
   }
 
@@ -286,43 +316,52 @@ class _JournalScreenState extends State<JournalScreen>
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // Background Image
-            Positioned.fill(
-              child: Image.file(
-                File(widget.imagePath),
-                fit: BoxFit.cover,
-              ),
-            ),
+            // Wrap everything in RepaintBoundary for screenshot
+            RepaintBoundary(
+              key: _screenshotKey,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // Background Image
+                  Positioned.fill(
+                    child: Image.file(
+                      File(widget.imagePath),
+                      fit: BoxFit.cover,
+                    ),
+                  ),
 
-            // Overlay items
-            Positioned.fill(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  return Stack(
-                    children: overlays.asMap().entries.map((entry) {
-                      final idx = entry.key;
-                      final item = entry.value;
-                      return _DraggableResizableOverlay(
-                        key: ValueKey(item.id),
-                        item: item,
-                        parentSize:
-                            Size(constraints.maxWidth, constraints.maxHeight),
-                        onUpdate: (updated) {
-                          setState(() => overlays[idx] = updated);
-                        },
-                        onRemove: () {
-                          setState(() => overlays.removeAt(idx));
-                        },
-                        onDragStart: () {
-                          setState(() => isDraggingOverlay = true);
-                        },
-                        onDragEnd: () {
-                          setState(() => isDraggingOverlay = false);
-                        },
-                      );
-                    }).toList(),
-                  );
-                },
+                  // Overlay items
+                  Positioned.fill(
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        return Stack(
+                          children: overlays.asMap().entries.map((entry) {
+                            final idx = entry.key;
+                            final item = entry.value;
+                            return _DraggableResizableOverlay(
+                              key: ValueKey(item.id),
+                              item: item,
+                              parentSize:
+                                  Size(constraints.maxWidth, constraints.maxHeight),
+                              onUpdate: (updated) {
+                                setState(() => overlays[idx] = updated);
+                              },
+                              onRemove: () {
+                                setState(() => overlays.removeAt(idx));
+                              },
+                              onDragStart: () {
+                                setState(() => isDraggingOverlay = true);
+                              },
+                              onDragEnd: () {
+                                setState(() => isDraggingOverlay = false);
+                              },
+                            );
+                          }).toList(),
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ),
             ),
 
