@@ -3,7 +3,7 @@ import 'dart:ui';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
-import 'package:presentation/screens/preview_screen.dart'; // adjust package/path if needed
+import 'package:presentation/camera_ui/preview_screen.dart'; // adjust package/path if needed
 
 class CameraScreen extends StatefulWidget {
   final List<CameraDescription> cameras;
