@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'map_body.dart';
 import 'app_theme.dart';
-import 'screens/camera_screen.dart';
-import 'screens/journal_screen.dart';
+import 'camera_ui/camera_screen.dart';
+import 'camera_ui/journal_screen.dart';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
