@@ -37,7 +37,7 @@ class _PostedScreenState extends State<PostedScreen> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(successMessage)));
       }
-      _refreshImages(); // Refresh the list
+      _refreshImages(); 
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -63,7 +63,7 @@ class _PostedScreenState extends State<PostedScreen> {
                 context,
                 MaterialPageRoute(builder: (context) => const RecentlyDeletedScreen()),
               ) .then((_) {
-                _refreshImages(); // This triggers setState and re-fetches data
+                _refreshImages(); 
               });
             },
           ),
@@ -179,7 +179,7 @@ class _PostedGridTile extends StatelessWidget {
                 title: const Text('Delete Image'),
                 onTap: () async {
                   Navigator.of(context).pop(); 
-                  await handleAction( // The parent handler
+                  await handleAction( 
                     context, 
                     () => storageService.softDeleteFromPosted(item), 
                     'Image Deleted.',

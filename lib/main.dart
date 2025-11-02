@@ -5,12 +5,15 @@ import 'map_body.dart';
 import 'screens/sign_in.dart';
 import 'app_theme.dart';
 
+import './objects/map_buttons.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart'; 
 import 'package:firebase_auth/firebase_auth.dart' as fbauth;
+import 'firebase_options.dart'; 
+import 'processes/locator.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
 import 'processes/auth.dart';
+
+import 'objects/globals.dart';
 
 import 'screens/bin_screen.dart';
 void main() async {
@@ -38,29 +41,16 @@ class Root extends StatelessWidget {
   const Root({super.key});
 
   @override
-  Widget build(BuildContext context) {    
+  Widget build(BuildContext context) {
+    pixelRatio = MediaQuery.of(context).devicePixelRatio;
     return MaterialApp(
       theme: ThemeData(
         colorScheme: memoirTheme
       ),
       debugShowCheckedModeBanner: false,
       title: "Memoir",
-      home: StreamBuilder<fbauth.User?>(
-        stream: fbauth.FirebaseAuth.instance.authStateChanges(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
-          if (snapshot.hasData) {
-            return const BinScreen();
-          } 
-          else {
-            return SignInCard();
-          }
-        },
-      ),
+      // Directly show the main map screen wrapper (MyScaffold)
+      home: MyScaffold(), 
     );
   }
 }

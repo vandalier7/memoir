@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import '../processes/storage_service.dart'; 
 import '../models/bin_item.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'posted_screen.dart'; // Navigation
+import 'posted_screen.dart';
+import '../my_scaffold.dart';
 
 const Color _kPrimarySelectionColor = Color.fromARGB(255, 33, 150, 243); 
-const Color _kDarkBackground = Color.fromARGB(255, 32, 28, 29);
 
 class BinScreen extends StatefulWidget {
   const BinScreen({super.key});
@@ -71,7 +71,6 @@ class _BinScreenState extends State<BinScreen> {
 
     final images = await _binImagesFuture;
     
-    // Check mounted status before showing dialog
     if (!mounted) return;
     
     final selectedImages = images.where((img) => _selectedIds.contains(img.fileName)).toList();
@@ -86,24 +85,17 @@ class _BinScreenState extends State<BinScreen> {
           TextButton(
             onPressed: () async {
               
-              // 1. EXECUTE DELETION LOOP (AWAIT)
               for (var item in selectedImages) {
-                  // Assuming this permanentlyDeleteImage call performs the soft delete (move)
                   await _storageService.permanentlyDeleteFromBin(item);
               }
               
-              // 2. CHECK MOUNTED STATUS BEFORE UI/NAVIGATION
               if (context.mounted) {
-                  Navigator.pop(context); // Close dialog
+                  Navigator.pop(context); 
               }
-              
-              // 3. SYNCHRONOUS STATE UPDATE
-              // Ensure these are NOT placed inside an internal setState() call,
-              // but rely on the subsequent _refreshImages() to trigger the UI update.
-              _selectedIds.clear(); 
-              _refreshImages(); // <-- This runs setState and re-fetches data
 
-              // 4. SHOW FEEDBACK
+              _selectedIds.clear(); 
+              _refreshImages(); 
+
               if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${selectedImages.length} images deleted permanently.')));
               }
@@ -113,7 +105,7 @@ class _BinScreenState extends State<BinScreen> {
         ],
       ),
     );
-}
+  }
   
   Widget _shadowedIcon(IconData iconData, {required Color color, required double size}) {
     return Text(
@@ -190,28 +182,38 @@ class _BinScreenState extends State<BinScreen> {
           isSelecting
               ? TextButton.icon(
                   onPressed: _deselectAll,
-                  icon: const Icon(Icons.close, color: Color.fromARGB(255, 250, 132, 154), size: 20),
+                  icon: const Icon(Icons.close, color: Color.fromARGB(255, 250, 132, 154), size: 15),
                   label: const Text('Deselect All', style: TextStyle(color: Color.fromARGB(255, 250, 132, 154))),
                 )
               : IconButton( 
                   icon: _shadowedIcon(Icons.close, color: Color.fromARGB(255, 37, 6, 6), size: 25),
-                  onPressed: () async {},
+                  onPressed: () async {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const MyScaffold()),
+                    );
+                  },
                 ),
           
           Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               ElevatedButton.icon(
                 onPressed: isSelecting ? _handlePostBulk : null,
                 icon: const Icon(Icons.upload, size: 18),
                 label: Text('Post (${_selectedIds.length})'),
-                style: ElevatedButton.styleFrom(backgroundColor: Color.fromARGB(255, 250, 132, 154), foregroundColor: Colors.white,),
+                style: ElevatedButton.styleFrom(backgroundColor: Color.fromARGB(255, 250, 132, 154), 
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               ElevatedButton.icon(
                 onPressed: isSelecting ? _handleDeleteBulk : null,
                 icon: const Icon(Icons.delete_forever, size: 18),
                 label: Text('Delete (${_selectedIds.length})'),
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.red[700], foregroundColor: Colors.white,),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red[700], 
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),),
               ),
             ],
           ),

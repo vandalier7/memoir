@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'map_body.dart';
+import 'objects/map_buttons.dart';
+import 'objects/search_bar.dart';
+import 'objects/memory.dart';
+import 'objects/memory_card.dart';
 
 class MyScaffold extends StatefulWidget {
   const MyScaffold({super.key});
@@ -9,8 +13,30 @@ class MyScaffold extends StatefulWidget {
 }
 
 class MyState extends State<MyScaffold> {
+  MemoryData? activeMemory;
+  bool isClosing = false;
+
+
   final _textFocusNode = FocusNode();
 
+  void showMemory(MemoryData memory) {
+    setState(() {
+      activeMemory = memory;
+      isClosing = false;
+    });
+  }
+
+  void closeMemory() {
+    setState(() {
+    isClosing = true;
+    });
+  }
+
+  void setMemoryInactive() {
+    setState(() {
+      activeMemory = null;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +67,10 @@ class MyState extends State<MyScaffold> {
       resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
-          MapBody()
+          MapBody(
+            propagateMemory: showMemory,
+            closeMemory: closeMemory
+          )
           ,       
           IgnorePointer( // so touches go to the map
       child: Container(
@@ -60,6 +89,8 @@ class MyState extends State<MyScaffold> {
         ),
       ),
     ),
+          const SearchBarWidget(),
+          const MapButtons(),
           Container(
             margin: EdgeInsets.fromLTRB(10, 40, 10, 0),
             child: TextField(
@@ -82,9 +113,17 @@ class MyState extends State<MyScaffold> {
               )
               
             )),
+            if (activeMemory != null)
+              MemoryCard(
+                description: "Lorem ipsum dolor sit amet.",
+                addressString: activeMemory!.addressString,
+                borderColor: const Color.fromARGB(255, 219, 198, 9),
+                borderWidth: 2,
+                onClose: () => setMemoryInactive(),
+                isClosing: isClosing,
+              ),
         ],
       )
-      
       
     ,
     )
