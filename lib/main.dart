@@ -19,6 +19,7 @@ import 'screens/bin_screen.dart';
 void main() async {
 
   WidgetsFlutterBinding.ensureInitialized();
+  pixelRatio = WidgetsBinding.instance.platformDispatcher.views.first.devicePixelRatio;
 
   // Initialize Firebase before the app runs
   await Firebase.initializeApp(
@@ -42,7 +43,7 @@ class Root extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    pixelRatio = MediaQuery.of(context).devicePixelRatio;
+    // pixelRatio = MediaQuery.of(context).devicePixelRatio;
     return MaterialApp(
       theme: ThemeData(
         colorScheme: memoirTheme

@@ -53,7 +53,7 @@ class SearchBarWidget extends StatelessWidget {
                     // You can navigate to profile or settings page here
                   },
                   child: Padding(
-                    padding: const EdgeInsets.only(right: 10),
+                    padding: const EdgeInsets.only(right: 7),
                     child: CircleAvatar(
                       radius: 18,
                       backgroundColor: memoirTheme.primary.withOpacity(0.8),

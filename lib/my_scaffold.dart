@@ -89,30 +89,9 @@ class MyState extends State<MyScaffold> {
         ),
       ),
     ),
-          const SearchBarWidget(),
+          SearchBarWidget(focusNode: _textFocusNode),
           const MapButtons(),
-          Container(
-            margin: EdgeInsets.fromLTRB(10, 40, 10, 0),
-            child: TextField(
-              focusNode: _textFocusNode,
-              decoration: InputDecoration(
-                hintText: "Search",
-                hintStyle: TextStyle(
-                  color: Colors.grey
-                ),
-                filled: true,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(100),
-                  borderSide: BorderSide.none
-                ),
-                suffixIcon: Container(
-                  child: CircleAvatar(),
-                  margin: EdgeInsets.fromLTRB(0, 0, 12, 0),
-                ),
-                fillColor: Colors.white
-              )
-              
-            )),
+
             if (activeMemory != null)
               MemoryCard(
                 description: "Lorem ipsum dolor sit amet.",
