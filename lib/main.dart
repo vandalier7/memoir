@@ -1,41 +1,60 @@
 import 'package:flutter/material.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
-import 'my_scaffold.dart';
-import 'map_body.dart';
-import 'screens/sign_in.dart';
+import 'package:presentation/camera_ui/preview_screen.dart';
 import 'app_theme.dart';
 
-import './objects/map_buttons.dart';
+
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart' as fbauth;
-import 'firebase_options.dart'; 
-import 'processes/locator.dart';
+import 'firebase_options.dart';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'my_scaffold.dart';
 import 'processes/auth.dart';
+
+import 'screens/sign_in.dart';
+
+import 'package:camera/camera.dart';
+import 'package:firebase_auth/firebase_auth.dart' as fbauth;
 
 import 'objects/globals.dart';
 
 import 'screens/bin_screen.dart';
-void main() async {
+import 'camera_ui/camera_screen.dart';
+import 'camera_ui/journal_screen.dart';
 
+
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   pixelRatio = WidgetsBinding.instance.platformDispatcher.views.first.devicePixelRatio;
 
-  // Initialize Firebase before the app runs
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  try {
+    // Initialize Firebase before the app runs
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    print('✅ Firebase initialized successfully');
 
-  await Supabase.initialize(
-    url: 'https://drnpxydotpjbxigrnlli.supabase.co', 
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRybnB4eWRvdHBqYnhpZ3JubGxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE2NjcwOTMsImV4cCI6MjA3NzI0MzA5M30.jMuA5DoAbWz-WCfcyqg6ndPy1pkxMUXOutj3UbGTptg',
-  );
+    // Initialize Supabase with error handling
+    await Supabase.initialize(
+      url: 'https://drnpxydotpjbxigrnlli.supabase.co', 
+      anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRybnB4eWRvdHBqYnhpZ3JubGxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE2NjcwOTMsImV4cCI6MjA3NzI0MzA5M30.jMuA5DoAbWz-WCfcyqg6ndPy1pkxMUXOutj3UbGTptg',
+    );
+    print('✅ Supabase initialized successfully');
 
-  loginUser("a@test.com", "1234Test");
+    // Get available cameras
+    cameras = await availableCameras();
+    print('✅ Cameras initialized: ${cameras.length} camera(s) found');
 
+    
+
+  } catch (e) {
+    print('❌ Initialization error: $e');
+    // You might want to show an error screen here instead of continuing
+  }
 
   MapLibreMap.useHybridComposition = true;
-  runApp(Root());
+  runApp(const Root());
 }
 
 class Root extends StatelessWidget {
@@ -45,17 +64,37 @@ class Root extends StatelessWidget {
   Widget build(BuildContext context) {
     // pixelRatio = MediaQuery.of(context).devicePixelRatio;
     return MaterialApp(
-      theme: ThemeData(
-        colorScheme: memoirTheme
-      ),
+      theme: ThemeData(colorScheme: memoirTheme),
       debugShowCheckedModeBanner: false,
       title: "Memoir",
       // Directly show the main map screen wrapper (MyScaffold)
-      home: MyScaffold(), 
+      home: SignInCard(), 
+      // 🔗 Routes for navigation
+      routes: {
+        '/map': (context) => const MyScaffold(),
+        '/journal': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments;
+          if (args is String) {
+            // ✅ Pass the imagePath and cameras to JournalScreen
+            return JournalScreen(imagePath: args, cameras: cameras);
+          } else {
+            // 🛠 Fallback (in case no image was passed)
+            return JournalScreen(imagePath: '', cameras: cameras);
+          }
+        },
+        '/bin': (context) => const BinScreen(),
+        '/camera': (context) => CameraScreen(cameras: cameras,),
+        '/preview': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments;
+          if (true) {
+            // ✅ Pass the imagePath and cameras to JournalScreen
+            return PreviewScreen(imagePath: args.toString());
+          }
+        }
+      },
     );
   }
 }
-
 
 class FirebaseCheckScreen extends StatelessWidget {
   const FirebaseCheckScreen({super.key});

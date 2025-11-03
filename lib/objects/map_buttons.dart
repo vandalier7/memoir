@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import './circle_button.dart';
 import '../app_theme.dart'; // path to your memoirTheme
 import '../screens/bin_screen.dart';
+import 'package:presentation/camera_ui/camera_screen.dart';
+import 'globals.dart';
 
 class MapButtons extends StatelessWidget {
   const MapButtons({super.key});
@@ -20,7 +22,9 @@ class MapButtons extends StatelessWidget {
             child: InkWell(
               customBorder: const CircleBorder(),
               splashColor: const Color(0xFFF75270).withOpacity(0.3),
-              onTap: () => debugPrint('Camera tapped'),
+              onTap: () {
+                Navigator.pushNamed(context, '/camera');
+              },
               child: AnimatedScale(
                 duration: const Duration(milliseconds: 120),
                 scale: 1.0,
@@ -65,10 +69,7 @@ class MapButtons extends StatelessWidget {
           right: 22,
           child: CircleButton(
             onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const BinScreen()),
-              );
+              Navigator.pushNamed(context, '/bin');
             },
             icon: Icons.history_toggle_off_outlined,
             bgColor: memoirTheme.surface,

@@ -188,10 +188,7 @@ class _BinScreenState extends State<BinScreen> {
               : IconButton( 
                   icon: _shadowedIcon(Icons.close, color: Color.fromARGB(255, 37, 6, 6), size: 25),
                   onPressed: () async {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const MyScaffold()),
-                    );
+                    Navigator.pop(context);
                   },
                 ),
           

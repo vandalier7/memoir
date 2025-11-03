@@ -14,16 +14,12 @@ const ColorScheme memoirTheme = ColorScheme(
   onTertiary: Colors.white,          // white text for contrast
 
   error: Color(0xFFDC143C),          // crimson red
-  onError: Colors.white,             // white text on red
-
-  // 🧱 Backgrounds & surfaces
-  background: Color(0xFFFFF8F5),     // warm off-white beige
-  onBackground: Color(0xFF2E1F1C),   // deep brown-gray text
+  onError: Colors.white,   // deep brown-gray text
 
   surface: Color(0xFFFFF1EE),        // card/panel tone
   onSurface: Color(0xFF2E1F1C),      // readable dark text
 
-  surfaceVariant: Color(0xFFFBE4E2), // subtle pinkish variant
+  surfaceContainerHighest: Color(0xFFFBE4E2), // subtle pinkish variant
   onSurfaceVariant: Color(0xFF5E4A45),
 
   // 🪞 Support tones

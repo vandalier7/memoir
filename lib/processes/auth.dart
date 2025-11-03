@@ -38,6 +38,6 @@ Future<void> loginUser(String email, String password) async {
     );
     debugPrint('✅ Logged in successfully');
   } on FirebaseAuthException catch (e) {
-    debugPrint('❌ Login error: ${e.message}and${email}and${password}');
+    debugPrint('❌ Login error: ${e.message}and${email}and$password');
   }
 }
