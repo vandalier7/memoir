@@ -1,379 +1,487 @@
-  import 'dart:math';
+import 'dart:math';
 
-  import 'package:flutter/material.dart';
-  import 'package:maplibre_gl/maplibre_gl.dart';
-  import 'package:geolocator/geolocator.dart';
-  import 'objects/pin.dart';
-  import 'objects/memory.dart';
-  import 'objects/memory_preview.dart';
+import 'package:flutter/material.dart';
+import 'package:maplibre_gl/maplibre_gl.dart';
+import 'package:geolocator/geolocator.dart';
+import 'objects/pin.dart';
+import 'objects/memory.dart';
+import 'objects/memory_preview.dart';
 
-  import 'objects/globals.dart';
+import 'objects/globals.dart';
 
-  import 'processes/location_iq.dart';
+import 'processes/location_iq.dart';
 
+class MapBody extends StatefulWidget {
+  final void Function(MemoryData) propagateMemory;
+  final void Function() closeMemory;
 
+  const MapBody({super.key, required this.propagateMemory, required this.closeMemory});
 
-  class MapBody extends StatefulWidget {
-    final void Function(MemoryData) propagateMemory;
-    final void Function() closeMemory;
+  @override
+  State<MapBody> createState() => MapState();
+}
 
-    const MapBody({super.key, required this.propagateMemory, required this.closeMemory});
+class MapState extends State<MapBody> {
+  LatLng currentPosition = LatLng(14.5995, 120.9842);
+  String? currentAddress = "...";
+  late MapLibreMapController mapController;
+  Point? screenPoint;
+  bool isHoldingMap = false;
+  bool considerTapAsDouble = false;
+  bool isAnimatingToMemory = false;
 
-    @override
-    State<MapBody> createState() => MapState();
+  List<MemoryData>? activeMemories;
+
+  double mapZoom = 16;
+
+  List<MemoryData> memories = [];
+
+  final locIQ = LocationIQService('pk.2e56aa59169aa53b63093b78aff0e291');
+  final Random _random = Random();
+
+  double pinAlpha = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    _getLocation();
   }
 
-  class MapState extends State<MapBody> {
-    LatLng currentPosition = LatLng(14.5995, 120.9842);
-    String? currentAddress = "...";
-    late MapLibreMapController mapController;
-    Point? screenPoint;
-    bool isHoldingMap = false;
-    bool considerTapAsDouble = false;
-    bool isAnimatingToMemory = false; // Flag to prevent closing preview during animation
+  void showMemories(List<MemoryData> memoriesToShow) {
+    setState(() {
+      widget.closeMemory();
+      activeMemories = memoriesToShow;
+      isAnimatingToMemory = true;
+    });
+  }
 
-    MemoryData? activeMemory; // Track which memory is showing preview
+  void closePreview() {
+    setState(() {
+      activeMemories = null;
+    });
+  }
 
-    double mapZoom = 16;
+  Future<void> waitForDoubleTap() async {
+    considerTapAsDouble = true;
+    await Future.delayed(const Duration(milliseconds: 300));
+    considerTapAsDouble = false;
+  }
 
-    List<MemoryData> memories = [];
+  Future<void> _getLocation() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) return;
 
-    final locIQ = LocationIQService('pk.2e56aa59169aa53b63093b78aff0e291'); 
-
-    double pinAlpha = 1;
-
-    @override
-    void initState() {
-      super.initState();
-      _getLocation();
+    LocationPermission permission = await Geolocator.requestPermission();
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      return;
     }
 
-    void showMemory(MemoryData memory) {
-      setState(() {
-        widget.closeMemory();
-        activeMemory = memory;
-        isAnimatingToMemory = true; // Set flag when showing memory
-      });
-    }
+    Position pos = await Geolocator.getCurrentPosition(
+        locationSettings: AndroidSettings(accuracy: LocationAccuracy.high));
 
-    void closePreview() {
-      setState(() {
-        activeMemory = null;
-      });
-    }
+    setState(() {
+      currentPosition = LatLng(pos.latitude, pos.longitude);
+    });
 
-    Future<void> waitForDoubleTap() async {
-      considerTapAsDouble = true;
-      await Future.delayed(const Duration(milliseconds: 300));
-      considerTapAsDouble = false;
-    }
+    mapController.animateCamera(
+      CameraUpdate.newLatLng(
+        LatLng(pos.latitude, pos.longitude),
+      ),
+    );
+  }
 
-    Future<void> _getLocation() async {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) return;
+  Future<void> animateCameraWithOffset({
+    required LatLng target,
+    double xOffsetPixels = 0,
+    double yOffsetPixels = 200,
+    int durationMs = 700,
+    bool showPreviewAfter = false
+  }) async {
+    final currentCameraPos = await mapController.queryCameraPosition();
+    if (currentCameraPos == null) return;
 
-      LocationPermission permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        return;
-      }
+    final targetScreen = await mapController.toScreenLocation(target);
 
-      Position pos = await Geolocator.getCurrentPosition(
-        locationSettings: AndroidSettings(accuracy: LocationAccuracy.high)
-      );
+    final offsetScreenX = targetScreen.x + (xOffsetPixels * pixelRatio!);
+    final offsetScreenY = targetScreen.y + (yOffsetPixels * pixelRatio!);
 
-      setState(() {
-        currentPosition = LatLng(pos.latitude, pos.longitude);
-      });
+    final offsetLatLng = await mapController
+        .toLatLng(Point(offsetScreenX.toDouble(), offsetScreenY.toDouble()));
+    updateMapHold(true);
+    isAnimatingToMemory = showPreviewAfter;
 
-      mapController.animateCamera(
-        CameraUpdate.newLatLng(
-          LatLng(pos.latitude, pos.longitude),
-        ),
-      );
-    }
+    await mapController.animateCamera(
+        CameraUpdate.newLatLng(offsetLatLng),
+        duration: Duration(milliseconds: durationMs));
+  }
 
-    Future<void> animateCameraWithOffset({
-      required LatLng target,
-      double xOffsetPixels = 0,
-      double yOffsetPixels = 200,
-      int durationMs = 700,
-      bool showPreviewAfter = false
-    }) async {
-      // Get current camera position to maintain zoom
-      final currentCameraPos = await mapController.queryCameraPosition();
-      if (currentCameraPos == null) return;
-      
-      // Convert target to screen coordinates
-      final targetScreen = await mapController.toScreenLocation(target);
-      
-      // Apply offset in screen space
-      final offsetScreenX = targetScreen.x + (xOffsetPixels * pixelRatio!);
-      final offsetScreenY = targetScreen.y + (yOffsetPixels * pixelRatio!);
-      
-      // Convert back to LatLng
-      final offsetLatLng = await mapController.toLatLng(Point(offsetScreenX.toDouble(), offsetScreenY.toDouble()));
-      updateMapHold(true);
-      isAnimatingToMemory = showPreviewAfter;
-      // Animate to the offset position
-      await mapController.animateCamera(
-        CameraUpdate.newLatLng(
-          offsetLatLng
-        ),
-        duration: Duration(milliseconds: durationMs)
-      );
-    }
+  void updateMapHold(bool value) {
+    setState(() {
+      isHoldingMap = value;
+    });
+  }
 
-    void updateMapHold(bool value) {
-      setState(() {
-        isHoldingMap = value;
-      });
-      // print(value);
-    }
+  Future<void> updateLocation() async {
+    var pos = await getUserLocation();
+    currentPosition = LatLng(pos!.latitude, pos.longitude);
 
-    Future<void> updateLocation() async {
-      
-      var pos = await getUserLocation();
-      currentPosition = LatLng(pos!.latitude, pos.longitude);
-      
-      _updateScreenPoint();
-      _updateAddress();
-    }
+    _updateScreenPoint();
+    _updateAddress();
+  }
 
-    Future<void> _updateAddress() async {
-      final info = await getAddressFromLocation(currentPosition, locIQ);
-      debugPrint(info);
+  Future<void> _updateAddress() async {
+    final info = await getAddressFromLocation(currentPosition, locIQ);
+    debugPrint(info);
 
-      setState(() {
-        currentAddress = info;
-      });
-    }
+    setState(() {
+      currentAddress = info;
+    });
+  }
 
-    void updateZoom(double value) {
-      setState(() {
-        mapZoom = value;
-      });
-    }
+  void updateZoom(double value) {
+    setState(() {
+      mapZoom = value;
+    });
+  }
 
-    Future<void> _updateScreenPoint() async {
-      final point = await mapController.toScreenLocation(currentPosition);
-      setState(() {
-        screenPoint = point;
-        updateMapHold(false);
-      });
-      // print(screenPoint);
-    }
+  Future<void> _updateScreenPoint() async {
+    final point = await mapController.toScreenLocation(currentPosition);
+    setState(() {
+      screenPoint = point;
+      updateMapHold(false);
+    });
+  }
 
-    void _addMemory(LatLng position) async {
-      final info = await getAddressFromLocation(position, locIQ);
-      setState(() {
-        memories.add(MemoryData(
+  void _addMemory(LatLng position) async {
+    final info = await getAddressFromLocation(position, locIQ);
+    setState(() {
+      memories.add(MemoryData(
           position: position,
           addressString: info,
           mood: Mood.happy,
-          decay: mapZoom
+          decay: mapZoom));
+    });
+    updateMapHold(false);
+  }
+
+  void _addMultipleMemories(LatLng position) async {
+    final info = await getAddressFromLocation(position, locIQ);
+    final count = _random.nextInt(5) + 1;
+    
+    final List<String> addressSuffixes = [
+      "First visit",
+      "Great times",
+      "Another day",
+      "Special moment",
+      "Passing by",
+      "Memorable day",
+      "Quick stop",
+      "Long stay"
+    ];
+
+    setState(() {
+      for (int i = 0; i < count; i++) {
+        final randomMood = _random.nextBool() ? Mood.happy : Mood.sad;
+        final suffix = addressSuffixes[_random.nextInt(addressSuffixes.length)];
+        
+        memories.add(MemoryData(
+          position: position,
+          addressString: "$info - $suffix",
+          mood: randomMood,
+          decay: mapZoom,
+          imageUrl: null,
         ));
-      });
-      updateMapHold(false);
+      }
+    });
+    updateMapHold(false);
+  }
 
-    }
+  @override
+  Widget build(BuildContext context) {
+    final groupedMemories = groupMemoriesByPosition(memories);
+    return Stack(children: [
+      Listener(
+        behavior: HitTestBehavior.translucent,
+        onPointerDown: (event) {
+          updateMapHold(!isHoldingMap);
+          if (!considerTapAsDouble) {
+            waitForDoubleTap();
+          } else {
+            updateMapHold(true);
+          }
+        },
+        onPointerMove: (event) {
+          if (event.delta.distance > 1) {
+            updateMapHold(true);
+            isAnimatingToMemory = false;
+          }
+        },
+        child: MapLibreMap(
+          compassEnabled: false,
+          rotateGesturesEnabled: false,
+          styleString:
+              "https://api.maptiler.com/maps/dataviz/style.json?key=gyEpeYKGmrox3x3xvhNk",
+          onMapCreated: (controller) async {
+            mapController = controller;
 
-    @override
-    Widget build(BuildContext context) {
-      return Stack(
-        children: [
-          
-          Listener(
-            behavior: HitTestBehavior.translucent,
-            onPointerDown: (event) {
-              updateMapHold(!isHoldingMap);
-              if (!considerTapAsDouble) {
-                waitForDoubleTap();
-              }
-              else {
-                updateMapHold(true);
-              }
-            },
-            onPointerMove: (event) {
-              if (event.delta.distance > 1) {
-                updateMapHold(true);
-                isAnimatingToMemory = false;
-              }
-            },
-
-            
-            
-            child: MapLibreMap(
-              compassEnabled: false,
-              rotateGesturesEnabled: false,
-              
-              styleString: "https://api.maptiler.com/maps/dataviz/style.json?key=gyEpeYKGmrox3x3xvhNk",
-              onMapCreated: (controller) async {
-                mapController = controller;
-
-                await updateLocation();
-              },
-              onCameraIdle: () async {
-                _updateScreenPoint();
-                updateMapHold(false);
-                var pos = await mapController.queryCameraPosition();
-                updateZoom(pos!.zoom);
-                // Only close preview if not animating to a memory
-                if (!isAnimatingToMemory) {
-                  closePreview();
-                } else {
-                  // Reset flag after animation completes
-                  isAnimatingToMemory = false;
-                }
-                debugPrint("$pixelRatio");
-              },
-
-              onCameraTrackingChanged: (mode) => updateMapHold(true),
-
-              
-
-              onCameraMove: (pos) {
-                updateMapHold(true);
-
-              },
-              onMapLongClick: (point, latLng) {
-                // currentPosition = latLng;
-                // await _updateAddress();
-                // _updateScreenPoint();
-                _addMemory(latLng);
-              },
-              initialCameraPosition: CameraPosition(
-                target: LatLng(14.5995, 120.9842), // Manila
-                zoom: 16.0,
-              ),
-            ),
+            await updateLocation();
+          },
+          onCameraIdle: () async {
+            _updateScreenPoint();
+            updateMapHold(false);
+            var pos = await mapController.queryCameraPosition();
+            updateZoom(pos!.zoom);
+            if (!isAnimatingToMemory) {
+              closePreview();
+            } else {
+              isAnimatingToMemory = false;
+            }
+            debugPrint("$pixelRatio");
+          },
+          onCameraTrackingChanged: (mode) => updateMapHold(true),
+          onCameraMove: (pos) {
+            updateMapHold(true);
+          },
+          onMapLongClick: (point, latLng) {
+            _addMultipleMemories(latLng);
+          },
+          initialCameraPosition: CameraPosition(
+            target: LatLng(14.5995, 120.9842),
+            zoom: 16.0,
           ),
+        ),
+      ),
+
+      // Render grouped memory pins
+      for (final entry in groupedMemories.entries)
+        MemoryPin.ofMemories(
+          entry.value,
+          entry.key,
+          mapController,
+          isHoldingMap,
+          updateMapHold,
+          decay: entry.value.first.decay,
+          mapZoom: mapZoom,
+          showPreview: false,
+          onShowMemories: showMemories,
+          onClosePreview: closePreview,
+          onLongPress: (newMemories) {
+            animateCameraWithOffset(
+              target: entry.key,
+              showPreviewAfter: true,
+              yOffsetPixels: 0,
+            );
+          },
+        ),
+
+      if (screenPoint != null)
+        Positioned(
+          // TODO : pin centerin here
+          left: screenPoint!.x / pixelRatio - 27,
+          top: screenPoint!.y / pixelRatio - 67,
+          child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: () async {
+                updateMapHold(true);
+                closePreview();
+                await mapController.animateCamera(
+                    CameraUpdate.newLatLngZoom(
+                      LatLng(currentPosition.latitude, currentPosition.longitude),
+                      14,
+                    ),
+                    duration: Duration(milliseconds: 1000));
+              },
+              child: IgnorePointer(
+                ignoring: true,
+                child: AnimatedOpacity(
+                  opacity: isHoldingMap ? 0.0 : 1.0,
+                  duration: Duration(milliseconds: 100),
+                  child: UserPin(
+                    color: Colors.purple.shade300,
+                    addressString: currentAddress!,
+                  ),
+                ),
+              )),
+        ),
+
+      // Render active memories previews with hexagonal arrangement
+      if (activeMemories != null && activeMemories!.isNotEmpty)
+        FutureBuilder<Point>(
+          future: mapController.toScreenLocation(activeMemories!.first.position),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) return const SizedBox.shrink();
+
+            final screenPoint = snapshot.data!;
+            final previewWidth = 100.0;
+            final previewHeight = 108.0;
+            final scaleFactor = 0.75;
+            final scaledWidth = previewWidth * scaleFactor;
+            final scaledHeight = previewHeight * scaleFactor;
             
-              for (final memory in memories)
-              MemoryPin(
-                position: memory.position,
-                addressString: memory.addressString,
-                decay: memory.decay,
-                mapController: mapController,
-                isHoldingMap: isHoldingMap,
-                mood: memory.mood,
-                imageUrl: memory.imageUrl,
-                holdingCallback: updateMapHold,
-                mapZoom: mapZoom,
-                showPreview: false, // Don't show preview in pin itself
-                onShowMemory: showMemory,
-                onClosePreview: closePreview,
-                onLongPress: () {
-                  animateCameraWithOffset(
-                    target: memory.position,
-                    showPreviewAfter: true,
-                    yOffsetPixels: 0
-                    );
-                },
-              ),
-              if (screenPoint != null) 
-              Positioned(
-                left: screenPoint!.x/pixelRatio! - 75, // adjust to center icon
-                top: screenPoint!.y/pixelRatio! - 50,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.translucent,
-                  onTap: () async {
-                    updateMapHold(true);
-                    closePreview();
-                    await mapController.animateCamera(
-                      CameraUpdate.newLatLngZoom(
-                        LatLng(currentPosition.latitude, currentPosition.longitude),
-                        14
-                      ),
-                      duration: Duration(milliseconds: 1000)
-                    );
-                  },
-                  child: IgnorePointer(
-                    ignoring: true,
-                    child: AnimatedOpacity(
-                      opacity: isHoldingMap ? 0.0 : 1.0, 
-                      duration: Duration(milliseconds: 100),
-                      child: UserPin(
-                        color: Colors.purple.shade300,
-                        addressString: currentAddress!,
+            // TODO : preview centering here
+            final pinCenterX = screenPoint.x / pixelRatio - 12;
+            final pinCenterY = screenPoint.y / pixelRatio - 40;
+            
+            // Take only first 6 memories
+            final displayMemories = activeMemories!.take(6).toList();
+            
+            return Stack(
+              children: displayMemories.asMap().entries.map((entry) {
+                final index = entry.key;
+                final memory = entry.value;
+                
+                // Hexagonal arrangement positions
+                final radius = 90.0;
+                double dx = 0;
+                double dy = 0;
+                
+                if (displayMemories.length == 1) {
+                  dx = 0;
+                  dy = -radius;
+                } else if (displayMemories.length == 2) {
+                  dx = 0;
+                  dy = index == 0 ? -radius : radius;
+                } else if (displayMemories.length == 3) {
+                  if (index == 0) {
+                    dx = 0;
+                    dy = -radius;
+                  } else if (index == 1) {
+                    dx = -radius * 0.866;
+                    dy = radius * 0.5;
+                  } else {
+                    dx = radius * 0.866;
+                    dy = radius * 0.5;
+                  }
+                } else if (displayMemories.length == 4) {
+                  if (index == 0) {
+                    dx = 0;
+                    dy = -radius;
+                  } else if (index == 1) {
+                    dx = -radius * 0.866;
+                    dy = 0;
+                  } else if (index == 2) {
+                    dx = radius * 0.866;
+                    dy = 0;
+                  } else {
+                    dx = 0;
+                    dy = radius;
+                  }
+                } else if (displayMemories.length == 5) {
+                  final angles = [-90, -18, 54, 126, 198];
+                  final angleRad = angles[index] * (pi / 180);
+                  dx = radius * cos(angleRad);
+                  dy = radius * sin(angleRad);
+                } else {
+                  final angle = (index * 60 - 90) * (pi / 180);
+                  dx = radius * cos(angle);
+                  dy = radius * sin(angle);
+                }
+                
+                // Calculate final position, centering preview on its point
+                final finalX = pinCenterX + dx - (scaledWidth / 2);
+                final finalY = pinCenterY + dy - (scaledHeight / 2);
+                
+                return Positioned(
+                  left: finalX,
+                  top: finalY,
+                  child: AnimatedOpacity(
+                    opacity: !isHoldingMap ? 1.0 : 0.0,
+                    duration: Duration(milliseconds: 100),
+                    child: Transform.scale(
+                      scale: scaleFactor,
+                      child: GestureDetector(
+                        onTap: () async {
+                          updateMapHold(true);
+                          widget.propagateMemory(memory);
+                          await animateCameraWithOffset(
+                            target: memory.position,
+                          );
+                        },
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            MemoryPreview(
+                              addressString: memory.addressString,
+                              mood: memory.mood,
+                              imageUrl: memory.imageUrl,
+                              onClose: closePreview,
+                            ),
+                            // Mood indicator dot
+                            Positioned(
+                              top: -4,
+                              left: -4,
+                              child: Container(
+                                width: 16,
+                                height: 16,
+                                decoration: BoxDecoration(
+                                  color: memory.mood == Mood.happy
+                                      ? Colors.yellow
+                                      : Colors.blue,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 2,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.2),
+                                      blurRadius: 3,
+                                      offset: const Offset(0, 1),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  )
-                ),
-              ),
-              
-              // Render active memory preview on top of all pins
-              if (activeMemory != null)
-                FutureBuilder<Point>(
-                  future: mapController.toScreenLocation(activeMemory!.position),
-                  builder: (context, snapshot) {
-                    if (!snapshot.hasData) return const SizedBox.shrink();
-                    
-                    final screenPoint = snapshot.data!;
-                    final previewWidth = 100.0;
-                    final pinHeight = 60.0;
-                    final previewHeight = 108.0;
-                    final totalHeight = pinHeight + previewHeight;
-                    
-                    return Positioned(
-                      left: screenPoint.x/pixelRatio! - (previewWidth / 2),
-                      top: screenPoint.y/pixelRatio! - totalHeight,
-                      child: AnimatedOpacity(
-                          opacity: !isHoldingMap ? 1.0 : 0.0,
-                          duration: Duration(milliseconds: 100),
-                          child: Padding(
-                            padding: const EdgeInsets.only(bottom: 68), // Space for pin below
-                            child: GestureDetector(
-                              onTap: () async {
-                                updateMapHold(true);
-                                widget.propagateMemory(activeMemory!);
-                                await animateCameraWithOffset(
-                                  target: activeMemory!.position,  
-                                );
-                                
-                              },
-                              child: MemoryPreview(
-                                addressString: activeMemory!.addressString,
-                                mood: activeMemory!.mood,
-                                imageUrl: activeMemory!.imageUrl,
-                                onClose: closePreview,
-                              ),
-                            )
-                          ),
-                        ),
-                    );
-                  },
-                ),
-        ]
-      );
-    }
+                  ),
+                );
+              }).toList(),
+            );
+          },
+        ),
+    ]);
+  }
+}
+
+Future<Position?> getUserLocation() async {
+  bool serviceEnabled;
+  LocationPermission permission;
+
+  serviceEnabled = await Geolocator.isLocationServiceEnabled();
+  if (!serviceEnabled) {
+    return Future.error('Location services are disabled.');
   }
 
-  Future<Position?> getUserLocation() async {
-    bool serviceEnabled;
-    LocationPermission permission;
-
-    // Check if location services are enabled
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      return Future.error('Location services are disabled.');
-    }
-
-    // Check permission
-    permission = await Geolocator.checkPermission();
+  permission = await Geolocator.checkPermission();
+  if (permission == LocationPermission.denied) {
+    permission = await Geolocator.requestPermission();
     if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        return Future.error('Location permissions are denied.');
-      }
+      return Future.error('Location permissions are denied.');
     }
-
-    if (permission == LocationPermission.deniedForever) {
-      return Future.error('Location permissions are permanently denied.');
-    }
-
-    // Get current position
-    return await Geolocator.getCurrentPosition(
-      locationSettings: AndroidSettings(accuracy: LocationAccuracy.high)
-    );
   }
+
+  if (permission == LocationPermission.deniedForever) {
+    return Future.error('Location permissions are permanently denied.');
+  }
+
+  return await Geolocator.getCurrentPosition(
+      locationSettings: AndroidSettings(accuracy: LocationAccuracy.high));
+}
+
+Map<LatLng, List<MemoryData>> groupMemoriesByPosition(List<MemoryData> memories) {
+  final Map<LatLng, List<MemoryData>> grouped = {};
+
+  for (final memory in memories) {
+    final key = memory.position;
+    if (!grouped.containsKey(key)) {
+      grouped[key] = [];
+    }
+    grouped[key]!.add(memory);
+  }
+
+  return grouped;
+}
