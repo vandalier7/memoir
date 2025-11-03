@@ -8,7 +8,8 @@ import 'package:camera/camera.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'camera_screen.dart';
+
+import 'package:presentation/processes/storage_service.dart';
 
 class JournalScreen extends StatefulWidget {
   final String imagePath;
@@ -34,6 +35,8 @@ class _JournalScreenState extends State<JournalScreen>
     Color.fromARGB(255, 245, 200, 157),
     Color.fromARGB(255, 248, 217, 174),
   ];
+
+  final StorageService storageService = StorageService(); 
 
   bool isMoodOpen = false;
   bool isJournalOpen = false;
@@ -151,37 +154,19 @@ class _JournalScreenState extends State<JournalScreen>
         throw Exception('Failed to capture image');
       }
 
+      
+
       // ===== SUPABASE PLACEHOLDER =====
       // TODO: implement Supabase Storage upload here
       // This is where the image with overlays will be uploaded to Supabase
       // Expected output: imageUrl (public URL of the uploaded image)
-      
-      String imageUrl = 'PLACEHOLDER_IMAGE_URL'; // Replace with actual Supabase URL
-      
-      // Example Supabase implementation:
-      /*
-      final supabase = Supabase.instance.client;
-      final fileName = 'memory_${DateTime.now().millisecondsSinceEpoch}.png';
-      
-      await supabase.storage
-          .from('memories')
-          .uploadBinary(fileName, imageBytes);
 
-      imageUrl = supabase.storage
-          .from('memories')
-          .getPublicUrl(fileName);
-      */
-      // ===== END SUPABASE PLACEHOLDER =====
+      
+      
+      String imageUrl = await storageService.uploadImage(imageBytes);
 
-      // 2. Get current authenticated user from Firebase Auth
-      final currentUser = FirebaseAuth.instance.currentUser;
       
-      if (currentUser == null) {
-        throw Exception('No user logged in');
-      }
-      
-      final userId = currentUser.uid;
-      final userEmail = currentUser.email ?? 'no-email';
+      final userId = storageService.currentUserId;
       
       // 3. Save metadata to Cloud Firestore
       final firestore = FirebaseFirestore.instance;
@@ -192,7 +177,6 @@ class _JournalScreenState extends State<JournalScreen>
         'description': whatsController.text.trim(),
         'tags': tags,
         'user_id': userId,
-        'user_email': userEmail,
         'created_at': FieldValue.serverTimestamp(),
       });
 
