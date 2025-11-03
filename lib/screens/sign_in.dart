@@ -70,6 +70,14 @@ class SignInState extends State<SignIn> with SingleTickerProviderStateMixin{
 
   final _logInEmailController = TextEditingController();
   final _logInPasswordController = TextEditingController();
+  
+  bool _isLoading = false;
+  
+  void _setLoading(bool loading) {
+    setState(() {
+      _isLoading = loading;
+    });
+  }
 
   @override
   void initState() {
@@ -129,20 +137,23 @@ class SignInState extends State<SignIn> with SingleTickerProviderStateMixin{
               Container(
                 padding: EdgeInsets.only(top: 20, left: 40, right: 40, bottom: 20),
                 height: 70,
-                child: TabBar(
-                      controller: _tabController,
-                        indicator: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary,
-                          borderRadius: BorderRadius.circular(40),
-                          
-                        ),
-                  indicatorSize: TabBarIndicatorSize.tab,
-                  labelColor: Theme.of(context).colorScheme.tertiary,
-                  unselectedLabelColor: Theme.of(context).colorScheme.onSurface,
-                  dividerColor: Colors.transparent,
-                  tabs: [
-                    Tab(text: "Log In"), Tab(text: "Sign Up")
-                  ],
+                child: IgnorePointer(
+                  ignoring: _isLoading,
+                  child: TabBar(
+                        controller: _tabController,
+                          indicator: BoxDecoration(
+                            color: Theme.of(context).colorScheme.primary,
+                            borderRadius: BorderRadius.circular(40),
+                            
+                          ),
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    labelColor: Theme.of(context).colorScheme.tertiary,
+                    unselectedLabelColor: Theme.of(context).colorScheme.onSurface,
+                    dividerColor: Colors.transparent,
+                    tabs: [
+                      Tab(text: "Log In"), Tab(text: "Sign Up")
+                    ],
+                  ),
                 ),
               )  ,
             ],
@@ -150,9 +161,21 @@ class SignInState extends State<SignIn> with SingleTickerProviderStateMixin{
           Expanded(child: 
             TabBarView(
               controller: _tabController,
+              physics: _isLoading ? NeverScrollableScrollPhysics() : null,
               children: [
-              LogIn(formKey: _logInKey, emailController: _logInEmailController, passwordController: _logInPasswordController,),
-              SignUp(formKey: _signUpKey, usernameController: _signUpUsernameController, emailController: _signUpEmailController, passwordController: _signUpPasswordController,),
+              LogIn(
+                formKey: _logInKey, 
+                emailController: _logInEmailController, 
+                passwordController: _logInPasswordController,
+                onLoadingChanged: _setLoading,
+              ),
+              SignUp(
+                formKey: _signUpKey, 
+                usernameController: _signUpUsernameController, 
+                emailController: _signUpEmailController, 
+                passwordController: _signUpPasswordController,
+                onLoadingChanged: _setLoading,
+              ),
             ])
           )
         ],
@@ -161,18 +184,31 @@ class SignInState extends State<SignIn> with SingleTickerProviderStateMixin{
   }
 }
 
-class LogIn extends StatelessWidget {
+class LogIn extends StatefulWidget {
   final GlobalKey<FormState> formKey;
   final TextEditingController emailController;
   final TextEditingController passwordController;
+  final ValueChanged<bool> onLoadingChanged;
 
-  const LogIn({super.key, required this.formKey, required this.emailController, required this.passwordController});
+  const LogIn({
+    super.key, 
+    required this.formKey, 
+    required this.emailController, 
+    required this.passwordController,
+    required this.onLoadingChanged,
+  });
 
+  @override
+  State<LogIn> createState() => _LogInState();
+}
+
+class _LogInState extends State<LogIn> {
+  bool _isLoading = false;
 
   @override
   Widget build(BuildContext context) {
     return Form(
-      key: formKey,
+      key: widget.formKey,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -187,12 +223,12 @@ class LogIn extends StatelessWidget {
             child: SizedBox(
               height: 55,
               child: TextFormField(
-                controller: emailController,
+                controller: widget.emailController,
+                enabled: !_isLoading,
                 style: TextStyle(
                     fontSize: 14
                 ),
                 validator: (value) => validateEmail(value),
-                // forceErrorText: "Test error",
                 
                 decoration: InputDecoration(
                   errorStyle: TextStyle(fontSize: 10),
@@ -223,16 +259,6 @@ class LogIn extends StatelessWidget {
                     borderRadius: BorderRadius.circular(5),
                     borderSide: BorderSide(strokeAlign: BorderSide.strokeAlignOutside, color: Colors.black54),
                   ),
-                  // errorBorder: OutlineInputBorder(
-                  //   borderRadius: BorderRadius.circular(5),
-                  //   borderSide: BorderSide.none,
-                  // ),
-                  // focusedErrorBorder: OutlineInputBorder(
-                  //   borderRadius: BorderRadius.circular(5),
-                  //   borderSide: BorderSide.none,
-                  // ),
-
-                  
                 ),
               ),
             )
@@ -246,7 +272,8 @@ class LogIn extends StatelessWidget {
             child: SizedBox(
               height: 55,
               child: TextFormField(
-                controller: passwordController,
+                controller: widget.passwordController,
+                enabled: !_isLoading,
                 validator:(value) => validatePassword(value),
                 obscureText: true,
                 style: TextStyle(
@@ -281,8 +308,6 @@ class LogIn extends StatelessWidget {
                     borderRadius: BorderRadius.circular(5),
                     borderSide: BorderSide(strokeAlign: BorderSide.strokeAlignOutside, color: Colors.black54),
                   ),
-
-                  
                 ),
               ),
             )
@@ -296,13 +321,16 @@ class LogIn extends StatelessWidget {
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
-                  gradient: const LinearGradient(
-                    colors: [
-                      Color(0xFFF75270), // deep pink
-                      Color.fromARGB(255, 250, 132, 154), // deep pink
-                      Color.fromARGB(255, 252, 165, 181), // deep pink
-                      Color.fromARGB(255, 245, 200, 157), // beige tint
-                      Color.fromARGB(255, 248, 217, 174), // beige tint
+                  gradient: LinearGradient(
+                    colors: _isLoading ? [
+                      Colors.grey.shade400,
+                      Colors.grey.shade400,
+                    ] : const [
+                      Color(0xFFF75270),
+                      Color.fromARGB(255, 250, 132, 154),
+                      Color.fromARGB(255, 252, 165, 181),
+                      Color.fromARGB(255, 245, 200, 157),
+                      Color.fromARGB(255, 248, 217, 174),
                     ],
                     begin: Alignment.bottomLeft,
                     end: Alignment.topRight,
@@ -316,35 +344,60 @@ class LogIn extends StatelessWidget {
                   ],
                 ),
                 child: ElevatedButton(
-                  onPressed: () async {
-                    if (formKey.currentState!.validate()) {
-                      await loginUser(
-                        emailController.text.trim(),
-                        passwordController.text.trim()
-                      );
-                      if (!context.mounted) return;
+                  onPressed: _isLoading ? null : () async {
+                    if (widget.formKey.currentState!.validate()) {
+                      setState(() {
+                        _isLoading = true;
+                      });
+                      widget.onLoadingChanged(true);
                       
-                      Navigator.pushNamed(context, '/map');
+                      try {
+                        await loginUser(
+                          widget.emailController.text.trim(),
+                          widget.passwordController.text.trim()
+                        );
+                        if (!context.mounted) return;
+                        
+                        Navigator.pushNamed(context, '/map');
+                      } finally {
+                        if (mounted) {
+                          setState(() {
+                            _isLoading = false;
+                          });
+                          widget.onLoadingChanged(false);
+                        }
+                      }
                     }
-
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent, // make button background transparent
-                    shadowColor: Colors.transparent, // prevent double shadows
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    padding: EdgeInsets.zero, // let gradient fill perfectly
+                    padding: EdgeInsets.zero,
+                    disabledBackgroundColor: Colors.transparent,
                   ),
-                  child: const Center(
-                    child: Text(
-                      "Log In",
-                      style: TextStyle(
-                        color: Color.fromARGB(255, 242, 253, 233),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
+                  child: Center(
+                    child: _isLoading 
+                      ? SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Color.fromARGB(255, 242, 253, 233),
+                            ),
+                          ),
+                        )
+                      : Text(
+                          "Log In",
+                          style: TextStyle(
+                            color: Color.fromARGB(255, 242, 253, 233),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
                   ),
                 ),
               )
@@ -359,19 +412,33 @@ class LogIn extends StatelessWidget {
   }
 }
 
-class SignUp extends StatelessWidget {
+class SignUp extends StatefulWidget {
   final GlobalKey<FormState> formKey;
   final TextEditingController emailController;
   final TextEditingController passwordController;
   final TextEditingController usernameController;
+  final ValueChanged<bool> onLoadingChanged;
 
-  const SignUp({super.key, required this.formKey, required this.usernameController, required this.emailController, required this.passwordController});
+  const SignUp({
+    super.key, 
+    required this.formKey, 
+    required this.usernameController, 
+    required this.emailController, 
+    required this.passwordController,
+    required this.onLoadingChanged,
+  });
 
+  @override
+  State<SignUp> createState() => _SignUpState();
+}
+
+class _SignUpState extends State<SignUp> {
+  bool _isLoading = false;
 
   @override
   Widget build(BuildContext context) {
     return Form(
-      key: formKey,
+      key: widget.formKey,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -385,7 +452,8 @@ class SignUp extends StatelessWidget {
             child: SizedBox(
               height: 53,
               child: TextFormField(
-                controller: usernameController,
+                controller: widget.usernameController,
+                enabled: !_isLoading,
                 validator: (value) => validateLength(value, 0, "username"),
                 style: TextStyle(
                     fontSize: 14
@@ -419,8 +487,6 @@ class SignUp extends StatelessWidget {
                     borderRadius: BorderRadius.circular(5),
                     borderSide: BorderSide(strokeAlign: BorderSide.strokeAlignOutside, color: Colors.black54),
                   ),
-
-                  
                 ),
               ),
             )
@@ -434,7 +500,8 @@ class SignUp extends StatelessWidget {
             child: SizedBox(
               height: 53,
               child: TextFormField(
-                controller: emailController,
+                controller: widget.emailController,
+                enabled: !_isLoading,
                 validator: (value) => validateEmail(value),
                 style: TextStyle(
                     fontSize: 14
@@ -468,8 +535,6 @@ class SignUp extends StatelessWidget {
                     borderRadius: BorderRadius.circular(5),
                     borderSide: BorderSide(strokeAlign: BorderSide.strokeAlignOutside, color: Colors.black54),
                   ),
-
-                  
                 ),
               ),
             )
@@ -483,7 +548,8 @@ class SignUp extends StatelessWidget {
             child: SizedBox(
               height: 53,
               child: TextFormField(
-                controller: passwordController,
+                controller: widget.passwordController,
+                enabled: !_isLoading,
                 validator: (value) => validatePassword(value),
                 obscureText: true,
                 style: TextStyle(
@@ -519,8 +585,6 @@ class SignUp extends StatelessWidget {
                     borderRadius: BorderRadius.circular(5),
                     borderSide: BorderSide(strokeAlign: BorderSide.strokeAlignOutside, color: Colors.black54),
                   ),
-
-                  
                 ),
               ),
             )
@@ -534,13 +598,16 @@ class SignUp extends StatelessWidget {
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
-                  gradient: const LinearGradient(
-                    colors: [
-                      Color(0xFFF75270), // deep pink
-                      Color.fromARGB(255, 250, 132, 154), // deep pink
-                      Color.fromARGB(255, 252, 165, 181), // deep pink
-                      Color.fromARGB(255, 245, 200, 157), // beige tint
-                      Color.fromARGB(255, 248, 217, 174), // beige tint
+                  gradient: LinearGradient(
+                    colors: _isLoading ? [
+                      Colors.grey.shade400,
+                      Colors.grey.shade400,
+                    ] : const [
+                      Color(0xFFF75270),
+                      Color.fromARGB(255, 250, 132, 154),
+                      Color.fromARGB(255, 252, 165, 181),
+                      Color.fromARGB(255, 245, 200, 157),
+                      Color.fromARGB(255, 248, 217, 174),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -554,36 +621,61 @@ class SignUp extends StatelessWidget {
                   ],
                 ),
                 child: ElevatedButton(
-                  onPressed: () async {
-                    if (formKey.currentState!.validate()) {
-                      await registerUser(
-                        usernameController.text.trim(),
-                        emailController.text.trim(),
-                        passwordController.text.trim()
-                      );
-                      // Check if still in the widget tree
-                      if (!context.mounted) return;
+                  onPressed: _isLoading ? null : () async {
+                    if (widget.formKey.currentState!.validate()) {
+                      setState(() {
+                        _isLoading = true;
+                      });
+                      widget.onLoadingChanged(true);
                       
-                      Navigator.pushNamed(context, '/map');
+                      try {
+                        await registerUser(
+                          widget.usernameController.text.trim(),
+                          widget.emailController.text.trim(),
+                          widget.passwordController.text.trim()
+                        );
+                        if (!context.mounted) return;
+                        
+                        Navigator.pushNamed(context, '/map');
+                      } finally {
+                        if (mounted) {
+                          setState(() {
+                            _isLoading = false;
+                          });
+                          widget.onLoadingChanged(false);
+                        }
+                      }
                     }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent, // make button background transparent
-                    shadowColor: Colors.transparent, // prevent double shadows
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    padding: EdgeInsets.zero, // let gradient fill perfectly
+                    padding: EdgeInsets.zero,
+                    disabledBackgroundColor: Colors.transparent,
                   ),
-                  child: const Center(
-                    child: Text(
-                      "Sign Up",
-                      style: TextStyle(
-                        color: Color.fromARGB(255, 242, 253, 233),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
+                  child: Center(
+                    child: _isLoading 
+                      ? SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Color.fromARGB(255, 242, 253, 233),
+                            ),
+                          ),
+                        )
+                      : Text(
+                          "Sign Up",
+                          style: TextStyle(
+                            color: Color.fromARGB(255, 242, 253, 233),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
                   ),
                 ),
               )
