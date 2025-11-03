@@ -225,7 +225,7 @@
                   // Reset flag after animation completes
                   isAnimatingToMemory = false;
                 }
-                // debugPrint("${pos.zoom}");
+                debugPrint("$pixelRatio");
               },
 
               onCameraTrackingChanged: (mode) => updateMapHold(true),

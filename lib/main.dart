@@ -26,7 +26,11 @@ import 'camera_ui/journal_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  pixelRatio = WidgetsBinding.instance.platformDispatcher.views.first.devicePixelRatio;
+
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    pixelRatio = WidgetsBinding.instance.platformDispatcher.views.first.devicePixelRatio;
+    // print("✅ REAL pixelRatio: $pixelRatio");
+  });
 
   try {
     // Initialize Firebase before the app runs
