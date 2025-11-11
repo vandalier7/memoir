@@ -1,4 +1,5 @@
 import 'package:camera/camera.dart';
+import 'memory.dart';
 
 late final num pixelRatio;
 
@@ -8,3 +9,4 @@ enum Mood {
 }
 
 List<CameraDescription> cameras = [];
+List<MemoryData> memories = [];

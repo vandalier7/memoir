@@ -34,8 +34,6 @@ class MapState extends State<MapBody> {
 
   double mapZoom = 16;
 
-  List<MemoryData> memories = [];
-
   final locIQ = LocationIQService('pk.2e56aa59169aa53b63093b78aff0e291');
   final Random _random = Random();
 
