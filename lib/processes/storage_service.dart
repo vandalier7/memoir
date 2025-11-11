@@ -22,7 +22,7 @@ class StorageService {
     return '$userId/$folder';
   }
 
-  Future<String> uploadImage(Uint8List bytes) async {
+  Future<String> uploadImage(String fileName, Uint8List bytes, String bucket) async {
   final fileName = 'memory_${DateTime.now().millisecondsSinceEpoch}.png';
 
   await _supabase.storage

@@ -8,6 +8,9 @@ import 'package:camera/camera.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:maplibre_gl/maplibre_gl.dart';
+import 'package:presentation/processes/location_iq.dart';
 
 import 'package:presentation/processes/storage_service.dart';
 
@@ -66,7 +69,6 @@ class _JournalScreenState extends State<JournalScreen>
   final TextEditingController whatsController = TextEditingController();
   final TextEditingController tagController = TextEditingController();
   final TextEditingController textOverlayController = TextEditingController();
-  final TextEditingController addressController = TextEditingController();
   List<String> tags = [];
   List<_OverlayItem> overlays = [];
   bool isDraggingOverlay = false;
@@ -96,7 +98,6 @@ class _JournalScreenState extends State<JournalScreen>
     textOverlayController.dispose();
     _bottomDrawerController.dispose();
     _moodDrawerController.dispose();
-    addressController.dispose();
     super.dispose();
   }
 
@@ -156,11 +157,46 @@ class _JournalScreenState extends State<JournalScreen>
       return;
     }
 
-    snack.showSnackBar(const SnackBar(content: Text('Uploading...')));
+    snack.showSnackBar(const SnackBar(content: Text('Getting location...')));
 
-    try {
+    try{
+      // Get current location and address
+      String? addressString;
+      double? latitude;
+      double? longitude;
+
+      try{
+        // Get current position
+        Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+        );
+
+        latitude = position.latitude;
+        longitude = position.longitude;
+
+        final locationIQ = LocationIQService('pk.2e56aa59169aa53b63093b78aff0e291');
+        addressString = await getAddressFromLocation(
+          LatLng(latitude, longitude),
+          locationIQ,
+        );
+
+        if (addressString == "null"){
+          addressString = null;
+        }
+
+        print('📍 Location: $latitude, $longitude');
+        print('🏠 Address: $addressString');
+      } catch (e) {
+        print('⚠️ Location error: $e');
+        // Continue without location if it fails
+      }
+
+      snack.hideCurrentSnackBar();
+      snack.showSnackBar(const SnackBar(content: Text('Uploading...')));
+
       final supabase = Supabase.instance.client;
       Uint8List? imageBytes;
+      final StorageService storageService = StorageService();
 
       // 1. Capture screenshot with overlays if they exist
       if (overlays.isNotEmpty) {
@@ -180,17 +216,17 @@ class _JournalScreenState extends State<JournalScreen>
       // 2. Upload image to Supabase Storage
       final fileName = 'memory_${currentUser.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg';
     
-      await supabase.storage
-          .from('memories')
-          .uploadBinary(fileName, imageBytes);
+      final imageUrl = await storageService.uploadImage(
+        fileName,
+        imageBytes,
+        'images',
+      );
+
+      if (imageUrl == null) {
+        throw Exception('Failed to upload to image to Supabase');
+      }
 
       print('✅ Image uploaded to Supabase: $fileName');
-
-      // Get public URL of uploaded image
-      final imageUrl = supabase.storage
-          .from('memories')
-          .getPublicUrl(fileName);
-
       print('🔗 Image URL: $imageUrl');
 
       // 3. Save memory metadata to Firebase Firestore
@@ -198,9 +234,9 @@ class _JournalScreenState extends State<JournalScreen>
     
       final memoryData = {
         'imageUrl': imageUrl,
-        'addressString': addressController.text.trim().isEmpty 
-            ? null 
-            : addressController.text.trim(),
+        'addressString': addressString,
+        'latitude': latitude,
+        'longitude': longitude,
         'description': whatsController.text.trim().isEmpty 
             ? null 
             : whatsController.text.trim(),
@@ -746,27 +782,6 @@ class _JournalScreenState extends State<JournalScreen>
                         ),
                       ],
                     ),
-                    const Text("Location (optional)",
-                      style: TextStyle(color: Colors.white70)),
-                    const SizedBox(height: 8),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.35),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: TextField(
-                        controller: addressController,
-                        maxLines: 1,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(
-                          border: InputBorder.none,
-                          hintText: 'Where was this taken?',
-                          hintStyle: TextStyle(color: Colors.white54),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
                     const Divider(color: Colors.white12),
                     const SizedBox(height: 8),
                     const Text("What's happening?",
