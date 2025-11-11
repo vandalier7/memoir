@@ -9,6 +9,7 @@ import 'globals.dart';
 import 'dart:math';
 
 class MemoryData {
+  final bool head;
   final Mood mood;
   final String addressString;
   final LatLng position;
@@ -20,6 +21,7 @@ class MemoryData {
     required this.position,
     required this.mood,
     this.decay = 16.0,
+    this.head = true,
     this.imageUrl,
   });
 

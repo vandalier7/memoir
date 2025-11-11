@@ -45,6 +45,9 @@ class MapState extends State<MapBody> {
     _getLocation();
   }
 
+  // Add to MapState:
+
+
   void showMemories(List<MemoryData> memoriesToShow) {
     setState(() {
       widget.closeMemory();
@@ -80,6 +83,7 @@ class MapState extends State<MapBody> {
 
     setState(() {
       currentPosition = LatLng(pos.latitude, pos.longitude);
+      
     });
 
     mapController.animateCamera(
@@ -163,6 +167,18 @@ class MapState extends State<MapBody> {
     updateMapHold(false);
   }
 
+  void _newAddMemory(LatLng position, bool isHead) async {
+    final info = await getAddressFromLocation(position, locIQ);
+    memories.add(MemoryData(
+          position: position,
+          addressString: info,
+          mood: Mood.happy,
+          decay: 9,
+          imageUrl: null,
+          head: isHead
+        ));
+  }
+
   void _addMultipleMemories(LatLng position) async {
     final info = await getAddressFromLocation(position, locIQ);
     final count = _random.nextInt(5) + 1;
@@ -235,14 +251,32 @@ class MapState extends State<MapBody> {
             } else {
               isAnimatingToMemory = false;
             }
-            debugPrint("$pixelRatio");
+            // debugPrint("$pixelRatio");
           },
           onCameraTrackingChanged: (mode) => updateMapHold(true),
           onCameraMove: (pos) {
             updateMapHold(true);
           },
           onMapLongClick: (point, latLng) {
-            _addMultipleMemories(latLng);
+            // _addMultipleMemories(latLng);
+            double closestDist = double.maxFinite;
+            late MemoryData closestMemory;
+            for (MemoryData memory in memories){
+              if (!memory.head) {continue;}
+              
+              double dist = distanceBetween(memory.position, latLng);
+              if (dist < closestDist) {
+                closestMemory = memory;
+                closestDist = dist;
+              }
+            }
+            debugPrint("$closestDist");
+            if (closestDist <= clusterRadius) {
+              _newAddMemory(closestMemory.position, false);
+            }
+            else {
+              _newAddMemory(latLng, true);
+            }
           },
           initialCameraPosition: CameraPosition(
             target: LatLng(14.5995, 120.9842),
@@ -482,4 +516,25 @@ Map<LatLng, List<MemoryData>> groupMemoriesByPosition(List<MemoryData> memories)
   }
 
   return grouped;
+}
+
+double distanceBetween(LatLng a, LatLng b) {
+  const double earthRadius = 6371000; // in meters
+
+  final double lat1 = a.latitude * pi / 180;
+  final double lon1 = a.longitude * pi / 180;
+  final double lat2 = b.latitude * pi / 180;
+  final double lon2 = b.longitude * pi / 180;
+
+  final double dLat = lat2 - lat1;
+  final double dLon = lon2 - lon1;
+
+  final double haversine = pow(sin(dLat / 2), 2) +
+      cos(lat1) * cos(lat2) * pow(sin(dLon / 2), 2);
+
+  final double c = 2 * atan2(sqrt(haversine), sqrt(1 - haversine));
+
+  // debugPrint("${earthRadius * c}");
+
+  return earthRadius * c;
 }

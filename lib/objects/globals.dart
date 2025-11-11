@@ -8,5 +8,8 @@ enum Mood {
   sad
 }
 
+const double clusterRadius = 30; // meters
+
 List<CameraDescription> cameras = [];
 List<MemoryData> memories = [];
+List<MemoryData> filteredMemories = [];
