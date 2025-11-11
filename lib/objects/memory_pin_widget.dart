@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'memory_preview.dart';
 import 'globals.dart';
 import 'memory.dart';
+import 'package:maplibre_gl/maplibre_gl.dart';
 
 class MemoryPinWidget extends StatelessWidget {
   final List<MemoryData> memories;
@@ -175,4 +176,75 @@ class PinPointerPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class ClusterPin extends StatelessWidget {
+  final int count;
+  final LatLng position;
+  final MapLibreMapController mapController;
+  final bool isHoldingMap;
+  final void Function(bool value) holdingCallback;
+  final void Function() clusterCallback;
+
+  const ClusterPin({
+    super.key,
+    required this.count,
+    required this.position,
+    required this.mapController,
+    required this.isHoldingMap,
+    required this.holdingCallback,
+    required this.clusterCallback
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedOpacity(
+      opacity: isHoldingMap ? 0.0 : 1.0,
+      duration: Duration(milliseconds: 100),
+      child: GestureDetector(
+        onTap: () async {
+          holdingCallback.call(true);
+          CameraPosition? camPos = await mapController.queryCameraPosition();
+          await mapController.animateCamera(
+            CameraUpdate.newLatLngZoom(position, camPos!.zoom + 2),
+            duration: Duration(milliseconds: 800),
+          );
+          holdingCallback.call(true);
+          clusterCallback.call();
+          await Future.delayed(Duration(milliseconds: 250));
+          holdingCallback.call(true);
+
+          holdingCallback.call(false);
+          
+
+        },
+        child: Container(
+          width: 60,
+          height: 60,
+          decoration: BoxDecoration(
+            color: Colors.purple.withOpacity(0.8),
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 3),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.3),
+                blurRadius: 8,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Center(
+            child: Text(
+              '$count',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

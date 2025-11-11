@@ -47,6 +47,7 @@ class MemoryPin extends StatefulWidget {
   final LatLng position;
   final MapLibreMapController mapController;
   final bool isHoldingMap;
+  final bool isClustered;
   final void Function(bool value) holdingCallback;
   final double decay;
   final double mapZoom;
@@ -62,6 +63,7 @@ class MemoryPin extends StatefulWidget {
     required this.position,
     required this.mapController,
     required this.isHoldingMap,
+    required this.isClustered,
     required this.holdingCallback,
     required this.decay,
     required this.mapZoom,
@@ -76,6 +78,7 @@ class MemoryPin extends StatefulWidget {
     LatLng position,
     MapLibreMapController mapController,
     bool isHoldingMap,
+    bool isClustered,
     void Function(bool value) holdingCallback, {
     double decay = 16.0,
     double mapZoom = 14.0,
@@ -94,6 +97,7 @@ class MemoryPin extends StatefulWidget {
       decay: decay,
       mapController: mapController,
       isHoldingMap: isHoldingMap,
+      isClustered: isClustered,
       holdingCallback: holdingCallback,
       mapZoom: mapZoom,
       onShowMemories: onShowMemories,
@@ -108,6 +112,7 @@ class MemoryPin extends StatefulWidget {
     MemoryData data,
     MapLibreMapController mapController,
     bool isHoldingMap,
+    bool isClustered,
     void Function(bool value) holdingCallback, {
     double mapZoom = 14.0,
     Key? key,
@@ -125,6 +130,7 @@ class MemoryPin extends StatefulWidget {
       decay: data.decay,
       mapController: mapController,
       isHoldingMap: isHoldingMap,
+      isClustered: isClustered,
       holdingCallback: holdingCallback,
       mapZoom: mapZoom,
       onShowMemories: (memories) => onShowMemory(memories.first),
@@ -156,6 +162,9 @@ class _MemoryPinState extends State<MemoryPin>
 
   Future<void> _updateScreenPoint() async {
     final point = await widget.mapController.toScreenLocation(widget.position);
+    
+    if (!mounted) {return;}
+    
     setState(() {
       screenPoint = point;
     });
@@ -302,7 +311,7 @@ class _MemoryPinState extends State<MemoryPin>
             ignoring: true,
             child: AnimatedOpacity(
               opacity:
-                  (!widget.isHoldingMap && widget.decay <= widget.mapZoom)
+                  (!widget.isHoldingMap && widget.decay <= widget.mapZoom && widget.isClustered)
                       ? 1.0
                       : 0.0,
               duration: Duration(milliseconds: 100),

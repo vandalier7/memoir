@@ -6,6 +6,7 @@ import 'package:geolocator/geolocator.dart';
 import 'objects/pin.dart';
 import 'objects/memory.dart';
 import 'objects/memory_preview.dart';
+import 'objects/memory_pin_widget.dart';
 
 import 'objects/globals.dart';
 
@@ -46,7 +47,72 @@ class MapState extends State<MapBody> {
   }
 
   // Add to MapState:
+  Map<LatLng, List<LatLng>> screenSpaceClusters = {}; // Maps cluster center to list of positions
+  bool isClusteringInProgress = false;
 
+  Future<void> _performScreenSpaceClustering() async {
+    if (isClusteringInProgress) return;
+    isClusteringInProgress = true;
+
+    try {
+      final Map<LatLng, List<LatLng>> clusters = {};
+      final Set<LatLng> clustered = {};
+      final double clusterThresholdPixels = 50.0; // Adjust this
+      
+      // Get all permanent cluster positions
+      final groupedMemories = groupMemoriesByPosition(memories);
+      final positions = groupedMemories.keys.toList();
+      
+      for (final pos1 in positions) {
+        if (clustered.contains(pos1)) continue;
+        
+        final screen1 = await mapController.toScreenLocation(pos1);
+        final List<LatLng> cluster = [pos1];
+        clustered.add(pos1);
+        
+        // Find nearby positions
+        for (final pos2 in positions) {
+          if (pos1 == pos2) continue;
+          if (clustered.contains(pos2)) continue;
+          
+          final screen2 = await mapController.toScreenLocation(pos2);
+          
+          final dx = (screen1.x - screen2.x) / pixelRatio!;
+          final dy = (screen1.y - screen2.y) / pixelRatio!;
+          final distance = sqrt(dx * dx + dy * dy);
+          
+          if (distance < clusterThresholdPixels) {
+            cluster.add(pos2);
+            clustered.add(pos2);
+          }
+        }
+        
+        // Calculate centroid of cluster positions
+        LatLng clusterCenter;
+        if (cluster.length == 1) {
+          clusterCenter = cluster.first;
+        } else {
+          double avgLat = 0;
+          double avgLng = 0;
+          for (final pos in cluster) {
+            avgLat += pos.latitude;
+            avgLng += pos.longitude;
+          }
+          avgLat /= cluster.length;
+          avgLng /= cluster.length;
+          clusterCenter = LatLng(avgLat, avgLng);
+        }
+        
+        clusters[clusterCenter] = cluster;
+      }
+      
+      setState(() {
+        screenSpaceClusters = clusters;
+      });
+    } finally {
+      isClusteringInProgress = false;
+    }
+  }
 
   void showMemories(List<MemoryData> memoriesToShow) {
     setState(() {
@@ -121,7 +187,18 @@ class MapState extends State<MapBody> {
   void updateMapHold(bool value) {
     setState(() {
       isHoldingMap = value;
+      if (!value) {
+        memories.clear();
+        for (MemoryData memory in unfilteredMemories) {
+          if (memory.decay <= mapZoom) {
+            memories.add(memory);
+          }
+        }
+      } else {
+        
+      }
     });
+    
   }
 
   Future<void> updateLocation() async {
@@ -169,11 +246,11 @@ class MapState extends State<MapBody> {
 
   void _newAddMemory(LatLng position, bool isHead) async {
     final info = await getAddressFromLocation(position, locIQ);
-    memories.add(MemoryData(
+    unfilteredMemories.add(MemoryData(
           position: position,
           addressString: info,
           mood: Mood.happy,
-          decay: 9,
+          decay: mapZoom - 3,
           imageUrl: null,
           head: isHead
         ));
@@ -214,6 +291,15 @@ class MapState extends State<MapBody> {
   @override
   Widget build(BuildContext context) {
     final groupedMemories = groupMemoriesByPosition(memories);
+    
+    // Build a set of positions that are part of multi-position clusters
+    final Set<LatLng> clusteredPositions = {};
+    for (final entry in screenSpaceClusters.entries) {
+      if (entry.value.length > 1) {
+        clusteredPositions.addAll(entry.value);
+      }
+    }
+    
     return Stack(children: [
       Listener(
         behavior: HitTestBehavior.translucent,
@@ -246,12 +332,15 @@ class MapState extends State<MapBody> {
             updateMapHold(false);
             var pos = await mapController.queryCameraPosition();
             updateZoom(pos!.zoom);
+            
+            // Perform screen-space clustering after camera stops
+            await _performScreenSpaceClustering();
+            
             if (!isAnimatingToMemory) {
               closePreview();
             } else {
               isAnimatingToMemory = false;
             }
-            // debugPrint("$pixelRatio");
           },
           onCameraTrackingChanged: (mode) => updateMapHold(true),
           onCameraMove: (pos) {
@@ -285,27 +374,59 @@ class MapState extends State<MapBody> {
         ),
       ),
 
-      // Render grouped memory pins
+      // Render individual memory pins (only those NOT in clusters)
       for (final entry in groupedMemories.entries)
-        MemoryPin.ofMemories(
-          entry.value,
-          entry.key,
-          mapController,
-          isHoldingMap,
-          updateMapHold,
-          decay: entry.value.first.decay,
-          mapZoom: mapZoom,
-          showPreview: false,
-          onShowMemories: showMemories,
-          onClosePreview: closePreview,
-          onLongPress: (newMemories) {
-            animateCameraWithOffset(
-              target: entry.key,
-              showPreviewAfter: true,
-              yOffsetPixels: 0,
-            );
-          },
-        ),
+          MemoryPin.ofMemories(
+            entry.value,
+            entry.key,
+            mapController,
+            isHoldingMap,
+            !clusteredPositions.contains(entry.key),
+            updateMapHold,
+            decay: entry.value.first.decay,
+            mapZoom: mapZoom,
+            showPreview: false,
+            onShowMemories: showMemories,
+            onClosePreview: closePreview,
+            onLongPress: (newMemories) {
+              animateCameraWithOffset(
+                target: entry.key,
+                showPreviewAfter: true,
+                yOffsetPixels: 0,
+              );
+            },
+          ),
+
+      // Render cluster pins (rendered AFTER individual pins so they appear on top)
+      for (final entry in screenSpaceClusters.entries)
+        if (entry.value.length > 1) // Only show cluster pin if there are multiple positions
+          FutureBuilder<Point>(
+            future: mapController.toScreenLocation(entry.key), // entry.key is now the centroid
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) return SizedBox.shrink();
+              
+              final screenPoint = snapshot.data!;
+              final allMemoriesInCluster = <MemoryData>[];
+              for (final pos in entry.value) {
+                if (groupedMemories.containsKey(pos)) {
+                  allMemoriesInCluster.addAll(groupedMemories[pos]!);
+                }
+              }
+              
+              return Positioned(
+                left: screenPoint.x / pixelRatio! - 30,
+                top: screenPoint.y / pixelRatio! - 40,
+                child: ClusterPin(
+                  count: allMemoriesInCluster.length,
+                  position: entry.key, // Centroid position for zoom target
+                  mapController: mapController,
+                  isHoldingMap: isHoldingMap,
+                  holdingCallback: updateMapHold,
+                  clusterCallback: screenSpaceClusters.clear,
+                ),
+              );
+            },
+          ),
 
       if (screenPoint != null)
         Positioned(
@@ -533,8 +654,6 @@ double distanceBetween(LatLng a, LatLng b) {
       cos(lat1) * cos(lat2) * pow(sin(dLon / 2), 2);
 
   final double c = 2 * atan2(sqrt(haversine), sqrt(1 - haversine));
-
-  // debugPrint("${earthRadius * c}");
 
   return earthRadius * c;
 }
