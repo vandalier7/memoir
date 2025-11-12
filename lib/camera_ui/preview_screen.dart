@@ -1,18 +1,54 @@
 import 'dart:io';
+import 'dart:typed_data'; 
 import 'package:flutter/material.dart';
+import '../processes/storage_service.dart'; 
 
-class PreviewScreen extends StatelessWidget {
+class PreviewScreen extends StatefulWidget {
   final String imagePath;
   const PreviewScreen({super.key, required this.imagePath});
 
   @override
+  State<PreviewScreen> createState() => _PreviewScreenState();
+}
+
+class _PreviewScreenState extends State<PreviewScreen> {
+  final StorageService _storageService = StorageService();
+
+  Future<void> _handleDiscard(BuildContext context) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final File imageFile = File(widget.imagePath);
+      final Uint8List imageBytes = await imageFile.readAsBytes();
+
+      await _storageService.uploadAndStageImage(imageBytes);
+
+      if (context.mounted) {
+        Navigator.pop(context);
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save to bin: $e')),
+        );
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     const palette = [
-      Color(0xFFF75270), // deep pink
-      Color.fromARGB(255, 250, 132, 154), // lighter pink
-      Color.fromARGB(255, 252, 165, 181), // soft pink
-      Color.fromARGB(255, 245, 200, 157), // beige tint
-      Color.fromARGB(255, 248, 217, 174), // lighter beige tint
+      Color(0xFFF75270), 
+      Color.fromARGB(255, 250, 132, 154), 
+      Color.fromARGB(255, 252, 165, 181), 
+      Color.fromARGB(255, 245, 200, 157), 
+      Color.fromARGB(255, 248, 217, 174), 
     ];
 
     return Scaffold(
@@ -20,15 +56,14 @@ class PreviewScreen extends StatelessWidget {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // Fullscreen captured image
           Positioned.fill(
             child: Image.file(
-              File(imagePath),
+
+              File(widget.imagePath),
               fit: BoxFit.cover,
             ),
           ),
 
-          // Bottom gradient overlay for better text visibility
           Positioned(
             bottom: 0,
             left: 0,
@@ -51,7 +86,6 @@ class PreviewScreen extends StatelessWidget {
             ),
           ),
 
-          // Top-left close button
           Positioned(
             top: MediaQuery.of(context).padding.top + 10,
             left: 20,
@@ -61,7 +95,6 @@ class PreviewScreen extends StatelessWidget {
             ),
           ),
 
-          // Bottom buttons + message
           Positioned(
             bottom: MediaQuery.of(context).padding.bottom + 60,
             left: 0,
@@ -77,10 +110,7 @@ class PreviewScreen extends StatelessWidget {
                       // ❌ Discard button
                       Expanded(
                         child: ElevatedButton(
-                          onPressed: () {
-                            // TODO: add the image to the bin of the user
-                            Navigator.pop(context);
-                          },
+                          onPressed: () => _handleDiscard(context),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.grey.shade800,
                             padding: const EdgeInsets.symmetric(
@@ -116,7 +146,7 @@ class PreviewScreen extends StatelessWidget {
                             Navigator.pushReplacementNamed(
                               context,
                               '/journal',
-                              arguments: imagePath,
+                              arguments: widget.imagePath,
                             );
                           },
                           style: ElevatedButton.styleFrom(
@@ -129,7 +159,6 @@ class PreviewScreen extends StatelessWidget {
                           ),
                           child: Ink(
                             decoration: BoxDecoration(
-                              // 🌒 Darker gradient version of the palette
                               gradient: LinearGradient(
                                 colors: [
                                   palette[0].withOpacity(0.85),
