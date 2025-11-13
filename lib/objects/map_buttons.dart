@@ -12,28 +12,26 @@ class MapButtons extends StatelessWidget {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // Camera button - smaller but still prominent with shadow
+        // Camera button with transparent fill + gradient border + gradient icon
         Positioned(
-          bottom: 15,
-          right: 15,
-          child: Material(
+          bottom: 20,
+          right: 10,
+          child: Material( // needed for ripple effect
             color: Colors.transparent,
             shape: const CircleBorder(),
             child: InkWell(
               customBorder: const CircleBorder(),
               splashColor: const Color(0xFFF75270).withOpacity(0.3),
-              onTap: () {
-                Navigator.pushNamed(context, '/camera');
-              },
+              onTap: () => debugPrint('Camera tapped'),
               child: AnimatedScale(
                 duration: const Duration(milliseconds: 120),
-                scale: 1.0,
+                scale: 1.0, 
                 child: Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
+                  width: 70,
+                  height: 70,
+                  decoration: const BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: const LinearGradient(
+                    gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
@@ -44,26 +42,43 @@ class MapButtons extends StatelessWidget {
                         Color.fromARGB(255, 248, 217, 174),
                       ],
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Color(0xFFF75270).withOpacity(0.4),
-                        blurRadius: 16,
-                        spreadRadius: 1,
-                        offset: Offset(0, 4),
-                      ),
-                    ],
                   ),
-                  child: const Icon(
-                    Icons.camera_alt,
-                    size: 26,
-                    color: Colors.white,
+                  child: Center(
+                    child: Container(
+                      width: 64,
+                      height: 64,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.transparent, // transparent background
+                      ),
+                      child: ShaderMask(
+                        shaderCallback: (Rect bounds) {
+                          return const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Color(0xFFF75270),
+                              Color.fromARGB(255, 250, 132, 154),
+                              Color.fromARGB(255, 245, 200, 157),
+                            ],
+                          ).createShader(bounds);
+                        },
+                        blendMode: BlendMode.srcIn,
+                        child: const Icon(
+                          Icons.camera_alt,
+                          size: 30,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
           ),
         ),
-        // Bin button - smaller and more subtle
+
+         // Bin button
         Positioned(
           bottom: 90,
           right: 22,

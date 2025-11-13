@@ -4,6 +4,7 @@ import 'objects/map_buttons.dart';
 import 'objects/search_bar.dart';
 import 'objects/memory.dart';
 import 'objects/memory_card.dart';
+import 'screens/account_screen.dart';
 
 class MyScaffold extends StatefulWidget {
   const MyScaffold({super.key});
@@ -92,6 +93,41 @@ class MyState extends State<MyScaffold> {
           SearchBarWidget(focusNode: _textFocusNode),
           const MapButtons(),
 
+          Container(
+            margin: EdgeInsets.fromLTRB(10, 40, 10, 0),
+            child: TextField(
+              focusNode: _textFocusNode,
+              decoration: InputDecoration(
+                hintText: "Search",
+                hintStyle: TextStyle(
+                  color: Colors.grey
+                ),
+                filled: true,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(100),
+                  borderSide: BorderSide.none
+                ),
+                suffixIcon: Container(
+                  margin: const EdgeInsets.only(right: 12),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(50),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const AccountScreen()),
+                      );
+                    },
+                    child: const CircleAvatar(
+                      radius: 18,
+                      backgroundImage: AssetImage('assets/profile_placeholder.png'),
+                    ),
+                  ),
+                ),
+
+                fillColor: Colors.white
+              )
+              
+            )),
             if (activeMemory != null)
               MemoryCard(
                 description: "Lorem ipsum dolor sit amet.",
