@@ -8,6 +8,9 @@ import 'package:camera/camera.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:maplibre_gl/maplibre_gl.dart';
+import 'package:presentation/processes/location_iq.dart';
 
 import 'package:presentation/processes/storage_service.dart';
 
@@ -42,16 +45,17 @@ class _JournalScreenState extends State<JournalScreen>
   bool isJournalOpen = false;
   bool isEmojiPickerOpen = false;
   String selectedMood = '';
+  int selectedMoodValue = 0;
 
   // Moods with emojis
-  final List<Map<String, String>> moods = [
-    {'emoji': '😊', 'label': 'Happy'},
-    {'emoji': '😢', 'label': 'Sad'},
-    {'emoji': '😡', 'label': 'Angry'},
-    {'emoji': '🤢', 'label': 'Disgusted'},
-    {'emoji': '😱', 'label': 'Scared'},
-    {'emoji': '😌', 'label': 'Chill'},
-    {'emoji': '😰', 'label': 'Stressed'},
+  final List<Map<String, dynamic>> moods = [
+    {'emoji': '😊', 'label': 'Happy', 'value': 1},
+    {'emoji': '😢', 'label': 'Sad', 'value': 2},
+    {'emoji': '😡', 'label': 'Angry', 'value': 3},
+    {'emoji': '🤢', 'label': 'Disgusted', 'value': 4},
+    {'emoji': '😱', 'label': 'Scared', 'value': 5},
+    {'emoji': '😌', 'label': 'Chill', 'value': 6},
+    {'emoji': '😰', 'label': 'Stressed', 'value': 7},
   ];
 
   // Available emojis for overlay
@@ -135,7 +139,7 @@ class _JournalScreenState extends State<JournalScreen>
 
   Future<void> saveToSupabase() async {
     final snack = ScaffoldMessenger.of(context);
-    
+  
     // Validate required fields
     if (selectedMood.isEmpty) {
       snack.showSnackBar(
@@ -144,41 +148,110 @@ class _JournalScreenState extends State<JournalScreen>
       return;
     }
 
-    snack.showSnackBar(const SnackBar(content: Text('Uploading...')));
+    // Get current user
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      snack.showSnackBar(
+        const SnackBar(content: Text('Please log in first!')),
+      );
+      return;
+    }
 
-    try {
-      // 1. Capture screenshot with overlays
-      final imageBytes = await _captureScreenshot();
-      
-      if (imageBytes == null) {
-        throw Exception('Failed to capture image');
+    snack.showSnackBar(const SnackBar(content: Text('Getting location...')));
+
+    try{
+      // Get current location and address
+      String? addressString;
+      double? latitude;
+      double? longitude;
+
+      try{
+        // Get current position
+        Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+        );
+
+        latitude = position.latitude;
+        longitude = position.longitude;
+
+        final locationIQ = LocationIQService('pk.2e56aa59169aa53b63093b78aff0e291');
+        addressString = await getAddressFromLocation(
+          LatLng(latitude, longitude),
+          locationIQ,
+        );
+
+        if (addressString == "null"){
+          addressString = null;
+        }
+
+        print('📍 Location: $latitude, $longitude');
+        print('🏠 Address: $addressString');
+      } catch (e) {
+        print('⚠️ Location error: $e');
+        // Continue without location if it fails
       }
 
-      
+      snack.hideCurrentSnackBar();
+      snack.showSnackBar(const SnackBar(content: Text('Uploading...')));
 
-      // ===== SUPABASE PLACEHOLDER =====
-      // TODO: implement Supabase Storage upload here
-      // This is where the image with overlays will be uploaded to Supabase
-      // Expected output: imageUrl (public URL of the uploaded image)
+      final supabase = Supabase.instance.client;
+      Uint8List? imageBytes;
+      final StorageService storageService = StorageService();
 
+      // 1. Capture screenshot with overlays if they exist
+      if (overlays.isNotEmpty) {
+        print('📸 Capturing screenshot with ${overlays.length} overlays...');
+        imageBytes = await _captureScreenshot();
       
-      
-      String imageUrl = await storageService.uploadImage(imageBytes);
+        if (imageBytes == null) {
+          throw Exception('Failed to capture screenshot');
+        }
+      } else {
+        // No overlays, use original image
+        print('📷 Using original image (no overlays)');
+        final file = File(widget.imagePath);
+        imageBytes = await file.readAsBytes();
+      }
 
-      
-      final userId = storageService.currentUserId;
-      
-      // 3. Save metadata to Cloud Firestore
+      // 2. Upload image to Supabase Storage
+      final fileName = 'memory_${currentUser.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+    
+      final imageUrl = await storageService.uploadImage(
+        fileName,
+        imageBytes,
+        'images',
+      );
+
+      if (imageUrl == null) {
+        throw Exception('Failed to upload to image to Supabase');
+      }
+
+      print('✅ Image uploaded to Supabase: $fileName');
+      print('🔗 Image URL: $imageUrl');
+
+      // 3. Save memory metadata to Firebase Firestore
       final firestore = FirebaseFirestore.instance;
-      
-      await firestore.collection('memories').add({
-        'image_url': imageUrl,
-        'mood': selectedMood,
-        'description': whatsController.text.trim(),
+    
+      final memoryData = {
+        'imageUrl': imageUrl,
+        'addressString': addressString,
+        'latitude': latitude,
+        'longitude': longitude,
+        'description': whatsController.text.trim().isEmpty 
+            ? null 
+            : whatsController.text.trim(),
+        'moodValue': selectedMoodValue, // 1-7
+        'userId': currentUser.uid,
+        'likesCount': 0,
+        'commentsCount': 0,
         'tags': tags,
-        'user_id': userId,
-        'created_at': FieldValue.serverTimestamp(),
-      });
+        'timestamp': FieldValue.serverTimestamp(),
+        'createdAt': DateTime.now().toIso8601String(),
+      };
+
+      final docRef = await firestore.collection('memories').add(memoryData);
+    
+      print('✅ Memory saved to Firebase with ID: ${docRef.id}');
 
       snack.hideCurrentSnackBar();
       snack.showSnackBar(
@@ -202,7 +275,7 @@ class _JournalScreenState extends State<JournalScreen>
           duration: const Duration(seconds: 5),
         ),
       );
-      print('Error: $e');
+      print('❌ Error: $e');
     }
   }
 
@@ -642,7 +715,10 @@ class _JournalScreenState extends State<JournalScreen>
                           ),
                         ),
                         onTap: () {
-                          setState(() => selectedMood = m['label']!);
+                          setState(() {
+                            selectedMood = m['label'] as String;
+                            selectedMoodValue = m['value'] as int;
+                          });
                           _toggleMood();
                         },
                       );
