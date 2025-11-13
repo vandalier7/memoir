@@ -4,6 +4,7 @@ import 'objects/map_buttons.dart';
 import 'objects/search_bar.dart';
 import 'objects/memory.dart';
 import 'objects/memory_card.dart';
+import 'screens/account_screen.dart';
 
 class MyScaffold extends StatefulWidget {
   const MyScaffold({super.key});
@@ -106,9 +107,22 @@ class MyState extends State<MyScaffold> {
                   borderSide: BorderSide.none
                 ),
                 suffixIcon: Container(
-                  child: CircleAvatar(),
-                  margin: EdgeInsets.fromLTRB(0, 0, 12, 0),
+                  margin: const EdgeInsets.only(right: 12),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(50),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const AccountScreen()),
+                      );
+                    },
+                    child: const CircleAvatar(
+                      radius: 18,
+                      backgroundImage: AssetImage('assets/profile_placeholder.png'),
+                    ),
+                  ),
                 ),
+
                 fillColor: Colors.white
               )
               
