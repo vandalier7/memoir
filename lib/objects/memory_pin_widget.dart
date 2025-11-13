@@ -212,7 +212,6 @@ class ClusterPin extends StatelessWidget {
           holdingCallback.call(true);
           clusterCallback.call();
           await Future.delayed(Duration(milliseconds: 250));
-          holdingCallback.call(true);
 
           holdingCallback.call(false);
           
