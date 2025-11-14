@@ -64,9 +64,13 @@ class MapState extends State<MapBody> {
       // Get all permanent cluster positions
       final groupedMemories = groupMemoriesByPosition(memories);
       final positions = groupedMemories.keys.toList();
+
+      // Find the nearby memory position to exclude from clustering
+      final nearbyPos = _findNearbyMemoryPosition();
       
       for (final pos1 in positions) {
         if (clustered.contains(pos1)) continue;
+        if (pos1 == nearbyPos) continue;
         
         final screen1 = await mapController.toScreenLocation(pos1);
         final List<LatLng> cluster = [pos1];
@@ -74,6 +78,7 @@ class MapState extends State<MapBody> {
         
         // Find nearby positions
         for (final pos2 in positions) {
+          if (pos2 == nearbyPos) continue;
           if (pos1 == pos2) continue;
           if (clustered.contains(pos2)) continue;
           
@@ -685,4 +690,4 @@ double distanceBetween(LatLng a, LatLng b) {
   final double c = 2 * atan2(sqrt(haversine), sqrt(1 - haversine));
 
   return earthRadius * c;
-}
+} 

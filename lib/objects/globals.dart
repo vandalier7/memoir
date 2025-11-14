@@ -9,6 +9,7 @@ enum Mood {
 }
 
 const double clusterRadius = 30; // meters
+const double clearanceRadius = 50; // pixels in screenSpace
 
 List<CameraDescription> cameras = [];
 List<MemoryData> memories = [];
