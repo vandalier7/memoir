@@ -4,6 +4,7 @@ import '../models/bin_item.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'posted_screen.dart';
 import '../my_scaffold.dart';
+import '../objects/globals.dart';
 
 const Color _kPrimarySelectionColor = Color.fromARGB(255, 33, 150, 243); 
 
@@ -15,7 +16,6 @@ class BinScreen extends StatefulWidget {
 }
 
 class _BinScreenState extends State<BinScreen> {
-  final StorageService _storageService = StorageService(); 
   late Future<List<BinItem>> _binImagesFuture;
   
   Set<String> _selectedIds = {}; 
@@ -23,12 +23,12 @@ class _BinScreenState extends State<BinScreen> {
   @override
   void initState() {
     super.initState();
-    _binImagesFuture = _storageService.fetchBinImages();
+    _binImagesFuture = storageService.fetchBinImages();
   }
 
   void _refreshImages() {
     setState(() {
-      _binImagesFuture = _storageService.fetchBinImages();
+      _binImagesFuture = storageService.fetchBinImages();
       _selectedIds = {}; 
     });
   }
@@ -56,7 +56,7 @@ class _BinScreenState extends State<BinScreen> {
     final selectedImages = images.where((img) => _selectedIds.contains(img.fileName)).toList();
     
     for (var item in selectedImages) {
-        await _storageService.restoreImage(item); 
+        await storageService.restoreImage(item); 
     }
 
     if (!context.mounted) return; 
@@ -86,7 +86,7 @@ class _BinScreenState extends State<BinScreen> {
             onPressed: () async {
               
               for (var item in selectedImages) {
-                  await _storageService.permanentlyDeleteFromBin(item);
+                  await storageService.permanentlyDeleteFromBin(item);
               }
               
               if (context.mounted) {

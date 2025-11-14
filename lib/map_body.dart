@@ -225,6 +225,8 @@ class MapState extends State<MapBody> {
       if (!value) {
         memories.clear();
         for (MemoryData memory in unfilteredMemories) {
+
+
           if (memory.decay <= mapZoom || memory.position == positionToUse) {
             if (memory.position != positionToUse){
               if (!isWithinPixelThreshold(pos1: memory.position, pos2: positionToUse, pixelThreshold: clearanceRadius, currentZoom: mapZoom)) {
@@ -340,6 +342,7 @@ class MapState extends State<MapBody> {
     final groupedMemories = groupMemoriesByPosition(memories);
     final nearbyMemoryPosition = _findNearbyMemoryPosition();
     
+    
     // Build a set of positions that are part of multi-position clusters
     final Set<LatLng> clusteredPositions = {};
     for (final entry in screenSpaceClusters.entries) {
@@ -397,25 +400,24 @@ class MapState extends State<MapBody> {
             updateMapHold(true);
           },
           onMapLongClick: (point, latLng) {
-            // _addMultipleMemories(latLng);
-            double closestDist = double.maxFinite;
-            late MemoryData closestMemory;
-            for (MemoryData memory in memories){
-              if (!memory.head) {continue;}
+          //   double closestDist = double.maxFinite;
+          //   late MemoryData closestMemory;
+          //   for (MemoryData memory in memories){
+          //     if (!memory.head) {continue;}
               
-              double dist = distanceBetween(memory.position, latLng);
-              if (dist < closestDist) {
-                closestMemory = memory;
-                closestDist = dist;
-              }
-            }
-            debugPrint("$closestDist");
-            if (closestDist <= clusterRadius) {
-              _newAddMemory(closestMemory.position, false);
-            }
-            else {
-              _newAddMemory(latLng, true);
-            }
+          //     double dist = distanceBetween(memory.position, latLng);
+          //     if (dist < closestDist) {
+          //       closestMemory = memory;
+          //       closestDist = dist;
+          //     }
+          //   }
+          //   debugPrint("$closestDist");
+          //   if (closestDist <= clusterRadius) {
+          //     _newAddMemory(closestMemory.position, false);
+          //   }
+          //   else {
+          //     _newAddMemory(latLng, true);
+          //   }
           },
           initialCameraPosition: CameraPosition(
             target: LatLng(14.5995, 120.9842),

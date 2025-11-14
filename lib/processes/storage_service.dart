@@ -1,7 +1,12 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import 'package:maplibre_gl/maplibre_gl.dart';
 import '../models/bin_item.dart';
+import '../objects/memory.dart'; // your MemoryData class
+import '../objects/globals.dart';
+import 'dart:async';
 
 const String supabaseBucket = 'images';
 const String postedFolder = 'posted';
@@ -11,6 +16,7 @@ const String pendingDelete = 'pending_delete';
 class StorageService {
   final FirebaseAuth _auth = FirebaseAuth.instance; 
   final SupabaseClient _supabase = Supabase.instance.client; 
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   String? get currentUserId => _auth.currentUser?.uid;
 
@@ -233,5 +239,40 @@ Future<void> restoreFromPending(BinItem item) async {
       if (kDebugMode) print("Supabase Storage Error during hard delete from bin: ${e.message}");
       rethrow;
     }
+  }
+
+  StreamSubscription<QuerySnapshot>? _memorySub;
+
+  void listenUserMemories({bool Function(MemoryData)? filter}) {
+    // cancel previous listener if exists
+    _memorySub?.cancel();
+
+    _memorySub = _firestore.collection('memories').snapshots().listen((snapshot) {
+      unfilteredMemories.clear();
+
+      for (var doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final lat = (data['latitude'] as num?)?.toDouble() ?? 0.0;
+        final lng = (data['longitude'] as num?)?.toDouble() ?? 0.0;
+
+        final memory = MemoryData(
+          head: data['head'] as bool? ?? false,
+          mood: moodFromValue(data['moodValue'] as int? ?? 1),
+          addressString: data['addressString'] as String? ?? '',
+          position: LatLng(lat, lng),
+          imageUrl: data['imageUrl'] as String?,
+        )..decay = 1.0;
+
+        if (filter == null || filter(memory)) {
+          unfilteredMemories.add(memory);
+        }
+      }
+
+      // optional: notify listeners if using Provider/ChangeNotifier
+    });
+  }
+
+  void dispose() {
+    _memorySub?.cancel();
   }
 }

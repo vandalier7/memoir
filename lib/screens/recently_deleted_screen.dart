@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../processes/storage_service.dart';
 import '../models/bin_item.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../objects/globals.dart';
 
 class RecentlyDeletedScreen extends StatefulWidget {
   const RecentlyDeletedScreen({super.key});
@@ -11,18 +12,17 @@ class RecentlyDeletedScreen extends StatefulWidget {
 }
 
 class _RecentlyDeletedScreenState extends State<RecentlyDeletedScreen> {
-  final StorageService _storageService = StorageService();
   late Future<List<BinItem>> _deletedImagesFuture;
 
   @override
   void initState() {
     super.initState();
-    _deletedImagesFuture = _storageService.fetchPendingDeleteImages(); 
+    _deletedImagesFuture = storageService.fetchPendingDeleteImages(); 
   }
 
   void _refreshImages() {
     setState(() {
-      _deletedImagesFuture = _storageService.fetchPendingDeleteImages();
+      _deletedImagesFuture = storageService.fetchPendingDeleteImages();
     });
   }
 
@@ -92,7 +92,7 @@ class _RecentlyDeletedScreenState extends State<RecentlyDeletedScreen> {
               final item = images[index];
               return _DeletedGridTile(
                 item: item,
-                storageService: _storageService,
+                storageService: storageService,
                 handleAction: _handleAction, 
               );
             },

@@ -14,6 +14,8 @@ import 'package:presentation/processes/location_iq.dart';
 
 import 'package:presentation/processes/storage_service.dart';
 
+import '../objects/globals.dart';
+
 class JournalScreen extends StatefulWidget {
   final String imagePath;
   final List<CameraDescription> cameras;
@@ -38,8 +40,6 @@ class _JournalScreenState extends State<JournalScreen>
     Color.fromARGB(255, 245, 200, 157),
     Color.fromARGB(255, 248, 217, 174),
   ];
-
-  final StorageService storageService = StorageService(); 
 
   bool isMoodOpen = false;
   bool isJournalOpen = false;
@@ -196,7 +196,6 @@ class _JournalScreenState extends State<JournalScreen>
 
       final supabase = Supabase.instance.client;
       Uint8List? imageBytes;
-      final StorageService storageService = StorageService();
 
       // 1. Capture screenshot with overlays if they exist
       if (overlays.isNotEmpty) {

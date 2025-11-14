@@ -3,6 +3,7 @@ import '../processes/storage_service.dart';
 import '../models/bin_item.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'recently_deleted_screen.dart';
+import '../objects/globals.dart';
 
 class PostedScreen extends StatefulWidget {
   const PostedScreen({super.key});
@@ -12,18 +13,17 @@ class PostedScreen extends StatefulWidget {
 }
 
 class _PostedScreenState extends State<PostedScreen> {
-  final StorageService _storageService = StorageService();
   late Future<List<BinItem>> _postedImagesFuture;
 
   @override
   void initState() {
     super.initState();
-    _postedImagesFuture = _storageService.fetchPostedImages(); 
+    _postedImagesFuture = storageService.fetchPostedImages(); 
   }
 
   void _refreshImages() {
     setState(() {
-      _postedImagesFuture = _storageService.fetchPostedImages();
+      _postedImagesFuture = storageService.fetchPostedImages();
     });
   }
   
@@ -104,7 +104,7 @@ class _PostedScreenState extends State<PostedScreen> {
               final item = images[index];
               return _PostedGridTile(
                 item: item,
-                storageService: _storageService, 
+                storageService: storageService, 
                 onActionComplete: _refreshImages, 
                 handleAction: _handleAction, 
               );
