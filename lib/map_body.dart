@@ -153,6 +153,7 @@ class MapState extends State<MapBody> {
     });
   }
 
+  // Made public so parent can call it
   void closePreview() {
     setState(() {
       activeMemories = null;
@@ -215,6 +216,7 @@ class MapState extends State<MapBody> {
         duration: Duration(milliseconds: durationMs));
   }
 
+  // Made public so parent can call it
   void updateMapHold(bool value) {
 
     final positionToUse = nearestMemoryPosition ?? currentPosition;
