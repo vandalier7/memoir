@@ -31,6 +31,8 @@ class MapState extends State<MapBody> {
   bool considerTapAsDouble = false;
   bool isAnimatingToMemory = false;
 
+  LatLng? nearestMemoryPosition;
+  
   List<MemoryData>? activeMemories;
 
   double mapZoom = 16;
@@ -114,6 +116,19 @@ class MapState extends State<MapBody> {
     }
   }
 
+  // Find memory position closest to user within clusterRadius
+  LatLng? _findNearbyMemoryPosition() {
+    final groupedMemories = groupMemoriesByPosition(memories);
+    
+    for (final position in groupedMemories.keys) {
+      final distance = distanceBetween(currentPosition, position);
+      if (distance <= clusterRadius) {
+        return position;
+      }
+    }
+    return null;
+  }
+
   void showMemories(List<MemoryData> memoriesToShow) {
     setState(() {
       widget.closeMemory();
@@ -190,10 +205,11 @@ class MapState extends State<MapBody> {
       if (!value) {
         memories.clear();
         for (MemoryData memory in unfilteredMemories) {
-          if (memory.decay <= mapZoom) {
+          if (memory.decay <= mapZoom || memory.position == nearestMemoryPosition) {
             memories.add(memory);
           }
         }
+        // memories.add(neaby)
       } else {
         
       }
@@ -225,7 +241,10 @@ class MapState extends State<MapBody> {
   }
 
   Future<void> _updateScreenPoint() async {
-    final point = await mapController.toScreenLocation(currentPosition);
+    nearestMemoryPosition = _findNearbyMemoryPosition();
+    final positionToUse = nearestMemoryPosition ?? currentPosition;
+    
+    final point = await mapController.toScreenLocation(positionToUse);
     setState(() {
       screenPoint = point;
       updateMapHold(false);
@@ -291,6 +310,7 @@ class MapState extends State<MapBody> {
   @override
   Widget build(BuildContext context) {
     final groupedMemories = groupMemoriesByPosition(memories);
+    final nearbyMemoryPosition = _findNearbyMemoryPosition();
     
     // Build a set of positions that are part of multi-position clusters
     final Set<LatLng> clusteredPositions = {};
@@ -374,8 +394,9 @@ class MapState extends State<MapBody> {
         ),
       ),
 
-      // Render individual memory pins (only those NOT in clusters)
+      // Render individual memory pins (skip if near user position)
       for (final entry in groupedMemories.entries)
+        if (entry.key != nearbyMemoryPosition)
           MemoryPin.ofMemories(
             entry.value,
             entry.key,
@@ -397,11 +418,11 @@ class MapState extends State<MapBody> {
             },
           ),
 
-      // Render cluster pins (rendered AFTER individual pins so they appear on top)
+      // Render cluster pins
       for (final entry in screenSpaceClusters.entries)
-        if (entry.value.length > 1) // Only show cluster pin if there are multiple positions
+        if (entry.value.length > 1)
           FutureBuilder<Point>(
-            future: mapController.toScreenLocation(entry.key), // entry.key is now the centroid
+            future: mapController.toScreenLocation(entry.key),
             builder: (context, snapshot) {
               if (!snapshot.hasData) return SizedBox.shrink();
               
@@ -418,7 +439,7 @@ class MapState extends State<MapBody> {
                 top: screenPoint.y / pixelRatio! - 40,
                 child: ClusterPin(
                   count: allMemoriesInCluster.length,
-                  position: entry.key, // Centroid position for zoom target
+                  position: entry.key,
                   mapController: mapController,
                   isHoldingMap: isHoldingMap,
                   holdingCallback: updateMapHold,
@@ -428,9 +449,9 @@ class MapState extends State<MapBody> {
             },
           ),
 
+      // UserPin - displays at nearby memory position if within clusterRadius
       if (screenPoint != null)
         Positioned(
-          // TODO : pin centerin here
           left: screenPoint!.x / pixelRatio - 27,
           top: screenPoint!.y / pixelRatio - 67,
           child: GestureDetector(
@@ -438,12 +459,17 @@ class MapState extends State<MapBody> {
               onTap: () async {
                 updateMapHold(true);
                 closePreview();
+                
+                final targetPosition = nearbyMemoryPosition ?? currentPosition;
+                
                 await mapController.animateCamera(
-                    CameraUpdate.newLatLngZoom(
-                      LatLng(currentPosition.latitude, currentPosition.longitude),
-                      14,
-                    ),
+                    CameraUpdate.newLatLngZoom(targetPosition, 14),
                     duration: Duration(milliseconds: 1000));
+                
+                // Show memories if at a memory location
+                if (nearbyMemoryPosition != null) {
+                  showMemories(groupedMemories[nearbyMemoryPosition]!);
+                }
               },
               child: IgnorePointer(
                 ignoring: true,
@@ -451,8 +477,11 @@ class MapState extends State<MapBody> {
                   opacity: isHoldingMap ? 0.0 : 1.0,
                   duration: Duration(milliseconds: 100),
                   child: UserPin(
-                    color: Colors.purple.shade300,
-                    addressString: currentAddress!,
+                    memories: nearbyMemoryPosition != null 
+                        ? groupedMemories[nearbyMemoryPosition]! 
+                        : [],
+                    showPreviews: false,
+                    onClosePreviews: closePreview,
                   ),
                 ),
               )),

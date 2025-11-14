@@ -1,156 +1,132 @@
 import 'package:flutter/material.dart';
-import 'globals.dart';
+import 'memory.dart';
 
 class UserPin extends StatelessWidget {
-  final String addressString;
-  final Color color;
-  final bool showLabel;
+  final List<MemoryData> memories;
+  final bool showPreviews;
+  final VoidCallback onClosePreviews;
   final VoidCallback? onTap;
-  final List<Mood>? moods; // Multiple moods for gradient border
-  final double borderWidth;
+  final bool showLabel;
 
   const UserPin({
     super.key,
-    required this.addressString,
-    this.color = Colors.white,
-    this.showLabel = true,
+    this.memories = const [],
+    this.showPreviews = false,
+    required this.onClosePreviews,
     this.onTap,
-    this.moods,
-    this.borderWidth = 4.0,
+    this.showLabel = true,
   });
-
-  // Get color for each mood
-  Color _getMoodColor(Mood mood) {
-    switch (mood) {
-      case Mood.happy:
-        return Colors.yellow;
-      case Mood.sad:
-        return Colors.blue;
-      // Add more moods as needed
-    }
-  }
-
-  // Generate gradient from moods
-  Gradient? _getMoodGradient() {
-    if (moods == null || moods!.isEmpty) return null;
-    
-    if (moods!.length == 1) {
-      // Single mood - solid color
-      final moodColor = _getMoodColor(moods![0]);
-      return LinearGradient(
-        colors: [moodColor, moodColor],
-      );
-    }
-    
-    // Multiple moods - create gradient
-    final colors = moods!.map((mood) => _getMoodColor(mood)).toList();
-    return SweepGradient(
-      colors: colors,
-      // Ensure smooth transition back to start
-      stops: List.generate(colors.length, (i) => i / colors.length),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
-    final moodGradient = _getMoodGradient();
-
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Label above pi
-
-        // Pin marker with mood gradient border
-        Material(
-          color: Colors.transparent,
-          shape: const CircleBorder(),
-          child: InkWell(
-            customBorder: const CircleBorder(),
-            splashColor: const Color(0xFFF75270).withOpacity(0.3),
-            onTap: onTap,
-            child: moodGradient != null
-                ? CustomPaint(
-                    painter: GradientBorderPainter(
-                      gradient: moodGradient,
-                      strokeWidth: borderWidth,
-                    ),
-                    child: Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            Color(0xFFF75270),
-                            Color.fromARGB(255, 250, 132, 154),
-                            Color.fromARGB(255, 252, 165, 181),
-                            Color.fromARGB(255, 245, 200, 157),
-                            Color.fromARGB(255, 248, 217, 174),
-                          ],
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFFF75270).withOpacity(0.4),
-                            blurRadius: 16,
-                            spreadRadius: 1,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.person,
-                        color: Colors.white,
-                        size: 28,
-                      ),
-                    ),
-                  )
-                : Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Color(0xFFF75270),
-                          Color.fromARGB(255, 250, 132, 154),
-                          Color.fromARGB(255, 252, 165, 181),
-                          Color.fromARGB(255, 245, 200, 157),
-                          Color.fromARGB(255, 248, 217, 174),
-                        ],
-                      ),
-                      border: Border.all(
-                        color: Colors.white,
-                        width: 3,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFFF75270).withOpacity(0.4),
-                          blurRadius: 16,
-                          spreadRadius: 1,
-                          offset: const Offset(0, 4),
-                        ),
+        // Empty space to maintain layout when previews are shown
+        // (previews are rendered at map level, not here)
+        if (showPreviews && memories.isNotEmpty)
+          SizedBox(
+            height: memories.length == 1 ? 140 : 
+                   memories.length <= 3 ? 140 : 140,
+          ),
+        
+        // Pin marker with proper clip behavior for shadows
+        Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            Material(
+              color: Colors.transparent,
+              shape: const CircleBorder(),
+              child: InkWell(
+                customBorder: const CircleBorder(),
+                splashColor: const Color(0xFFF75270).withOpacity(0.3),
+                onTap: onTap,
+                child: Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color(0xFFF75270),
+                        Color.fromARGB(255, 250, 132, 154),
+                        Color.fromARGB(255, 252, 165, 181),
+                        Color.fromARGB(255, 245, 200, 157),
+                        Color.fromARGB(255, 248, 217, 174),
                       ],
                     ),
-                    child: const Icon(
-                      Icons.person,
+                    border: Border.all(
                       color: Colors.white,
-                      size: 28,
+                      width: 3,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFF75270).withOpacity(0.4),
+                        blurRadius: 16,
+                        spreadRadius: 1,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.person,
+                    color: Colors.white,
+                    size: 28,
+                  ),
+                ),
+              ),
+            ),
+            
+            // Memory count badge
+            if (memories.length > 1)
+              Positioned(
+                top: -2,
+                right: -2,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white,
+                      width: 2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 3,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                  constraints: const BoxConstraints(
+                    minWidth: 20,
+                    minHeight: 20,
+                  ),
+                  child: Center(
+                    child: Text(
+                      '${memories.length}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
-          ),
+                ),
+              ),
+          ],
         ),
 
-        // Pin pointer
+        // Pin pointer with gradient
         Container(
           padding: const EdgeInsets.only(top: 2),
           child: CustomPaint(
             size: const Size(20, 10),
             painter: PinPointerPainter(
-              color: color,
               gradient: const LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
@@ -167,42 +143,18 @@ class UserPin extends StatelessWidget {
   }
 }
 
-class GradientBorderPainter extends CustomPainter {
-  final Gradient gradient;
-  final double strokeWidth;
-
-  GradientBorderPainter({
-    required this.gradient,
-    required this.strokeWidth,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rect = Offset.zero & size;
-    final paint = Paint()
-      ..shader = gradient.createShader(rect)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth;
-
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = (size.width / 2) - (strokeWidth / 2);
-
-    canvas.drawCircle(center, radius, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
-}
-
 class PinPointerPainter extends CustomPainter {
-  final Color color;
-  final Gradient? gradient;
+  final Gradient gradient;
 
-  PinPointerPainter({required this.color, this.gradient});
+  PinPointerPainter({required this.gradient});
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..style = PaintingStyle.fill;
+    final paint = Paint()
+      ..style = PaintingStyle.fill
+      ..shader = gradient.createShader(
+        Rect.fromLTWH(0, 0, size.width, size.height),
+      );
 
     final path = Path()
       ..moveTo(size.width / 2, size.height)
@@ -210,18 +162,9 @@ class PinPointerPainter extends CustomPainter {
       ..lineTo(size.width, 0)
       ..close();
 
-    if (gradient != null) {
-      paint.shader = gradient!.createShader(
-        Rect.fromLTWH(0, 0, size.width, size.height),
-      );
-    } else {
-      paint.color = color;
-    }
-
     canvas.drawPath(path, paint);
   }
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
-
