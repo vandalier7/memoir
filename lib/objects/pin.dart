@@ -4,7 +4,6 @@ import 'memory.dart';
 class UserPin extends StatelessWidget {
   final List<MemoryData> memories;
   final bool showPreviews;
-  final VoidCallback onClosePreviews;
   final VoidCallback? onTap;
   final bool showLabel;
 
@@ -12,7 +11,6 @@ class UserPin extends StatelessWidget {
     super.key,
     this.memories = const [],
     this.showPreviews = false,
-    required this.onClosePreviews,
     this.onTap,
     this.showLabel = true,
   });

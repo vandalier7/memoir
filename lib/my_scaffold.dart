@@ -4,6 +4,7 @@ import 'objects/map_buttons.dart';
 import 'objects/search_bar.dart';
 import 'objects/memory.dart';
 import 'objects/memory_card.dart';
+import 'package:maplibre_gl/maplibre_gl.dart';
 
 class MyScaffold extends StatefulWidget {
   const MyScaffold({super.key});

@@ -23,15 +23,14 @@ class MapBody extends StatefulWidget {
 }
 
 class MapState extends State<MapBody> {
-  LatLng currentPosition = LatLng(14.5995, 120.9842);
   String? currentAddress = "...";
-  late MapLibreMapController mapController;
+  
   Point? screenPoint;
   bool isHoldingMap = false;
   bool considerTapAsDouble = false;
   bool isAnimatingToMemory = false;
 
-  LatLng? nearestMemoryPosition;
+  
   
   List<MemoryData>? activeMemories;
 
@@ -134,6 +133,18 @@ class MapState extends State<MapBody> {
     return null;
   }
 
+  void zoomToCurrentPosition () async {
+    updateMapHold(true);
+    closePreview();
+    widget.closeMemory();
+    
+    final targetPosition = nearestMemoryPosition ?? currentPosition;
+    
+    await mapController.animateCamera(
+        CameraUpdate.newLatLngZoom(targetPosition, 18),
+        duration: Duration(milliseconds: 1000));
+  }
+
   void showMemories(List<MemoryData> memoriesToShow) {
     setState(() {
       widget.closeMemory();
@@ -205,13 +216,25 @@ class MapState extends State<MapBody> {
   }
 
   void updateMapHold(bool value) {
+
+    final positionToUse = nearestMemoryPosition ?? currentPosition;
+
+
     setState(() {
       isHoldingMap = value;
       if (!value) {
         memories.clear();
         for (MemoryData memory in unfilteredMemories) {
-          if (memory.decay <= mapZoom || memory.position == nearestMemoryPosition) {
-            memories.add(memory);
+          if (memory.decay <= mapZoom || memory.position == positionToUse) {
+            if (memory.position != positionToUse){
+              if (!isWithinPixelThreshold(pos1: memory.position, pos2: positionToUse, pixelThreshold: clearanceRadius, currentZoom: mapZoom)) {
+                memories.add(memory);
+              }
+            }
+            else {
+              memories.add(memory);
+            }
+            // memories.add(memory);
           }
         }
         // memories.add(neaby)
@@ -353,10 +376,12 @@ class MapState extends State<MapBody> {
             await updateLocation();
           },
           onCameraIdle: () async {
-            _updateScreenPoint();
-            updateMapHold(false);
             var pos = await mapController.queryCameraPosition();
             updateZoom(pos!.zoom);
+
+            _updateScreenPoint();
+            updateMapHold(false);
+            
             
             // Perform screen-space clustering after camera stops
             await _performScreenSpaceClustering();
@@ -462,13 +487,15 @@ class MapState extends State<MapBody> {
           child: GestureDetector(
               behavior: HitTestBehavior.translucent,
               onTap: () async {
-                updateMapHold(true);
                 closePreview();
+                widget.closeMemory();
+                updateMapHold(true);
+                
                 
                 final targetPosition = nearbyMemoryPosition ?? currentPosition;
                 
                 await mapController.animateCamera(
-                    CameraUpdate.newLatLngZoom(targetPosition, 14),
+                    CameraUpdate.newLatLng(targetPosition),
                     duration: Duration(milliseconds: 1000));
                 
                 // Show memories if at a memory location
@@ -486,7 +513,6 @@ class MapState extends State<MapBody> {
                         ? groupedMemories[nearbyMemoryPosition]! 
                         : [],
                     showPreviews: false,
-                    onClosePreviews: closePreview,
                   ),
                 ),
               )),
@@ -691,3 +717,39 @@ double distanceBetween(LatLng a, LatLng b) {
 
   return earthRadius * c;
 } 
+
+double metersPerPixelAtZoom(double latitude, double zoom) {
+  const double earthCircumference = 40075017; // meters at equator
+  final double latitudeRadians = latitude * pi / 180;
+  
+  // Meters per pixel = (Earth circumference * cos(latitude)) / (256 * 2^zoom)
+  return (earthCircumference * cos(latitudeRadians)) / (256 * pow(2, zoom));
+}
+
+/// Convert pixel distance to meters at current zoom and latitude
+double pixelsToMeters(double pixels, double latitude, double zoom) {
+  return pixels * metersPerPixelAtZoom(latitude, zoom);
+}
+
+/// Convert meter distance to pixels at current zoom and latitude
+double metersToPixels(double meters, double latitude, double zoom) {
+  return meters / metersPerPixelAtZoom(latitude, zoom);
+}
+
+/// Check if two positions are within pixel threshold at current zoom
+bool isWithinPixelThreshold({
+  required LatLng pos1,
+  required LatLng pos2,
+  required double pixelThreshold,
+  required double currentZoom,
+}) {
+  // Calculate real-world distance in meters
+  final metersDistance = distanceBetween(pos1, pos2);
+  
+  // Convert pixel threshold to meters at this zoom level
+  // Use average latitude for the calculation
+  final avgLatitude = (pos1.latitude + pos2.latitude) / 2;
+  final metersThreshold = pixelsToMeters(pixelThreshold, avgLatitude, currentZoom);
+  
+  return metersDistance <= metersThreshold;
+}
