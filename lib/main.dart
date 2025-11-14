@@ -50,8 +50,6 @@ void main() async {
     cameras = await availableCameras();
     print('✅ Cameras initialized: ${cameras.length} camera(s) found');
 
-    
-    
 
   } catch (e) {
     print('❌ Initialization error: $e');
