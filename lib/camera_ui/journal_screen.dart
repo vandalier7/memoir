@@ -234,12 +234,12 @@ class _JournalScreenState extends State<JournalScreen>
       final memoryData = {
         'imageUrl': imageUrl,
         'addressString': addressString,
-        'latitude': latitude,
-        'longitude': longitude,
+        'latitude': currentPosition.latitude,
+        'longitude': currentPosition.longitude,
         'description': whatsController.text.trim().isEmpty 
             ? null 
             : whatsController.text.trim(),
-        'moodValue': selectedMoodValue, // 1-7
+        'moodValue': selectedMoodValue - 1, // 1-7
         'userId': currentUser.uid,
         'likesCount': 0,
         'commentsCount': 0,

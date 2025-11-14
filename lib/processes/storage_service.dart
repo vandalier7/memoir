@@ -72,10 +72,10 @@ class StorageService {
       return binItems;
       
     } on StorageException catch (e) {
-      if (kDebugMode) print("Supabase Storage Error fetching bin images: ${e.message}");
+      if (kDebugMode) debugPrint("Supabase Storage Error fetching bin images: ${e.message}");
       return []; 
     } on Exception catch (e) {
-      if (kDebugMode) print("General Error fetching bin images: $e");
+      if (kDebugMode) debugPrint("General Error fetching bin images: $e");
       return [];
     }
   }
@@ -92,9 +92,9 @@ class StorageService {
           sourcePath, 
           destinationPath,
         );
-        if (kDebugMode) print('✅ Image ${item.fileName} restored (moved to POSTED).');
+        if (kDebugMode) debugPrint('✅ Image ${item.fileName} restored (moved to POSTED).');
       } on StorageException catch (e) {
-        if (kDebugMode) print("Supabase Storage Error restoring image: ${e.message}");
+        if (kDebugMode) debugPrint("Supabase Storage Error restoring image: ${e.message}");
         rethrow;
       }
     }
@@ -124,10 +124,10 @@ class StorageService {
       return postedItems;
       
     } on StorageException catch (e) {
-      if (kDebugMode) print("Supabase Storage Error fetching posted images: ${e.message}");
+      if (kDebugMode) debugPrint("Supabase Storage Error fetching posted images: ${e.message}");
       return []; 
     } on Exception catch (e) {
-      if (kDebugMode) print("General Error fetching posted images: $e");
+      if (kDebugMode) debugPrint("General Error fetching posted images: $e");
       return [];
     }
   }
@@ -161,10 +161,10 @@ Future<List<BinItem>> fetchPendingDeleteImages() async {
     return pendingItems;
     
   } on StorageException catch (e) {
-    if (kDebugMode) print("Supabase Storage Error fetching pending delete images: ${e.message}");
+    if (kDebugMode) debugPrint("Supabase Storage Error fetching pending delete images: ${e.message}");
     return []; 
   } on Exception catch (e) {
-    if (kDebugMode) print("General Error fetching pending delete images: $e");
+    if (kDebugMode) debugPrint("General Error fetching pending delete images: $e");
     return [];
   }
 }
@@ -181,10 +181,10 @@ Future<void> softDeleteFromPosted(BinItem item) async {
         sourcePath, 
         destinationPath,
       );
-      if (kDebugMode) print('✅ Image moved from POSTED to PENDING DELETE stage.');
+      if (kDebugMode) debugPrint('✅ Image moved from POSTED to PENDING DELETE stage.');
       
     } on StorageException catch (e) {
-      if (kDebugMode) print("Supabase Storage Error during soft delete from posted: ${e.message}");
+      if (kDebugMode) debugPrint("Supabase Storage Error during soft delete from posted: ${e.message}");
       rethrow;
     }
   }
@@ -202,10 +202,10 @@ Future<void> restoreFromPending(BinItem item) async {
         sourcePath, 
         destinationPath,
       );
-      if (kDebugMode) print('✅ Image ${item.fileName} restored from pending delete back to POSTED.');
+      if (kDebugMode) debugPrint('✅ Image ${item.fileName} restored from pending delete back to POSTED.');
       
     } on StorageException catch (e) {
-      if (kDebugMode) print("Supabase Storage Error during restore from pending: ${e.message}");
+      if (kDebugMode) debugPrint("Supabase Storage Error during restore from pending: ${e.message}");
       rethrow;
     }
 }
@@ -219,9 +219,9 @@ Future<void> restoreFromPending(BinItem item) async {
 
     try {
       await _supabase.storage.from(supabaseBucket).remove([filePathToDelete]);
-      if (kDebugMode) print('✅ Image ${item.fileName} permanently removed from storage.');
+      if (kDebugMode) debugPrint('✅ Image ${item.fileName} permanently removed from storage.');
     } on StorageException catch (e) {
-      if (kDebugMode) print("Supabase Storage Error during hard delete: ${e.message}");
+      if (kDebugMode) debugPrint("Supabase Storage Error during hard delete: ${e.message}");
       rethrow;
     }
   }
@@ -234,9 +234,9 @@ Future<void> restoreFromPending(BinItem item) async {
 
     try {
       await _supabase.storage.from(supabaseBucket).remove([filePathToDelete]);
-      if (kDebugMode) print('✅ Image ${item.fileName} permanently removed from BIN storage.');
+      if (kDebugMode) debugPrint('✅ Image ${item.fileName} permanently removed from BIN storage.');
     } on StorageException catch (e) {
-      if (kDebugMode) print("Supabase Storage Error during hard delete from bin: ${e.message}");
+      if (kDebugMode) debugPrint("Supabase Storage Error during hard delete from bin: ${e.message}");
       rethrow;
     }
   }
@@ -244,33 +244,91 @@ Future<void> restoreFromPending(BinItem item) async {
   StreamSubscription<QuerySnapshot>? _memorySub;
 
   void listenUserMemories({bool Function(MemoryData)? filter}) {
-    // cancel previous listener if exists
-    _memorySub?.cancel();
+  debugPrint('🔵 [1] listenUserMemories called');
+  
+  _memorySub?.cancel();
+  debugPrint('🔵 [2] Previous subscription cancelled');
 
-    _memorySub = _firestore.collection('memories').snapshots().listen((snapshot) {
-      unfilteredMemories.clear();
-
-      for (var doc in snapshot.docs) {
-        final data = doc.data() as Map<String, dynamic>;
-        final lat = (data['latitude'] as num?)?.toDouble() ?? 0.0;
-        final lng = (data['longitude'] as num?)?.toDouble() ?? 0.0;
-
-        final memory = MemoryData(
-          head: data['head'] as bool? ?? false,
-          mood: moodFromValue(data['moodValue'] as int? ?? 1),
-          addressString: data['addressString'] as String? ?? '',
-          position: LatLng(lat, lng),
-          imageUrl: data['imageUrl'] as String?,
-        )..decay = 1.0;
-
-        if (filter == null || filter(memory)) {
-          unfilteredMemories.add(memory);
-        }
-      }
-
-      // optional: notify listeners if using Provider/ChangeNotifier
-    });
+  final userId = currentUserId;
+  debugPrint('🔵 [3] Got userId: $userId');
+  
+  if (userId == null) {
+    debugPrint('⚠️ Cannot listen to memories: user not logged in');
+    return;
   }
+
+  debugPrint('🔵 [4] About to create Firestore listener...');
+  
+  _memorySub = _firestore
+    .collection('memories')
+    .where('userId', isEqualTo: userId)
+    .snapshots()
+    .listen(
+      (snapshot) {
+        print('🟢 [5] Snapshot received with ${snapshot.docs.length} docs');
+        
+        unfilteredMemories.clear();
+        print('🟢 [6] Cleared unfilteredMemories');
+
+        print('🟡 [6.5] snapshot.docs type: ${snapshot.docs.runtimeType}');
+        print('🟡 [6.6] About to enter for loop...');
+        
+        int count = 0;
+        for (var doc in snapshot.docs) {
+          print('🟡 [7.$count] INSIDE for loop - processing doc');
+          
+          print('🟡 [7.${count}a] About to call doc.data()');
+          final data = doc.data();
+          print('🟡 [7.${count}b] Got data: ${data.keys}');
+          
+          print('🟡 [7.${count}c] Parsing latitude');
+          final lat = (data['latitude'] as num?)?.toDouble() ?? 0.0;
+          print('🟡 [7.${count}d] lat = $lat');
+          
+          print('🟡 [7.${count}e] Parsing longitude');
+          final lng = (data['longitude'] as num?)?.toDouble() ?? 0.0;
+          print('🟡 [7.${count}f] lng = $lng');
+
+          print('🟡 [7.${count}g] Getting moodValue');
+          final moodVal = data['moodValue'] as int? ?? 1;
+          print('🟡 [7.${count}h] moodVal = $moodVal, calling moodFromValue()');
+          
+          final mood = moodFromValue(moodVal);
+          print('🟡 [7.${count}i] mood = $mood');
+
+          print('🟡 [7.${count}j] Creating LatLng');
+          final position = LatLng(lat, lng);
+          print('🟡 [7.${count}k] position created');
+
+          print('🟡 [7.${count}l] Creating MemoryData');
+          final memory = MemoryData(
+            head: data['head'] as bool? ?? false,
+            mood: mood,
+            addressString: data['addressString'] as String? ?? '',
+            position: position,
+            imageUrl: data['imageUrl'] as String?,
+          );
+
+
+          print('🟡 [7.${count}o] Checking filter');
+          if (filter == null || filter(memory)) {
+            print('🟡 [7.${count}p] Adding to unfilteredMemories');
+            unfilteredMemories.add(memory);
+            print('🟡 [7.${count}q] Added successfully');
+          }
+          
+          print('🟡 [7.${count}r] Doc complete');
+          count++;
+        }
+        print('🟢 [7] Finished processing $count memories');
+      },
+      onError: (error) {
+        print('❌ Firestore error: $error');
+      },
+    );
+  
+  debugPrint('🔵 [8] Listener setup complete (but stream is async)');
+}
 
   void dispose() {
     _memorySub?.cancel();

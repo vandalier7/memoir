@@ -50,11 +50,16 @@ void main() async {
     cameras = await availableCameras();
     print('✅ Cameras initialized: ${cameras.length} camera(s) found');
 
+    
+
+
 
   } catch (e) {
     print('❌ Initialization error: $e');
     // You might want to show an error screen here instead of continuing
   }
+
+  storageService.listenUserMemories();
 
   MapLibreMap.useHybridComposition = true;
   runApp(const Root());

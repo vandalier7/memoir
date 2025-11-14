@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:core';
 import 'package:presentation/objects/unfocus_on_tap.dart';
+import '../objects/globals.dart';
 
 import '../processes/auth.dart';
 
@@ -273,8 +274,8 @@ class _LogInState extends State<LogIn> {
               height: 55,
               child: TextFormField(
                 controller: widget.passwordController,
+                validator: (value) => validateLength(value, 0, "password"),
                 enabled: !_isLoading,
-                validator:(value) => validatePassword(value),
                 obscureText: true,
                 style: TextStyle(
                     fontSize: 14
@@ -356,6 +357,7 @@ class _LogInState extends State<LogIn> {
                           widget.emailController.text.trim(),
                           widget.passwordController.text.trim()
                         );
+                        // storageService.listenUserMemories();
                         if (!context.mounted) return;
                         
                         Navigator.pushNamed(context, '/map');
@@ -635,7 +637,6 @@ class _SignUpState extends State<SignUp> {
                           widget.passwordController.text.trim()
                         );
                         if (!context.mounted) return;
-                        
                         Navigator.pushNamed(context, '/map');
                       } finally {
                         if (mounted) {
