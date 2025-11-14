@@ -125,6 +125,22 @@ void _switchCamera() async {
     final image = await _controller!.takePicture();
 
     if (!mounted) return;
+
+    // Get current location
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+  
+      // Update global currentPosition
+      currentPosition = LatLng(position.latitude, position.longitude);
+      print('📍 Location updated: ${currentPosition.latitude}, ${currentPosition.longitude}');
+  
+    } catch (e) {
+    print('⚠️ Location error: $e');
+  }
+
+  // Navigate to preview with image path
     // Use pushReplacement so going back from journal returns to camera, not preview
     Navigator.pushNamed(context, '/preview', arguments: image.path);
   }
