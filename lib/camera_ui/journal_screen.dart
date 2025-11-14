@@ -1,4 +1,4 @@
-// lib/screens/journal_screen.dart
+// lib/camera_ui/journal_screen.dart
 import 'dart:io';
 import 'dart:ui';
 import 'dart:typed_data';
@@ -157,23 +157,15 @@ class _JournalScreenState extends State<JournalScreen>
       return;
     }
 
-    snack.showSnackBar(const SnackBar(content: Text('Getting location...')));
+    snack.showSnackBar(const SnackBar(content: Text('Uploading...')));
 
     try{
       // Get current location and address
       String? addressString;
-      double? latitude;
-      double? longitude;
+      double? latitude = currentPosition.latitude;
+      double? longitude = currentPosition.longitude;
 
       try{
-        // Get current position
-        Position position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high,
-        );
-
-        latitude = position.latitude;
-        longitude = position.longitude;
-
         final locationIQ = LocationIQService('pk.2e56aa59169aa53b63093b78aff0e291');
         addressString = await getAddressFromLocation(
           LatLng(latitude, longitude),
@@ -187,12 +179,9 @@ class _JournalScreenState extends State<JournalScreen>
         print('📍 Location: $latitude, $longitude');
         print('🏠 Address: $addressString');
       } catch (e) {
-        print('⚠️ Location error: $e');
+        print('⚠️ Address lookup error: $e');
         // Continue without location if it fails
       }
-
-      snack.hideCurrentSnackBar();
-      snack.showSnackBar(const SnackBar(content: Text('Uploading...')));
 
       final supabase = Supabase.instance.client;
       Uint8List? imageBytes;

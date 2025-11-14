@@ -3,7 +3,10 @@ import 'dart:ui';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
-import 'package:presentation/camera_ui/preview_screen.dart'; // adjust package/path if needed
+import 'package:geolocator/geolocator.dart';
+import 'package:maplibre_gl/maplibre_gl.dart';
+import 'package:presentation/camera_ui/preview_screen.dart';
+import 'package:presentation/objects/globals.dart';
 
 class CameraScreen extends StatefulWidget {
   final List<CameraDescription> cameras;
@@ -125,25 +128,28 @@ void _switchCamera() async {
     final image = await _controller!.takePicture();
 
     if (!mounted) return;
+    
+    // Navigate to preview immediately
+    Navigator.pushNamed(context, '/preview', arguments: image.path);
 
-    // Get current location
+    // Fetch location in the background (non-blocking)
+    _fetchLocationInBackground();
+  }
+  void _fetchLocationInBackground() async {
     try {
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
       );
-  
+ 
       // Update global currentPosition
       currentPosition = LatLng(position.latitude, position.longitude);
-      print('📍 Location updated: ${currentPosition.latitude}, ${currentPosition.longitude}');
-  
+      print('✅ Location updated: ${currentPosition.latitude}, ${currentPosition.longitude}');
     } catch (e) {
-    print('⚠️ Location error: $e');
-  }
-
-  // Navigate to preview with image path
-    // Use pushReplacement so going back from journal returns to camera, not preview
-    Navigator.pushNamed(context, '/preview', arguments: image.path);
-  }
+      print('⚠️ Background location error: $e');
+    }
+  }  
 
   @override
   void dispose() {

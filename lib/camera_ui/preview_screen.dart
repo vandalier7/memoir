@@ -1,9 +1,65 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:presentation/processes/storage_service.dart';
+import 'package:presentation/objects/globals.dart';
 
 class PreviewScreen extends StatelessWidget {
   final String imagePath;
   const PreviewScreen({super.key, required this.imagePath});
+
+  Future<void> _discardToBin(BuildContext context) async {
+    try {
+      // Show loading
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Moving to bin...')),
+      );
+
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        throw Exception('Please log in first');
+      }
+
+      // Read image file
+      final file = File(imagePath);
+      final imageBytes = await file.readAsBytes();
+    
+      // Upload to bin folder in Supabase using storage service
+      final fileName = 'discarded_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      
+      await storageService.uploadToBin(fileName, imageBytes);
+    
+      print('✅ Image moved to bin: $fileName');
+    
+      if (!context.mounted) return;
+    
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Photo moved to bin'),
+          backgroundColor: Colors.grey,
+        ),
+      );
+    
+      // Go back to camera
+      Navigator.pop(context);
+    
+    } catch (e) {
+      print('❌ Error moving to bin: $e');
+      if (!context.mounted) return;
+    
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    
+      // Still go back
+      Navigator.pop(context);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,16 +107,6 @@ class PreviewScreen extends StatelessWidget {
             ),
           ),
 
-          // Top-left close button
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 10,
-            left: 20,
-            child: IconButton(
-              icon: const Icon(Icons.close, color: Colors.white, size: 30),
-              onPressed: () => Navigator.pop(context),
-            ),
-          ),
-
           // Bottom buttons + message
           Positioned(
             bottom: MediaQuery.of(context).padding.bottom + 60,
@@ -77,9 +123,8 @@ class PreviewScreen extends StatelessWidget {
                       // ❌ Discard button
                       Expanded(
                         child: ElevatedButton(
-                          onPressed: () {
-                            // TODO: add the image to the bin of the user
-                            Navigator.pop(context);
+                          onPressed: () async {
+                            await _discardToBin(context);
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.grey.shade800,
@@ -129,7 +174,6 @@ class PreviewScreen extends StatelessWidget {
                           ),
                           child: Ink(
                             decoration: BoxDecoration(
-                              // 🌒 Darker gradient version of the palette
                               gradient: LinearGradient(
                                 colors: [
                                   palette[0].withOpacity(0.85),

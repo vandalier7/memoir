@@ -29,20 +29,34 @@ class StorageService {
   }
 
   Future<String> uploadImage(String fileName, Uint8List bytes, String bucket) async {
-  final fileName = 'memory_${DateTime.now().millisecondsSinceEpoch}.png';
-
+  
   await _supabase.storage
-      .from(supabaseBucket)
+      .from(bucket)
           .uploadBinary(
             "$currentUserId/posted/$fileName", 
             bytes
           );
 
   return _supabase.storage
-          .from(supabaseBucket)
+          .from(bucket)
           .getPublicUrl("$currentUserId/posted/$fileName");
-}
+  }
 
+  Future<void> uploadToBin(String fileName, Uint8List bytes) async {
+  final userId = currentUserId;
+  if (userId == null) {
+    throw Exception("Authentication Error: User is not logged in.");
+  }
+
+  await _supabase.storage
+      .from(supabaseBucket)
+      .uploadBinary(
+        "$userId/$binFolder/$fileName",
+        bytes,
+      );
+
+  print('✅ Image uploaded to bin: $fileName');
+  }
 
   Future<List<BinItem>> fetchBinImages() async {
     final binPath = _getUserFolderPath(binFolder);

@@ -22,8 +22,6 @@ import 'screens/bin_screen.dart';
 import 'camera_ui/camera_screen.dart';
 import 'camera_ui/journal_screen.dart';
 
-
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -71,7 +69,7 @@ class Root extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: "Memoir",
       // Directly show the main map screen wrapper (MyScaffold)
-      home: MyScaffold(), 
+      home: SignInCard(), 
       // 🔗 Routes for navigation
       routes: {
         '/map': (context) => const MyScaffold(),
