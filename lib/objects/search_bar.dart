@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../app_theme.dart'; // for memoirTheme colors
+import '../screens/account_screen.dart';
 
 class SearchBarWidget extends StatelessWidget {
   final FocusNode? focusNode;
@@ -49,8 +50,10 @@ class SearchBarWidget extends StatelessWidget {
                 // 👤 Account button (now on the right)
                 GestureDetector(
                   onTap: () {
-                    debugPrint('Account button tapped');
-                    // You can navigate to profile or settings page here
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const AccountScreen()),
+                      );
                   },
                   child: Padding(
                     padding: const EdgeInsets.only(right: 7),
@@ -74,10 +77,10 @@ class SearchBarWidget extends StatelessWidget {
               debugPrint("Filters button tapped");
             },
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: memoirTheme.surface,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.08),
@@ -89,13 +92,14 @@ class SearchBarWidget extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min, // shrink to fit content
                 children: [
-                  Icon(Icons.layers, size: 10, color: memoirTheme.onSurface),
+                  Icon(Icons.layers, size: 15, color: memoirTheme.onSurface),
                   const SizedBox(width: 6),
                   Text(
                     "Filters",
                     style: TextStyle(
                       color: memoirTheme.onSurface,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w400,
+                      fontSize: 13
                     ),
                   ),
                 ],
