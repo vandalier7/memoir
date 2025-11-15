@@ -79,7 +79,7 @@ class UserPin extends StatelessWidget {
             ),
             
             // Memory count badge
-            if (memories.length > 1)
+            if (memories.isNotEmpty)
               Positioned(
                 top: -2,
                 right: -2,

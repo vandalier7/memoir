@@ -321,6 +321,7 @@ Future<void> restoreFromPending(BinItem item) async {
             addressString: data['addressString'] as String? ?? '',
             position: position,
             imageUrl: data['imageUrl'] as String?,
+            description: data['description'] as String?,
           );
 
 

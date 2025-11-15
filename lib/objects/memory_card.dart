@@ -13,7 +13,7 @@ class MemoryCard extends StatefulWidget {
   const MemoryCard({
     super.key,
     this.imageUrl,
-    required this.description,
+    this.description = "yeah",
     required this.addressString,
     this.onClose,
     this.borderColor = Colors.white,

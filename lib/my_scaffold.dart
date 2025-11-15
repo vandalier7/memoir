@@ -95,7 +95,8 @@ class MyState extends State<MyScaffold> {
 
             if (activeMemory != null)
               MemoryCard(
-                description: "Lorem ipsum dolor sit amet.",
+                description: activeMemory!.description ?? "",
+                imageUrl: activeMemory!.imageUrl ?? "",
                 addressString: activeMemory!.addressString,
                 borderColor: const Color.fromARGB(255, 219, 198, 9),
                 borderWidth: 2,

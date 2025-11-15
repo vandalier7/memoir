@@ -536,7 +536,7 @@ class MapState extends State<MapBody> {
             final scaledHeight = previewHeight * scaleFactor;
             
             // TODO : preview centering here
-            final pinCenterX = screenPoint.x / pixelRatio - 12;
+            final pinCenterX = screenPoint.x / pixelRatio - 14;
             final pinCenterY = screenPoint.y / pixelRatio - 40;
             
             // Take only first 6 memories
@@ -548,7 +548,7 @@ class MapState extends State<MapBody> {
                 final memory = entry.value;
                 
                 // Hexagonal arrangement positions
-                final radius = 90.0;
+                final radius = 100.0;
                 double dx = 0;
                 double dy = 0;
                 

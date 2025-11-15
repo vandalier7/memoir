@@ -9,6 +9,7 @@ import 'globals.dart';
 import 'dart:math';
 
 class MemoryData {
+  final String? description;
   final bool head;
   final Mood mood;
   final String addressString;
@@ -23,6 +24,7 @@ class MemoryData {
     this.decay = 16.0,
     this.head = true,
     this.imageUrl,
+    this.description
   });
 
   @override
