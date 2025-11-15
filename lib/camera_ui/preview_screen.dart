@@ -4,60 +4,54 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:presentation/processes/storage_service.dart';
 import 'package:presentation/objects/globals.dart';
+// No need for FirebaseAuth or Supabase imports here
+import 'package:presentation/processes/storage_service.dart';
+import 'package:presentation/objects/globals.dart'; // Use global service
 
-class PreviewScreen extends StatelessWidget {
+class PreviewScreen extends StatefulWidget { // Changed to StatefulWidget
   final String imagePath;
   const PreviewScreen({super.key, required this.imagePath});
 
-  Future<void> _discardToBin(BuildContext context) async {
+  @override
+  State<PreviewScreen> createState() => _PreviewScreenState();
+}
+
+class _PreviewScreenState extends State<PreviewScreen> {
+  // No need to instantiate StorageService, use global 'storageService'
+
+  Future<void> _handleDiscard(BuildContext context) async {
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
     try {
-      // Show loading
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Moving to bin...')),
-      );
+      final File imageFile = File(widget.imagePath);
+      final imageBytes = await imageFile.readAsBytes();
 
-      final currentUser = FirebaseAuth.instance.currentUser;
-      if (currentUser == null) {
-        throw Exception('Please log in first');
+      // Use the new function via the global service
+      // This will upload to Supabase AND create the Firestore doc with 30-day TTL
+      await storageService.uploadAndStageImage(imageBytes);
+
+      if (context.mounted) {
+        Navigator.pop(context); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Image added to Bin'),
+            backgroundColor: Colors.grey, // Optional: Differentiate from error
+          ),
+        );
+        Navigator.pop(context); // Go back from preview screen
       }
-
-      // Read image file
-      final file = File(imagePath);
-      final imageBytes = await file.readAsBytes();
-    
-      // Upload to bin folder in Supabase using storage service
-      final fileName = 'discarded_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      
-      await storageService.uploadToBin(fileName, imageBytes);
-    
-      print('✅ Image moved to bin: $fileName');
-    
-      if (!context.mounted) return;
-    
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Photo moved to bin'),
-          backgroundColor: Colors.grey,
-        ),
-      );
-    
-      // Go back to camera
-      Navigator.pop(context);
-    
     } catch (e) {
-      print('❌ Error moving to bin: $e');
-      if (!context.mounted) return;
-    
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    
-      // Still go back
-      Navigator.pop(context);
+      if (context.mounted) {
+        Navigator.pop(context); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save to bin: $e')),
+        );
+      }
     }
   }
 
@@ -79,7 +73,7 @@ class PreviewScreen extends StatelessWidget {
           // Fullscreen captured image
           Positioned.fill(
             child: Image.file(
-              File(imagePath),
+              File(widget.imagePath),
               fit: BoxFit.cover,
             ),
           ),
@@ -106,6 +100,16 @@ class PreviewScreen extends StatelessWidget {
               ),
             ),
           ),
+          
+          // Close button (from your new code)
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 10,
+            left: 20,
+            child: IconButton(
+              icon: const Icon(Icons.close, color: Colors.white, size: 30),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ),
 
           // Bottom buttons + message
           Positioned(
@@ -123,9 +127,7 @@ class PreviewScreen extends StatelessWidget {
                       // ❌ Discard button
                       Expanded(
                         child: ElevatedButton(
-                          onPressed: () async {
-                            await _discardToBin(context);
-                          },
+                          onPressed: () => _handleDiscard(context), // Use new handler
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.grey.shade800,
                             padding: const EdgeInsets.symmetric(
@@ -161,7 +163,7 @@ class PreviewScreen extends StatelessWidget {
                             Navigator.pushReplacementNamed(
                               context,
                               '/journal',
-                              arguments: imagePath,
+                              arguments: widget.imagePath,
                             );
                           },
                           style: ElevatedButton.styleFrom(
@@ -213,7 +215,7 @@ class PreviewScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 25),
 
-                // ✨ Emotional message with semi-transparent container
+                // ✨ Emotional message
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 40),
                   child: Container(
