@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:core';
 import 'package:presentation/objects/unfocus_on_tap.dart';
 import '../objects/globals.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../processes/auth.dart';
 
@@ -205,6 +206,8 @@ class LogIn extends StatefulWidget {
 
 class _LogInState extends State<LogIn> {
   bool _isLoading = false;
+  String? _errorMessage;
+
 
   @override
   Widget build(BuildContext context) {
@@ -313,10 +316,20 @@ class _LogInState extends State<LogIn> {
               ),
             )
           ),
+          if (_errorMessage != null) 
+            Center(
+              child: Padding(
+              padding: EdgeInsets.all(0.0),
+              child: Text(
+                _errorMessage!,
+                style: TextStyle(color: Colors.red, fontSize: 12),
+              ),
+            ),
+            ),
           Center(
             child: Container(
-              padding: const EdgeInsets.only(left: 20, right: 20, top: 30, bottom: 30),
-              height: 100,
+              padding: EdgeInsets.only(left: 20, right: 20, top: (_errorMessage != null ? 12 : 30), bottom: 30),
+              height: (_errorMessage != null ? 82 : 100),
               width: 400,
               
               child: Container(
@@ -346,9 +359,13 @@ class _LogInState extends State<LogIn> {
                 ),
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : () async {
+                     setState(() {
+                        _errorMessage = null;
+                      });
                     if (widget.formKey.currentState!.validate()) {
                       setState(() {
                         _isLoading = true;
+                        _errorMessage = null;
                       });
                       widget.onLoadingChanged(true);
                       
@@ -356,11 +373,52 @@ class _LogInState extends State<LogIn> {
                         await loginUser(
                           widget.emailController.text.trim(),
                           widget.passwordController.text.trim()
-                        );
-                        // storageService.listenUserMemories();
+                        );  
+                        
+                        if (!context.mounted) return;
+                        Navigator.pushNamed(context, '/map');
+                        
+                      } on FirebaseAuthException catch (e) {
+                        // Handle Firebase Auth specific errors
                         if (!context.mounted) return;
                         
-                        Navigator.pushNamed(context, '/map');
+                        String errorMessage;
+                        if (e.code == 'user-not-found') {
+                          errorMessage = 'No account found with this email.';
+                        } else if (e.code == 'invalid-credential') {
+                          errorMessage = 'Invalid email or password.';
+                        } else if (e.code == 'too-many-requests') {
+                          errorMessage = 'Too many requests. Try again in a few minutes.';
+                        } else if (e.code == 'user-disabled') {
+                          errorMessage = 'This account has been disabled.';
+                        } else {
+                          errorMessage = 'Login failed: ${e.code}';
+                        }
+                        
+                        // Show error using SnackBar
+                        // ScaffoldMessenger.of(context).showSnackBar(
+                        //   SnackBar(
+                        //     content: Text(errorMessage),
+                        //     backgroundColor: Colors.red,
+                        //     duration: Duration(seconds: 4),
+                        //   ),
+                        // );
+
+                        // Show error through _errorMessage
+                        setState(() {
+                          _errorMessage = errorMessage;
+                        });
+                        
+                      } catch (e) {
+                        // Handle any other errors
+                        if (!context.mounted) return;
+                        
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('An unexpected error occurred: $e'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
                       } finally {
                         if (mounted) {
                           setState(() {
@@ -436,6 +494,7 @@ class SignUp extends StatefulWidget {
 
 class _SignUpState extends State<SignUp> {
   bool _isLoading = false;
+  String? _errorMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -593,8 +652,8 @@ class _SignUpState extends State<SignUp> {
           ),
           Center(
             child: Container(
-              padding: const EdgeInsets.all(20),
-              height: 80,
+              padding: EdgeInsets.only(right: 20, left: 20, bottom: 20, top: _errorMessage != null ? 2 : 20),
+              height: _errorMessage != null ? 62 : 80,
               width: 400,
               
               child: Container(
@@ -638,13 +697,29 @@ class _SignUpState extends State<SignUp> {
                         );
                         if (!context.mounted) return;
                         Navigator.pushNamed(context, '/map');
-                      } finally {
-                        if (mounted) {
-                          setState(() {
-                            _isLoading = false;
-                          });
-                          widget.onLoadingChanged(false);
+                      } on FirebaseAuthException catch (e) {
+                        // Handle Firebase Auth specific errors
+                        if (!context.mounted) return;
+                        
+                        String errorMessage;
+                        if (e.code == 'user-not-found') {
+                          errorMessage = 'No account found with this email.';
+                        } else if (e.code == 'invalid-credential') {
+                          errorMessage = 'Invalid email or password.';
+                        } else if (e.code == 'too-many-requests') {
+                          errorMessage = 'Too many requests. Try again in a few minutes.';
+                        } else if (e.code == 'user-disabled') {
+                          errorMessage = 'This account has been disabled.';
+                        } else {
+                          errorMessage = 'Login failed: ${e.code}';
                         }
+                        
+
+                        // Show error through _errorMessage
+                        setState(() {
+                          _errorMessage = errorMessage;
+                        });
+                        
                       }
                     }
                   },

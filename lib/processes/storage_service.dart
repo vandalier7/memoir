@@ -55,7 +55,7 @@ class StorageService {
         bytes,
       );
 
-  print('✅ Image uploaded to bin: $fileName');
+  debugPrint('✅ Image uploaded to bin: $fileName');
   }
 
   Future<List<BinItem>> fetchBinImages() async {
@@ -279,42 +279,42 @@ Future<void> restoreFromPending(BinItem item) async {
     .snapshots()
     .listen(
       (snapshot) {
-        print('🟢 [5] Snapshot received with ${snapshot.docs.length} docs');
+        debugPrint('🟢 [5] Snapshot received with ${snapshot.docs.length} docs');
         
         unfilteredMemories.clear();
-        print('🟢 [6] Cleared unfilteredMemories');
+        debugPrint('🟢 [6] Cleared unfilteredMemories');
 
-        print('🟡 [6.5] snapshot.docs type: ${snapshot.docs.runtimeType}');
-        print('🟡 [6.6] About to enter for loop...');
+        debugPrint('🟡 [6.5] snapshot.docs type: ${snapshot.docs.runtimeType}');
+        debugPrint('🟡 [6.6] About to enter for loop...');
         
         int count = 0;
         for (var doc in snapshot.docs) {
-          print('🟡 [7.$count] INSIDE for loop - processing doc');
+          debugPrint('🟡 [7.$count] INSIDE for loop - processing doc');
           
-          print('🟡 [7.${count}a] About to call doc.data()');
+          debugPrint('🟡 [7.${count}a] About to call doc.data()');
           final data = doc.data();
-          print('🟡 [7.${count}b] Got data: ${data.keys}');
+          debugPrint('🟡 [7.${count}b] Got data: ${data.keys}');
           
-          print('🟡 [7.${count}c] Parsing latitude');
+          debugPrint('🟡 [7.${count}c] Parsing latitude');
           final lat = (data['latitude'] as num?)?.toDouble() ?? 0.0;
-          print('🟡 [7.${count}d] lat = $lat');
+          debugPrint('🟡 [7.${count}d] lat = $lat');
           
-          print('🟡 [7.${count}e] Parsing longitude');
+          debugPrint('🟡 [7.${count}e] Parsing longitude');
           final lng = (data['longitude'] as num?)?.toDouble() ?? 0.0;
-          print('🟡 [7.${count}f] lng = $lng');
+          debugPrint('🟡 [7.${count}f] lng = $lng');
 
-          print('🟡 [7.${count}g] Getting moodValue');
+          debugPrint('🟡 [7.${count}g] Getting moodValue');
           final moodVal = data['moodValue'] as int? ?? 1;
-          print('🟡 [7.${count}h] moodVal = $moodVal, calling moodFromValue()');
+          debugPrint('🟡 [7.${count}h] moodVal = $moodVal, calling moodFromValue()');
           
           final mood = moodFromValue(moodVal);
-          print('🟡 [7.${count}i] mood = $mood');
+          debugPrint('🟡 [7.${count}i] mood = $mood');
 
-          print('🟡 [7.${count}j] Creating LatLng');
+          debugPrint('🟡 [7.${count}j] Creating LatLng');
           final position = LatLng(lat, lng);
-          print('🟡 [7.${count}k] position created');
+          debugPrint('🟡 [7.${count}k] position created');
 
-          print('🟡 [7.${count}l] Creating MemoryData');
+          debugPrint('🟡 [7.${count}l] Creating MemoryData');
           final memory = MemoryData(
             head: data['head'] as bool? ?? false,
             mood: mood,
@@ -325,20 +325,20 @@ Future<void> restoreFromPending(BinItem item) async {
           );
 
 
-          print('🟡 [7.${count}o] Checking filter');
+          debugPrint('🟡 [7.${count}o] Checking filter');
           if (filter == null || filter(memory)) {
-            print('🟡 [7.${count}p] Adding to unfilteredMemories');
+            debugPrint('🟡 [7.${count}p] Adding to unfilteredMemories');
             unfilteredMemories.add(memory);
-            print('🟡 [7.${count}q] Added successfully');
+            debugPrint('🟡 [7.${count}q] Added successfully');
           }
           
-          print('🟡 [7.${count}r] Doc complete');
+          debugPrint('🟡 [7.${count}r] Doc complete');
           count++;
         }
-        print('🟢 [7] Finished processing $count memories');
+        debugPrint('🟢 [7] Finished processing $count memories');
       },
       onError: (error) {
-        print('❌ Firestore error: $error');
+        debugPrint('❌ Firestore error: $error');
       },
     );
   
