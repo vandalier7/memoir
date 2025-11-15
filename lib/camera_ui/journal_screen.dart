@@ -1,4 +1,4 @@
-// lib/screens/journal_screen.dart
+// lib/camera_ui/journal_screen.dart
 import 'dart:io';
 import 'dart:ui';
 import 'dart:typed_data';
@@ -157,23 +157,16 @@ class _JournalScreenState extends State<JournalScreen>
       return;
     }
 
-    snack.showSnackBar(const SnackBar(content: Text('Getting location...')));
+    snack.showSnackBar(const SnackBar(content: Text('Uploading...')));
+    LatLng positionToUse = nearestMemoryPosition ?? currentPosition;
 
     try{
       // Get current location and address
       String? addressString;
-      double? latitude;
-      double? longitude;
+      double? latitude = positionToUse.latitude;
+      double? longitude = positionToUse.longitude;
 
       try{
-        // Get current position
-        Position position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high,
-        );
-
-        latitude = position.latitude;
-        longitude = position.longitude;
-
         final locationIQ = LocationIQService('pk.2e56aa59169aa53b63093b78aff0e291');
         addressString = await getAddressFromLocation(
           LatLng(latitude, longitude),
@@ -187,12 +180,9 @@ class _JournalScreenState extends State<JournalScreen>
         print('📍 Location: $latitude, $longitude');
         print('🏠 Address: $addressString');
       } catch (e) {
-        print('⚠️ Location error: $e');
+        print('⚠️ Address lookup error: $e');
         // Continue without location if it fails
       }
-
-      snack.hideCurrentSnackBar();
-      snack.showSnackBar(const SnackBar(content: Text('Uploading...')));
 
       final supabase = Supabase.instance.client;
       Uint8List? imageBytes;
@@ -216,9 +206,7 @@ class _JournalScreenState extends State<JournalScreen>
       final fileName = 'memory_${currentUser.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg';
     
       final imageUrl = await storageService.uploadImage(
-        fileName,
         imageBytes,
-        'images',
       );
 
       if (imageUrl == null) {
@@ -234,8 +222,8 @@ class _JournalScreenState extends State<JournalScreen>
       final memoryData = {
         'imageUrl': imageUrl,
         'addressString': addressString,
-        'latitude': currentPosition.latitude,
-        'longitude': currentPosition.longitude,
+        'latitude': positionToUse.latitude,
+        'longitude': positionToUse.longitude,
         'description': whatsController.text.trim().isEmpty 
             ? null 
             : whatsController.text.trim(),

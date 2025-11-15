@@ -22,8 +22,6 @@ import 'screens/bin_screen.dart';
 import 'camera_ui/camera_screen.dart';
 import 'camera_ui/journal_screen.dart';
 
-
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 

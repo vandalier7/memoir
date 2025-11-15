@@ -628,12 +628,11 @@ class MapState extends State<MapBody> {
                               top: -4,
                               left: -4,
                               child: Container(
+                                margin: EdgeInsets.all(8),
                                 width: 16,
                                 height: 16,
                                 decoration: BoxDecoration(
-                                  color: memory.mood == Mood.happy
-                                      ? Colors.yellow
-                                      : Colors.blue,
+                                  color: getMoodColor(memory.mood),
                                   shape: BoxShape.circle,
                                   border: Border.all(
                                     color: Colors.white,

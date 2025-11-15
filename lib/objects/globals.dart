@@ -2,6 +2,7 @@ import 'package:camera/camera.dart';
 import 'memory.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:presentation/processes/storage_service.dart';
+import 'package:flutter/material.dart';
 
 late final num pixelRatio;
 
@@ -25,6 +26,26 @@ Mood moodFromValue(int value) {
       case 5: return Mood.calm;
       case 6: return Mood.worried;
       default: return Mood.happy;
+    }
+  }
+
+Color getMoodColor(Mood mood) {
+    switch (mood) {
+      case Mood.happy:
+        return Colors.yellow;
+      case Mood.sad:
+        return const Color.fromARGB(255, 33, 65, 243);
+      case Mood.angry:
+        return Colors.red.shade900;
+      case Mood.disgusted:
+        return Colors.green.shade800;
+      case Mood.calm:
+        return Colors.lightBlue.shade400;
+      case Mood.afraid:
+        return Colors.deepPurpleAccent;
+      case Mood.worried:
+        return Colors.deepOrangeAccent;
+      // Add more moods as needed
     }
   }
 

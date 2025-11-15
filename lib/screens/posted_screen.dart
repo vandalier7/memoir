@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import '../processes/storage_service.dart';
-import '../models/bin_item.dart';
+// import '../models/bin_item.dart'; // No longer used here
+import '../models/posted_item.dart'; // Use the new PostedItem model
 import 'package:cached_network_image/cached_network_image.dart';
-import 'recently_deleted_screen.dart';
+// import 'recently_deleted_screen.dart'; // No longer used
 import '../objects/globals.dart';
 
 class PostedScreen extends StatefulWidget {
@@ -13,12 +14,13 @@ class PostedScreen extends StatefulWidget {
 }
 
 class _PostedScreenState extends State<PostedScreen> {
-  late Future<List<BinItem>> _postedImagesFuture;
+  // Use the new PostedItem model
+  late Future<List<PostedItem>> _postedImagesFuture;
 
   @override
   void initState() {
     super.initState();
-    _postedImagesFuture = storageService.fetchPostedImages(); 
+    _postedImagesFuture = storageService.fetchPostedImages();
   }
 
   void _refreshImages() {
@@ -26,9 +28,10 @@ class _PostedScreenState extends State<PostedScreen> {
       _postedImagesFuture = storageService.fetchPostedImages();
     });
   }
-  
+
+  // This handleAction function from alpha-version is perfect, no change needed
   Future<void> _handleAction(
-    BuildContext context, 
+    BuildContext context,
     Future<void> Function() action,
     String successMessage,
   ) async {
@@ -37,7 +40,7 @@ class _PostedScreenState extends State<PostedScreen> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(successMessage)));
       }
-      _refreshImages(); 
+      _refreshImages();
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -55,21 +58,9 @@ class _PostedScreenState extends State<PostedScreen> {
         title: const Text('Posted Memories'),
         centerTitle: true,
         backgroundColor: Color.fromARGB(255, 248, 217, 174),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.restore_from_trash, color: Color.fromARGB(255, 230, 35, 35)), 
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const RecentlyDeletedScreen()),
-              ) .then((_) {
-                _refreshImages(); 
-              });
-            },
-          ),
-        ],
+        // The 'actions' property (with the recently_deleted button) is removed.
       ),
-      body: FutureBuilder<List<BinItem>>(
+      body: FutureBuilder<List<PostedItem>>( // Use PostedItem
         future: _postedImagesFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -85,7 +76,7 @@ class _PostedScreenState extends State<PostedScreen> {
           if (images.isEmpty) {
             return const Center(
               child: Text(
-                'No images posted yet. Restore some from the Bin!',
+                'No images posted yet. Post some from the Bin!', // Updated text
                 style: TextStyle(fontSize: 16, color: Colors.grey),
               ),
             );
@@ -95,18 +86,18 @@ class _PostedScreenState extends State<PostedScreen> {
             padding: const EdgeInsets.all(5.0),
             itemCount: images.length,
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2, 
+              crossAxisCount: 2,
               crossAxisSpacing: 5.0,
               mainAxisSpacing: 5.0,
-              childAspectRatio: 0.8, 
+              childAspectRatio: 0.8,
             ),
             itemBuilder: (context, index) {
               final item = images[index];
               return _PostedGridTile(
                 item: item,
-                storageService: storageService, 
-                onActionComplete: _refreshImages, 
-                handleAction: _handleAction, 
+                storageService: storageService,
+                onActionComplete: _refreshImages,
+                handleAction: _handleAction,
               );
             },
           );
@@ -117,12 +108,13 @@ class _PostedScreenState extends State<PostedScreen> {
 }
 
 class _PostedGridTile extends StatelessWidget {
-  final BinItem item;
+  final PostedItem item; // Use PostedItem
   final StorageService storageService;
   final VoidCallback onActionComplete;
-  final Function handleAction; 
+  final Function handleAction;
 
   const _PostedGridTile({
+    // 'super.key' was missing in alpha, adding it
     super.key,
     required this.item,
     required this.storageService,
@@ -133,7 +125,7 @@ class _PostedGridTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () => _showOptionsDialog(context), 
+      onTap: () => _showOptionsDialog(context),
       child: Card(
         elevation: 4,
         child: ClipRRect(
@@ -153,6 +145,7 @@ class _PostedGridTile extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
                   color: Colors.black54,
                   child: Text(
+                    // Use the dateAdded from PostedItem
                     'Posted: ${item.dateAdded.year}-${item.dateAdded.month}-${item.dateAdded.day}',
                     style: const TextStyle(color: Colors.white, fontSize: 10),
                   ),
@@ -176,20 +169,45 @@ class _PostedGridTile extends StatelessWidget {
             children: [
               ListTile(
                 leading: const Icon(Icons.delete_outline, color: Colors.red),
-                title: const Text('Delete Image'),
-                onTap: () async {
-                  Navigator.of(context).pop(); 
-                  await handleAction( 
-                    context, 
-                    () => storageService.softDeleteFromPosted(item), 
-                    'Image Deleted.',
-                  );
+                title: const Text('Delete Permanently'), // Updated text
+                onTap: () {
+                  Navigator.of(context).pop(); // Close this dialog first
+                  // Show confirmation dialog for permanent delete
+                  _showDeleteConfirmation(context);
                 },
               ),
             ],
           ),
         );
       },
+    );
+  }
+
+  void _showDeleteConfirmation(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Permanently?'),
+        content: const Text('This image will be deleted permanently and cannot be recovered.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context); // Close confirmation dialog
+              // Use the new permanent delete function
+              await handleAction(
+                context,
+                () => storageService.permanentlyDeleteFromPosted(item),
+                'Image deleted permanently.',
+              );
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          )
+        ],
+      )
     );
   }
 }
