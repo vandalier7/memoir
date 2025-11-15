@@ -13,7 +13,7 @@ import 'objects/globals.dart';
 import 'processes/location_iq.dart';
 
 class MapBody extends StatefulWidget {
-  final void Function(MemoryData) propagateMemory;
+  final void Function(List<MemoryData>, MemoryData) propagateMemory;
   final void Function() closeMemory;
 
   const MapBody({super.key, required this.propagateMemory, required this.closeMemory});
@@ -609,7 +609,8 @@ class MapState extends State<MapBody> {
                       child: GestureDetector(
                         onTap: () async {
                           updateMapHold(true);
-                          widget.propagateMemory(memory);
+                          final memoriesAtLocation = groupedMemories[memory.position] ?? [memory];
+                          widget.propagateMemory(memoriesAtLocation, memory);
                           await animateCameraWithOffset(
                             target: memory.position,
                           );

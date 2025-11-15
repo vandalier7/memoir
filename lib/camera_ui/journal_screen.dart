@@ -239,6 +239,8 @@ class _JournalScreenState extends State<JournalScreen>
       };
 
       final docRef = await firestore.collection('memories').add(memoryData);
+
+      await docRef.update({'memoryId': docRef.id});
     
       print('✅ Memory saved to Firebase with ID: ${docRef.id}');
 

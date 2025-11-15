@@ -15,6 +15,7 @@ class MemoryData {
   final LatLng position;
   late final double decay;
   final String? imageUrl; // Network image URL
+  final String? memoryId;
 
   MemoryData({
     required this.addressString,
@@ -23,6 +24,7 @@ class MemoryData {
     this.decay = 16.0,
     this.head = true,
     this.imageUrl,
+    this.memoryId,
   });
 
   @override

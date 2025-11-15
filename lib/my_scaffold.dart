@@ -14,15 +14,17 @@ class MyScaffold extends StatefulWidget {
 }
 
 class MyState extends State<MyScaffold> {
-  MemoryData? activeMemory;
+  List<MemoryData>? activeMemories;
+  MemoryData? selectedMemory;
   bool isClosing = false;
 
 
   final _textFocusNode = FocusNode();
 
-  void showMemory(MemoryData memory) {
+  void showMemory(List<MemoryData> memories, MemoryData selected) {
     setState(() {
-      activeMemory = memory;
+      activeMemories = memories;
+      selectedMemory = selected;
       isClosing = false;
     });
   }
@@ -35,7 +37,8 @@ class MyState extends State<MyScaffold> {
 
   void setMemoryInactive() {
     setState(() {
-      activeMemory = null;
+      activeMemories = null;
+      selectedMemory = null;
     });
   }
 
@@ -93,12 +96,10 @@ class MyState extends State<MyScaffold> {
           SearchBarWidget(focusNode: _textFocusNode),
           const MapButtons(),
 
-            if (activeMemory != null)
+            if (activeMemories != null && selectedMemory != null)
               MemoryCard(
-                description: "Lorem ipsum dolor sit amet.",
-                addressString: activeMemory!.addressString,
-                borderColor: const Color.fromARGB(255, 219, 198, 9),
-                borderWidth: 2,
+                memories: activeMemories!,
+                selectedMemory: selectedMemory!,
                 onClose: () => setMemoryInactive(),
                 isClosing: isClosing,
               ),
