@@ -7,13 +7,23 @@ late final num pixelRatio;
 
 enum Mood {
   happy,
-  sad
+  sad,
+  angry,
+  disgusted,
+  afraid,
+  calm,
+  worried
 }
 
 Mood moodFromValue(int value) {
     switch (value) {
       case 0: return Mood.happy;
       case 1: return Mood.sad;
+      case 2: return Mood.angry;
+      case 3: return Mood.disgusted;
+      case 4: return Mood.afraid;
+      case 5: return Mood.calm;
+      case 6: return Mood.worried;
       default: return Mood.happy;
     }
   }

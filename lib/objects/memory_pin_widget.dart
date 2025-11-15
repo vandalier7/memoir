@@ -16,6 +16,26 @@ class MemoryPinWidget extends StatelessWidget {
     required this.onClosePreviews,
   });
 
+  IconData getSentiment(Mood mood) {
+    switch (mood) {
+      case Mood.happy:
+        return Icons.sentiment_very_satisfied_outlined;
+      case Mood.sad:
+        return Icons.sentiment_dissatisfied_rounded;
+      case Mood.angry:
+        return Icons.sentiment_dissatisfied_rounded;
+      case Mood.disgusted:
+        return Icons.sentiment_dissatisfied_rounded;
+      case Mood.calm:
+        return Icons.sentiment_satisfied_alt;
+      case Mood.afraid:
+        return Icons.sentiment_very_dissatisfied_outlined;
+      case Mood.worried:
+        return Icons.sentiment_very_dissatisfied_outlined;
+      // Add more moods as needed
+    }
+  }
+
   // Get color for each mood
   Color _getMoodColor(Mood mood) {
     switch (mood) {
@@ -23,6 +43,16 @@ class MemoryPinWidget extends StatelessWidget {
         return Colors.yellow;
       case Mood.sad:
         return Colors.blue;
+      case Mood.angry:
+        return Colors.red.shade900;
+      case Mood.disgusted:
+        return Colors.green.shade800;
+      case Mood.calm:
+        return Colors.lightBlue.shade400;
+      case Mood.afraid:
+        return Colors.deepPurpleAccent;
+      case Mood.worried:
+        return Colors.deepOrangeAccent;
       // Add more moods as needed
     }
   }
@@ -92,9 +122,7 @@ class MemoryPinWidget extends StatelessWidget {
                 ],
               ),
               child: Icon(
-                primaryMood == Mood.happy
-                    ? Icons.sentiment_very_satisfied
-                    : Icons.sentiment_dissatisfied,
+                getSentiment(primaryMood),
                 color: Colors.white,
                 size: 28,
               ),

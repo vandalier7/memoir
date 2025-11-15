@@ -76,7 +76,7 @@ class Root extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: "Memoir",
       // Directly show the main map screen wrapper (MyScaffold)
-      home: MyScaffold(), 
+      home: SignInCard(), 
       // 🔗 Routes for navigation
       routes: {
         '/map': (context) => const MyScaffold(),

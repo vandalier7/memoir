@@ -243,6 +243,7 @@ class MapState extends State<MapBody> {
       } else {
         
       }
+      if (memories.isEmpty) {}
     });
     
   }
