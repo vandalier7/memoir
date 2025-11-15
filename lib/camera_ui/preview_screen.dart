@@ -1,5 +1,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:presentation/processes/storage_service.dart';
+import 'package:presentation/objects/globals.dart';
 // No need for FirebaseAuth or Supabase imports here
 import 'package:presentation/processes/storage_service.dart';
 import 'package:presentation/objects/globals.dart'; // Use global service
