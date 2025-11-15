@@ -29,6 +29,8 @@ class StorageService {
   }
 
   Future<String> uploadImage(String fileName, Uint8List bytes, String bucket) async {
+
+  
   
   await _supabase.storage
       .from(bucket)

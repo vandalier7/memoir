@@ -9,34 +9,60 @@ import '../objects/globals.dart';
 
 // Sign up
 Future<void> registerUser(String username, String email, String password) async {
+  try {
+    await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+    debugPrint('User created in Firebase');
 
-  await FirebaseAuth.instance.createUserWithEmailAndPassword(
-    email: email,
-    password: password,
-  );
+    await databaseService.recordUser(
+      FirebaseAuth.instance.currentUser!.uid, 
+      email
+    );
+    
+    debugPrint('User recorded in Supabase');
 
-  storageService.listenUserMemories();
-  debugPrint('✅ Registered successfully');
+    storageService.listenUserMemories();
 
+    debugPrint('✅ Registered successfully');
+  } catch (e) {
+    debugPrint('❌ Registration error: $e');
+    rethrow;
+  }
 }
 
-// Sign in
 Future<void> loginUser(String email, String password) async {
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  try {
+    await FirebaseAuth.instance.signInWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
 
-  await FirebaseAuth.instance.signInWithEmailAndPassword(
-    email: email,
-    password: password,
-  );
-  storageService.listenUserMemories();
+    debugPrint('Logged in to Firebase');
 
-  debugPrint('✅ Logged in successfully');
+    bool hasUser = await databaseService.isUserRecorded(
+      FirebaseAuth.instance.currentUser!.uid
+    );
+
+    debugPrint('User exists in Supabase: $hasUser');
+
+    if (!hasUser) {
+      await databaseService.recordUser(
+        FirebaseAuth.instance.currentUser!.uid, 
+        email
+      );
+      debugPrint('User recorded in Supabase');
+    }
+
+    storageService.listenUserMemories();
+
+    debugPrint('✅ Logged in successfully');
+  } catch (e) {
+    debugPrint('❌ Login error: $e');
+    rethrow;
+  }
 }
 
 Future<void> logOut() async {

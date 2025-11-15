@@ -1,3 +1,5 @@
+import 'dart:isolate';
+
 import 'package:flutter/material.dart';
 import 'dart:core';
 import 'package:presentation/objects/unfocus_on_tap.dart';
@@ -650,6 +652,16 @@ class _SignUpState extends State<SignUp> {
               ),
             )
           ),
+          if (_errorMessage != null) 
+            Center(
+              child: Padding(
+              padding: EdgeInsets.all(0.0),
+              child: Text(
+                _errorMessage!,
+                style: TextStyle(color: Colors.red, fontSize: 12),
+              ),
+            ),
+            ),
           Center(
             child: Container(
               padding: EdgeInsets.only(right: 20, left: 20, bottom: 20, top: _errorMessage != null ? 2 : 20),
@@ -702,8 +714,8 @@ class _SignUpState extends State<SignUp> {
                         if (!context.mounted) return;
                         
                         String errorMessage;
-                        if (e.code == 'user-not-found') {
-                          errorMessage = 'No account found with this email.';
+                        if (e.code == 'email-already-in-use') {
+                          errorMessage = 'Email already in use.';
                         } else if (e.code == 'invalid-credential') {
                           errorMessage = 'Invalid email or password.';
                         } else if (e.code == 'too-many-requests') {
@@ -718,7 +730,9 @@ class _SignUpState extends State<SignUp> {
                         // Show error through _errorMessage
                         setState(() {
                           _errorMessage = errorMessage;
+                          _isLoading = false;
                         });
+                        widget.onLoadingChanged(false);
                         
                       }
                     }
