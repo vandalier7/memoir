@@ -158,12 +158,13 @@ class _JournalScreenState extends State<JournalScreen>
     }
 
     snack.showSnackBar(const SnackBar(content: Text('Uploading...')));
+    LatLng positionToUse = nearestMemoryPosition ?? currentPosition;
 
     try{
       // Get current location and address
       String? addressString;
-      double? latitude = currentPosition.latitude;
-      double? longitude = currentPosition.longitude;
+      double? latitude = positionToUse.latitude;
+      double? longitude = positionToUse.longitude;
 
       try{
         final locationIQ = LocationIQService('pk.2e56aa59169aa53b63093b78aff0e291');
@@ -223,8 +224,8 @@ class _JournalScreenState extends State<JournalScreen>
       final memoryData = {
         'imageUrl': imageUrl,
         'addressString': addressString,
-        'latitude': currentPosition.latitude,
-        'longitude': currentPosition.longitude,
+        'latitude': positionToUse.latitude,
+        'longitude': positionToUse.longitude,
         'description': whatsController.text.trim().isEmpty 
             ? null 
             : whatsController.text.trim(),

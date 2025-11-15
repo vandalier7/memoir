@@ -36,27 +36,6 @@ class MemoryPinWidget extends StatelessWidget {
     }
   }
 
-  // Get color for each mood
-  Color _getMoodColor(Mood mood) {
-    switch (mood) {
-      case Mood.happy:
-        return Colors.yellow;
-      case Mood.sad:
-        return Colors.blue;
-      case Mood.angry:
-        return Colors.red.shade900;
-      case Mood.disgusted:
-        return Colors.green.shade800;
-      case Mood.calm:
-        return Colors.lightBlue.shade400;
-      case Mood.afraid:
-        return Colors.deepPurpleAccent;
-      case Mood.worried:
-        return Colors.deepOrangeAccent;
-      // Add more moods as needed
-    }
-  }
-
   // Get the primary mood (most common or first)
   Mood _getPrimaryMood() {
     if (memories.isEmpty) return Mood.happy;
@@ -75,7 +54,7 @@ class MemoryPinWidget extends StatelessWidget {
 
   // Get primary color based on primary mood
   Color _getPrimaryColor() {
-    return _getMoodColor(_getPrimaryMood());
+    return getMoodColor(_getPrimaryMood());
   }
 
   @override
