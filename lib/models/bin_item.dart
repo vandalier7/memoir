@@ -1,29 +1,29 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
 class BinItem {
-  final String storagePath;
+  final String id;
+  final String supabasePath;
   final String imageUrl;
   final String fileName;
-  final DateTime dateAdded;
-  
+  final Timestamp expireAt;
+
   const BinItem({
-    required this.storagePath,
+    required this.id,
+    required this.supabasePath,
     required this.imageUrl,
     required this.fileName,
-    required this.dateAdded,
+    required this.expireAt,
   });
 
-factory BinItem.fromSupabaseFileObject(
-  FileObject fileObject, 
-  String publicUrl
-) {
-  final createdAtString = fileObject.createdAt; 
-  
-  return BinItem(
-    storagePath: fileObject.id!, 
-    imageUrl: publicUrl,
-    fileName: fileObject.name!,
-    dateAdded: DateTime.parse(createdAtString!),
-  );
+  factory BinItem.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    
+    return BinItem(
+      id: doc.id, 
+      
+      supabasePath: data['supabasePath'] ?? '',
+      imageUrl: data['publicUrl'] ?? data['imageUrl'] ?? '',
+      fileName: data['fileName'] ?? '',
+      expireAt: data['expireAt'] ?? Timestamp.now(),
+    );
   }
 }
