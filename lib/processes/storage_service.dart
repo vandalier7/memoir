@@ -28,22 +28,22 @@ class StorageService {
     }
     return '$userId/$folder';
   }
-  
-  // This is your new uploadImage function
-  Future<String> uploadImage(Uint8List bytes) async {
-    final fileName = 'memory_${DateTime.now().millisecondsSinceEpoch}.png';
-    final path = "$currentUserId/posted/$fileName";
 
+  Future<String> uploadImage(String fileName, Uint8List bytes, String bucket) async {
+
+  
+  
     await _supabase.storage
-        .from(supabaseBucket)
-        .uploadBinary(
-          path,
-          bytes
-        );
+        .from(bucket)
+            .uploadBinary(
+              "$currentUserId/posted/$fileName", 
+              bytes
+            );
+    databaseService.recordMemory(currentUserId!);
 
     return _supabase.storage
-        .from(supabaseBucket)
-        .getPublicUrl(path);
+        .from(bucket)
+        .getPublicUrl("$currentUserId/posted/$fileName");
   }
 
   // --- NEW BIN LOGIC (Firestore + Supabase) ---
@@ -236,47 +236,48 @@ class StorageService {
   debugPrint('🔵 [4] About to create Firestore listener...');
   
   _memorySub = _firestore
-   .collection('memories')
-   .where('userId', isEqualTo: userId)
-   .snapshots()
-   .listen(
-     (snapshot) {
-       print('🟢 [5] Snapshot received with ${snapshot.docs.length} docs');
-       
-       unfilteredMemories.clear();
-       print('🟢 [6] Cleared unfilteredMemories');
+    .collection('memories')
+    .where('userId', isEqualTo: userId)
+    .snapshots()
+    .listen(
+      (snapshot) {
+        debugPrint('🟢 [5] Snapshot received with ${snapshot.docs.length} docs');
+        
+        unfilteredMemories.clear();
+        debugPrint('🟢 [6] Cleared unfilteredMemories');
 
-       print('🟡 [6.5] snapshot.docs type: ${snapshot.docs.runtimeType}');
-       print('🟡 [6.6] About to enter for loop...');
-       
-       int count = 0;
-       for (var doc in snapshot.docs) {
-         print('🟡 [7.$count] INSIDE for loop - processing doc');
-         
-         print('🟡 [7.${count}a] About to call doc.data()');
-         final data = doc.data();
-         print('🟡 [7.${count}b] Got data: ${data.keys}');
-         
-         print('🟡 [7.${count}c] Parsing latitude');
-         final lat = (data['latitude'] as num?)?.toDouble() ?? 0.0;
-         print('🟡 [7.${count}d] lat = $lat');
-         
-         print('🟡 [7.${count}e] Parsing longitude');
-         final lng = (data['longitude'] as num?)?.toDouble() ?? 0.0;
-         print('🟡 [7.${count}f] lng = $lng');
+        debugPrint('🟡 [6.5] snapshot.docs type: ${snapshot.docs.runtimeType}');
+        debugPrint('🟡 [6.6] About to enter for loop...');
+        
+        int count = 0;
+        for (var doc in snapshot.docs) {
+          debugPrint('🟡 [7.$count] INSIDE for loop - processing doc');
+          
+          debugPrint('🟡 [7.${count}a] About to call doc.data()');
+          final data = doc.data();
+          debugPrint('🟡 [7.${count}b] Got data: ${data.keys}');
+          
+          debugPrint('🟡 [7.${count}c] Parsing latitude');
+          final lat = (data['latitude'] as num?)?.toDouble() ?? 0.0;
+          debugPrint('🟡 [7.${count}d] lat = $lat');
+          
+          debugPrint('🟡 [7.${count}e] Parsing longitude');
+          final lng = (data['longitude'] as num?)?.toDouble() ?? 0.0;
+          debugPrint('🟡 [7.${count}f] lng = $lng');
 
-         print('🟡 [7.${count}g] Getting moodValue');
-         final moodVal = data['moodValue'] as int? ?? 1;
-         print('🟡 [7.${count}h] moodVal = $moodVal, calling moodFromValue()');
-         
-         final mood = moodFromValue(moodVal);
-         print('🟡 [7.${count}i] mood = $mood');
+          debugPrint('🟡 [7.${count}g] Getting moodValue');
+          final moodVal = data['moodValue'] as int? ?? 1;
+          debugPrint('🟡 [7.${count}h] moodVal = $moodVal, calling moodFromValue()');
+          
+          final mood = moodFromValue(moodVal);
+          debugPrint('🟡 [7.${count}i] mood = $mood');
 
-         print('🟡 [7.${count}j] Creating LatLng');
-         final position = LatLng(lat, lng);
-         print('🟡 [7.${count}k] position created');
+          debugPrint('🟡 [7.${count}j] Creating LatLng');
+          final position = LatLng(lat, lng);
+          debugPrint('🟡 [7.${count}k] position created');
 
           print('🟡 [7.${count}l] Creating MemoryData');
+          debugPrint('🟡 [7.${count}l] Creating MemoryData');
           final memory = MemoryData(
             head: data['head'] as bool? ?? false,
             mood: mood,
@@ -284,25 +285,26 @@ class StorageService {
             position: position,
             imageUrl: data['imageUrl'] as String?,
             memoryId: doc.id,
+            description: data['description'] as String?,
           );
 
 
-         print('🟡 [7.${count}o] Checking filter');
-         if (filter == null || filter(memory)) {
-           print('🟡 [7.${count}p] Adding to unfilteredMemories');
-           unfilteredMemories.add(memory);
-           print('🟡 [7.${count}q] Added successfully');
-         }
-         
-         print('🟡 [7.${count}r] Doc complete');
-         count++;
-       }
-       print('🟢 [7] Finished processing $count memories');
-     },
-     onError: (error) {
-       print('❌ Firestore error: $error');
-     },
-   );
+          debugPrint('🟡 [7.${count}o] Checking filter');
+          if (filter == null || filter(memory)) {
+            debugPrint('🟡 [7.${count}p] Adding to unfilteredMemories');
+            unfilteredMemories.add(memory);
+            debugPrint('🟡 [7.${count}q] Added successfully');
+          }
+          
+          debugPrint('🟡 [7.${count}r] Doc complete');
+          count++;
+        }
+        debugPrint('🟢 [7] Finished processing $count memories');
+      },
+      onError: (error) {
+        debugPrint('❌ Firestore error: $error');
+      },
+    );
   
   debugPrint('🔵 [8] Listener setup complete (but stream is async)');
 }

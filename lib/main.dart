@@ -57,7 +57,10 @@ void main() async {
     // You might want to show an error screen here instead of continuing
   }
 
-  storageService.listenUserMemories();
+  if (fbauth.FirebaseAuth.instance.currentUser != null) {
+    storageService.listenUserMemories();
+  }
+  
 
   MapLibreMap.useHybridComposition = true;
   runApp(const Root());
@@ -74,9 +77,10 @@ class Root extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: "Memoir",
       // Directly show the main map screen wrapper (MyScaffold)
-      home: SignInCard(), 
+      home:  fbauth.FirebaseAuth.instance.currentUser != null ? MyScaffold() : SignInCard(), 
       // 🔗 Routes for navigation
       routes: {
+        '/sign-in': (context) => const SignInCard(),
         '/map': (context) => const MyScaffold(),
         '/journal': (context) {
           final args = ModalRoute.of(context)!.settings.arguments;

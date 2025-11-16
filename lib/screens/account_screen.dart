@@ -1,11 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../app_theme.dart'; // for memoirTheme
+import '../processes/auth.dart';
 
 final user = FirebaseAuth.instance.currentUser;
-final followers = FirebaseAuth.instance.currentUser;
-final following = FirebaseAuth.instance.currentUser;
-final memories = FirebaseAuth.instance.currentUser;
+
 
 class AccountScreen extends StatelessWidget {
   const AccountScreen({super.key});
@@ -121,8 +120,10 @@ class AccountScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              onPressed: () {
-                // TODO: implement logout logic later
+              onPressed: () async {
+                await logOut();
+                if (!context.mounted) return;
+                Navigator.pushNamed(context, '/sign-in');
               },
               child: const Text(
                 "Log Out",

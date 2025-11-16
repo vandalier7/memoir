@@ -98,8 +98,16 @@ class MyState extends State<MyScaffold> {
 
             if (activeMemories != null && selectedMemory != null)
               MemoryCard(
+<<<<<<< HEAD
                 memories: activeMemories!,
                 selectedMemory: selectedMemory!,
+=======
+                description: activeMemory!.description ?? "",
+                imageUrl: activeMemory!.imageUrl ?? "",
+                addressString: activeMemory!.addressString,
+                borderColor: const Color.fromARGB(255, 219, 198, 9),
+                borderWidth: 2,
+>>>>>>> alpha-version
                 onClose: () => setMemoryInactive(),
                 isClosing: isClosing,
               ),

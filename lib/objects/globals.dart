@@ -2,6 +2,7 @@ import 'package:camera/camera.dart';
 import 'memory.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:presentation/processes/storage_service.dart';
+import 'package:presentation/processes/database_service.dart';
 import 'package:flutter/material.dart';
 
 late final num pixelRatio;
@@ -61,3 +62,4 @@ LatLng currentPosition = LatLng(14.5995, 120.9842);
 LatLng? nearestMemoryPosition;
 
 final StorageService storageService = StorageService(); 
+final databaseService = DatabaseService();
