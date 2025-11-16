@@ -230,7 +230,7 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
                 margin: const EdgeInsets.only(bottom: 10),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.95),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.1),
@@ -250,10 +250,10 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
                         ),
                       )
                     : ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(20),
                         child: ListView.separated(
                           shrinkWrap: true,
-                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          padding: const EdgeInsets.symmetric(vertical: 0),
                           itemCount: _userResults.length,
                           separatorBuilder: (context, index) => Divider(
                             height: 1,
@@ -292,7 +292,7 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.95),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.1),
