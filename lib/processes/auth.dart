@@ -32,6 +32,7 @@ Future<void> registerUser(String username, String email, String password) async 
     debugPrint('User recorded in Supabase');
 
     storageService.listenUserMemories();
+    activeUsername = await databaseService.getActiveUsername(FirebaseAuth.instance.currentUser!.uid);
 
     debugPrint('✅ Registered successfully');
   } catch (e) {
@@ -65,6 +66,7 @@ Future<void> loginUser(String email, String password) async {
     }
 
     storageService.listenUserMemories();
+    activeUsername = await databaseService.getActiveUsername(FirebaseAuth.instance.currentUser!.uid);
 
     debugPrint('✅ Logged in successfully');
   } catch (e) {

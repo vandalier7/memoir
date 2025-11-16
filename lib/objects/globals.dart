@@ -63,3 +63,5 @@ LatLng? nearestMemoryPosition;
 
 final StorageService storageService = StorageService(); 
 final databaseService = DatabaseService();
+
+String? activeUsername;

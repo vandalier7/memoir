@@ -1,3 +1,4 @@
+import 'package:presentation/objects/globals.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class DatabaseService {
@@ -68,14 +69,38 @@ class DatabaseService {
     }
   }
 
-  Future<List<Map<String, dynamic>>> searchByUsername(String query) async {
+  Future<List<Map<String, dynamic>>> searchByUsername(String query, {bool hideSelf = true}) async {
     final response = await _supabase
     .from('user')
     .select('uid, username') // whatever fields you want
     .ilike('username', '%$query%')      // case-insensitive partial match
     .limit(10);
 
-    return List<Map<String, dynamic>>.from(response);
+    if (!hideSelf) {
+      return List<Map<String, dynamic>>.from(response);
+    }
+    else {
+      List<Map<String, dynamic>> res = List<Map<String, dynamic>>.from(response);
+      res = res.where((row) => row['username'] != activeUsername).toList();
+      return res;
+    }
+  }
+
+  Future<String> getActiveUsername(String userID) async {
+    const table = "user";
+
+    try {
+      final response = await _supabase
+          .from(table)
+          .select('username')   
+          .eq('uid', userID)
+          .single();            
+
+      return response['username'] as String;
+    } catch (e) {
+      print('Error querying $table: $e');
+      rethrow;
+    }
   }
 
   /// Query records with filters

@@ -59,6 +59,7 @@ void main() async {
 
   if (fbauth.FirebaseAuth.instance.currentUser != null) {
     storageService.listenUserMemories();
+    activeUsername = await databaseService.getActiveUsername(fbauth.FirebaseAuth.instance.currentUser!.uid);
   }
   
 
