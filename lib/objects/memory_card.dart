@@ -264,9 +264,6 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
       
         setState(() => _isLiked = false);
       
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Unliked')),
-        );
       } else {
         // Like
         await likeRef.set({
@@ -280,10 +277,7 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
         });
       
         setState(() => _isLiked = true);
-      
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Liked! ❤️')),
-        );
+    
       }
     } catch (e) {
       print('Error handling like: $e');
