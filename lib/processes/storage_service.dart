@@ -41,8 +41,8 @@ class StorageService {
           );
 
     return _supabase.storage
-        .from(supabaseBucket)
-        .getPublicUrl(path);
+        .from(bucket)
+        .getPublicUrl("$currentUserId/posted/$fileName");
   }
 
   // --- NEW BIN LOGIC (Firestore + Supabase) ---
