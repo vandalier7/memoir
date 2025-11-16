@@ -18,6 +18,7 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
   late FocusNode _internalFocusNode;
   bool _isFocused = false;
   final TextEditingController _searchController = TextEditingController();
+  bool _shouldPreventFocus = false;
 
   // User search results from database
   List<Map<String, dynamic>> _userResults = [];
@@ -34,6 +35,17 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Unfocus when returning to this screen
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_shouldPreventFocus && _internalFocusNode.hasFocus) {
+        _internalFocusNode.unfocus();
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _debounceTimer?.cancel();
     _internalFocusNode.removeListener(_onFocusChange);
@@ -46,6 +58,12 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
   }
 
   void _onFocusChange() {
+    if (_shouldPreventFocus && _internalFocusNode.hasFocus) {
+      // Immediately unfocus if we're preventing focus
+      _internalFocusNode.unfocus();
+      return;
+    }
+    
     setState(() {
       _isFocused = _internalFocusNode.hasFocus;
     });
@@ -147,6 +165,7 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
                     child: TextField(
                       controller: _searchController,
                       focusNode: _internalFocusNode,
+                      enableInteractiveSelection: true,
                       decoration: const InputDecoration(
                         hintText: "Search users",
                         hintStyle: TextStyle(color: Colors.grey),
@@ -157,13 +176,32 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
                   // 👤 Account button
                   GestureDetector(
                     onTap: () {
+                      // Remove focus completely
+                      FocusScope.of(context).unfocus();
                       _internalFocusNode.unfocus();
+                      
+                      // Set flag to prevent refocus and clear focused state
+                      setState(() {
+                        _shouldPreventFocus = true;
+                        _isFocused = false;
+                      });
+                      
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                             builder: (context) => const AccountScreen()),
-                      );
-                      _internalFocusNode.unfocus();
+                      ).then((_) {
+                        // When returning, ensure focus is cleared and keep prevention flag
+                        FocusScope.of(context).unfocus();
+                        // Reset flag after a brief delay
+                        Future.delayed(const Duration(milliseconds: 100), () {
+                          if (mounted) {
+                            setState(() {
+                              _shouldPreventFocus = false;
+                            });
+                          }
+                        });
+                      });
                     },
                     child: Padding(
                       padding: const EdgeInsets.only(right: 7),
@@ -225,7 +263,7 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
                           itemBuilder: (context, index) {
                             final user = _userResults[index];
                             final username = user['username'] ?? 'Unknown';
-                            final userId = user['id'];
+                            final userId = user['uid'];
                             final avatarUrl = user['avatar_url'];
                             final bio = user['bio']; // Optional bio field
                             
