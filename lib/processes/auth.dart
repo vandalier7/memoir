@@ -10,6 +10,12 @@ import '../objects/globals.dart';
 // Sign up
 Future<void> registerUser(String username, String email, String password) async {
   try {
+
+    bool isUsernameAvailable = await databaseService.isUsernameAvailable(username);
+    if (!isUsernameAvailable) {
+      throw FirebaseAuthException(code: "username-taken");
+    }
+
     await FirebaseAuth.instance.createUserWithEmailAndPassword(
       email: email,
       password: password,
@@ -19,7 +25,8 @@ Future<void> registerUser(String username, String email, String password) async 
 
     await databaseService.recordUser(
       FirebaseAuth.instance.currentUser!.uid, 
-      email
+      email,
+      username
     );
     
     debugPrint('User recorded in Supabase');
@@ -51,7 +58,8 @@ Future<void> loginUser(String email, String password) async {
     if (!hasUser) {
       await databaseService.recordUser(
         FirebaseAuth.instance.currentUser!.uid, 
-        email
+        email,
+        FirebaseAuth.instance.currentUser!.uid.substring(1, 9)
       );
       debugPrint('User recorded in Supabase');
     }

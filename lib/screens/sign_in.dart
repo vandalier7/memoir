@@ -722,7 +722,9 @@ class _SignUpState extends State<SignUp> {
                           errorMessage = 'Too many requests. Try again in a few minutes.';
                         } else if (e.code == 'user-disabled') {
                           errorMessage = 'This account has been disabled.';
-                        } else {
+                        } else if (e.code == 'username-taken') {
+                          errorMessage = 'This username is already in use.';
+                        }else {
                           errorMessage = 'Login failed: ${e.code}';
                         }
                         
