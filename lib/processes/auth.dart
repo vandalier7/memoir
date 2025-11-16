@@ -19,7 +19,8 @@ Future<void> registerUser(String username, String email, String password) async 
 
     await databaseService.recordUser(
       FirebaseAuth.instance.currentUser!.uid, 
-      email
+      email,
+      username
     );
     
     debugPrint('User recorded in Supabase');
@@ -51,7 +52,8 @@ Future<void> loginUser(String email, String password) async {
     if (!hasUser) {
       await databaseService.recordUser(
         FirebaseAuth.instance.currentUser!.uid, 
-        email
+        email,
+        FirebaseAuth.instance.currentUser!.uid
       );
       debugPrint('User recorded in Supabase');
     }
