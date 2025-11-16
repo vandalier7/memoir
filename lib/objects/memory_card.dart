@@ -110,6 +110,8 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
       final memoryId = currentMemory.memoryId;
       
       print('🔍 Loading comments for memoryId: $memoryId');
+      print('🔍 Memory image URL: ${currentMemory.imageUrl}');
+      print('🔍 Memory address: ${currentMemory.addressString}');
       
       if (memoryId == null) {
         print('Memory ID is null');
@@ -128,6 +130,19 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
           .get();
       
       print('📊 Found ${snapshot.docs.length} comments');
+
+      if (snapshot.docs.isEmpty) {
+        print('⚠️ No comments found for memoryId: $memoryId');
+        // Check if there are ANY comments in the collection
+        final allComments = await firestore.collection('comments').limit(5).get();
+        print('📋 Total comments in collection: ${allComments.docs.length}');
+        if (allComments.docs.isNotEmpty) {
+          print('📋 Sample memoryIds in comments collection:');
+          for (var doc in allComments.docs) {
+            print('   - ${doc.data()['memoryId']}');
+          }
+        }
+      }
 
       List<CommentData> loadedComments = [];
       for (var doc in snapshot.docs) {
