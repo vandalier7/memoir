@@ -25,11 +25,8 @@ class MemoryData {
     this.decay = 16.0,
     this.head = true,
     this.imageUrl,
-<<<<<<< HEAD
     this.memoryId,
-=======
     this.description
->>>>>>> alpha-version
   });
 
   @override
