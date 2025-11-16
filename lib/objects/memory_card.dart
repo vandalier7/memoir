@@ -1,4 +1,5 @@
 import 'package:presentation/objects/globals.dart';
+import 'package:presentation/processes/comment_service.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -13,9 +14,11 @@ class MemoryCard extends StatefulWidget {
 
   const MemoryCard({
     super.key,
-    this.imageUrl,
-    this.description = "yeah",
-    required this.addressString,
+    required this.memories,
+    required this.selectedMemory,
+    //this.imageUrl,
+    //this.description = "yeah",
+    //required this.addressString,
     this.onClose,
     this.isClosing = false,
   });
@@ -111,8 +114,6 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
       final memoryId = currentMemory.memoryId;
       
       print('🔍 Loading comments for memoryId: $memoryId');
-      print('🔍 Memory image URL: ${currentMemory.imageUrl}');
-      print('🔍 Memory address: ${currentMemory.addressString}');
       
       if (memoryId == null) {
         print('Memory ID is null');
@@ -123,95 +124,35 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
         return;
       }
 
-      final firestore = FirebaseFirestore.instance;
-      final snapshot = await firestore
-          .collection('comments')
-          .where('memoryId', isEqualTo: memoryId)
-          .orderBy('timestamp', descending: false)
-          .get();
-      
-      print('📊 Found ${snapshot.docs.length} comments');
-
-      if (snapshot.docs.isEmpty) {
-        print('⚠️ No comments found for memoryId: $memoryId');
-        // Check if there are ANY comments in the collection
-        final allComments = await firestore.collection('comments').limit(5).get();
-        print('📋 Total comments in collection: ${allComments.docs.length}');
-        if (allComments.docs.isNotEmpty) {
-          print('📋 Sample memoryIds in comments collection:');
-          for (var doc in allComments.docs) {
-            print('   - ${doc.data()['memoryId']}');
-          }
-        }
+      // Convert String memoryId to int for Supabase
+      final memoryIdInt = int.tryParse(memoryId);
+      if (memoryIdInt == null) {
+        print('❌ Cannot convert memoryId to int');
+        setState(() {
+          _comments = [];
+          _isLoadingComments = false;
+        });
+        return;
       }
 
-      List<CommentData> loadedComments = [];
-      for (var doc in snapshot.docs) {
-        final data = doc.data();
-        print('💬 Comment data: $data');
+       // Get memory owner ID (assuming currentUserId is the owner for now)
+      final memoryOwnerId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
-        // Get user name
-        String userName = 'Anonymous';
-        try {
-          final userDoc = await firestore
-              .collection('users')
-              .doc(data['userId'])
-              .get();
-          if (userDoc.exists) {
-            userName = userDoc.data()?['displayName'] ?? 'Anonymous';
-          }
-        } catch (e) {
-          print('Error loading user: $e');
-        }
-        
-        loadedComments.add(CommentData(
-          id: doc.id,
-          userName: userName,
-          userId: data['userId'] ?? '',
-          text: data['text'] ?? '',
-          timestamp: _formatTimestamp(data['timestamp']),
-        ));
-      }
-      
-      print('✅ Loaded ${loadedComments.length} comments');
+       // Load comments from Supabase
+      final loadedComments = await commentsService.loadComments(
+        memoryIdInt,
+        memoryOwnerId,
+      );
+
+      print('✅ Loaded ${loadedComments.length} comments from Supabase');
 
       setState(() {
         _comments = loadedComments;
         _isLoadingComments = false;
       });
     } catch (e) {
-      print('Error loading comments: $e');
+      print('❌ Error loading comments: $e');
       setState(() => _isLoadingComments = false);
-    }
-  }
-
-  String _formatTimestamp(dynamic timestamp) {
-    if (timestamp == null) return 'Just now';
-    
-    try {
-      DateTime dateTime;
-      if (timestamp is Timestamp) {
-        dateTime = timestamp.toDate();
-      } else {
-        return 'Just now';
-      }
-
-      final now = DateTime.now();
-      final difference = now.difference(dateTime);
-
-      if (difference.inDays > 7) {
-        return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
-      } else if (difference.inDays > 0) {
-        return '${difference.inDays}d ago';
-      } else if (difference.inHours > 0) {
-        return '${difference.inHours}h ago';
-      } else if (difference.inMinutes > 0) {
-        return '${difference.inMinutes}m ago';
-      } else {
-        return 'Just now';
-      }
-    } catch (e) {
-      return 'Just now';
     }
   }
 
@@ -321,42 +262,8 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
     if (currentUser == null) return;
 
     try {
-      final firestore = FirebaseFirestore.instance;
-    
-      // Get the comment document to check ownership
-      final commentDoc = await firestore
-        .collection('comments')
-        .doc(comment.id)
-        .get();
-    
-      if (!commentDoc.exists) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Comment not found')),
-        );
-        return;
-      }
-    
-      final commentUserId = commentDoc.data()?['userId'];
-    
-      // Only allow deletion if user owns the comment
-      if (commentUserId != currentUser.uid) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('You can only delete your own comments')),
-        );
-        return;
-      }
-    
-      // Delete the comment
-      await firestore.collection('comments').doc(comment.id).delete();
-    
-      // Decrement comment count
-      final currentMemory = widget.memories[_currentIndex];
-      final memoryId = currentMemory.memoryId;
-      if (memoryId != null) {
-        await firestore.collection('memories').doc(memoryId).update({
-          'commentsCount': FieldValue.increment(-1),
-        });
-     }
+      // Delete from Supabase
+      await commentsService.deleteComment(comment.id);
     
       // Reload comments
       _loadComments();
@@ -365,7 +272,7 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
         const SnackBar(content: Text('Comment deleted')),
       );
     } catch (e) {
-      print('Error deleting comment: $e');
+      print('❌ Error deleting comment: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e')),
       );
@@ -471,28 +378,32 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
       return;
       }
 
-      final firestore = FirebaseFirestore.instance;
-      
-      await firestore.collection('comments').add({
-        'memoryId': memoryId,
-        'userId': currentUser.uid,
-        'text': text,
-        'timestamp': FieldValue.serverTimestamp(),
-      });
+      // Convert String memoryId to int
+      final memoryIdInt = int.tryParse(memoryId);
+      if (memoryIdInt == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Invalid memory ID')),
+        );
+        return;
+      }
 
-      // Also increment comment count
-      await firestore.collection('memories').doc(memoryId).update({
-        'commentsCount': FieldValue.increment(1),
-      });
+      // Post comment to Supabase
+      await commentsService.postComment(
+        memoryId: memoryIdInt,
+        text: text,
+      );
 
       _commentController.clear();
       _loadComments(); // Reload comments
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Comment added!')),
+      const SnackBar(content: Text('Comment added!')),
       );
     } catch (e) {
-      print('Error sending comment: $e');
+      print('❌ Error sending comment: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
     }
   }
 
@@ -954,7 +865,7 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  comment.timestamp,
+                  comment.getRelativeTime(),
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey.shade600,
@@ -969,11 +880,20 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
   }
 }
 class CommentData {
-  final String id;
+  final int id;
   final String userName;
   final String userId;
   final String text;
-  final String timestamp;
+  final DateTime timestamp;
+  final int? repliedCommentID;
+  final int? headCommentID;
+  final int likesCount;
+  final int repliesCount;
+  final bool isLikedByMe;
+  final bool isAuthor;
+
+  // For showing latest reply preview
+  final CommentData? latestReply;
 
   CommentData({
     required this.id,
@@ -981,5 +901,51 @@ class CommentData {
     required this.userId,
     required this.text,
     required this.timestamp,
+    this.repliedCommentID,
+    this.headCommentID,
+    this.likesCount = 0,
+    this.repliesCount = 0,
+    this.isLikedByMe = false,
+    this.isAuthor = false,
+    this.latestReply,
   });
+
+  String getRelativeTime() {
+    final now = DateTime.now();
+    final difference = now.difference(timestamp);
+
+    if (difference.inSeconds < 60) {
+      return '${difference.inSeconds}s';
+    } else if (difference.inMinutes < 60) {
+      return '${difference.inMinutes}m';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours}h';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays}d';
+    } else {
+      final weeks = (difference.inDays / 7).floor();
+      return '${weeks}w';
+    }
+  }
+
+  factory CommentData.fromSupabase(
+    Map<String, dynamic> data, {
+    bool isLikedByMe = false,
+    bool isAuthor = false,
+    CommentData? latestReply,
+  }) {
+    return CommentData(
+      id: data['id'] as int,
+      userName: data['user_name'] as String? ?? 'Anonymous',
+      userId: data['userID'] as String,
+      text: data['comment'] as String,
+      timestamp: DateTime.parse(data['created_at'] as String),
+      repliedCommentID: data['repliedCommentID'] as int?,
+      likesCount: data['likes_count'] as int? ?? 0,
+      repliesCount: data['replies_count'] as int? ?? 0,
+      isLikedByMe: isLikedByMe,
+      isAuthor: isAuthor,
+      latestReply: latestReply,
+    );
+  }
 }

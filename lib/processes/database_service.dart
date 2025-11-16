@@ -10,11 +10,12 @@ class DatabaseService {
   final SupabaseClient _supabase = Supabase.instance.client;
 
 
-  Future<void> recordUser(String userID, String email) async {
+  Future<void> recordUser(String userID, String email, String username) async {
     String table = "user";
     Map<String, dynamic> data = {
       'uid' : userID,
-      'email' : email
+      'email' : email,
+      'username' : username
     };
 
     try {
