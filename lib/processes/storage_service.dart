@@ -33,12 +33,13 @@ class StorageService {
 
   
   
-  await _supabase.storage
-      .from(bucket)
-          .uploadBinary(
-            "$currentUserId/posted/$fileName", 
-            bytes
-          );
+    await _supabase.storage
+        .from(bucket)
+            .uploadBinary(
+              "$currentUserId/posted/$fileName", 
+              bytes
+            );
+    databaseService.recordMemory(currentUserId!);
 
     return _supabase.storage
         .from(bucket)

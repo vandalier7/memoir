@@ -206,7 +206,9 @@ class _JournalScreenState extends State<JournalScreen>
       final fileName = 'memory_${currentUser.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg';
     
       final imageUrl = await storageService.uploadImage(
+        fileName,
         imageBytes,
+        "images" // bucket name
       );
 
       if (imageUrl == null) {

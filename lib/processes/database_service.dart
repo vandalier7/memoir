@@ -28,6 +28,23 @@ class DatabaseService {
     }
   }
 
+  Future<void> recordMemory(String userID) async {
+    String table = "memory";
+    Map<String, dynamic> data = {
+      'userID' : userID,
+    };
+
+    try {
+        await _supabase
+          .from(table)
+          .insert(data);
+
+    } catch (e) {
+      print('Error inserting into $table: $e');
+      rethrow;
+    }
+  }
+
   /// Query records with filters
   Future<bool> isUserRecorded(String userID) async {
 
