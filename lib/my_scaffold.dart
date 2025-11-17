@@ -4,7 +4,6 @@ import 'objects/map_buttons.dart';
 import 'objects/search_bar.dart';
 import 'objects/memory.dart';
 import 'objects/memory_card.dart';
-import 'screens/account_screen.dart';
 
 class MyScaffold extends StatefulWidget {
   const MyScaffold({super.key});
@@ -17,7 +16,6 @@ class MyState extends State<MyScaffold> {
   MemoryData? activeMemory;
   bool isClosing = false;
 
-
   final _textFocusNode = FocusNode();
 
   void showMemory(MemoryData memory) {
@@ -29,7 +27,7 @@ class MyState extends State<MyScaffold> {
 
   void closeMemory() {
     setState(() {
-    isClosing = true;
+      isClosing = true;
     });
   }
 
@@ -46,88 +44,51 @@ class MyState extends State<MyScaffold> {
       onPointerDown: (event) {
         final currentFocus = FocusScope.of(context);
         if (_textFocusNode.hasFocus) {
-      // get RenderBox for TextField
-      final renderBox = _textFocusNode.context?.findRenderObject() as RenderBox?;
-      if (renderBox != null) {
-        final offset = renderBox.localToGlobal(Offset.zero);
-        final size = renderBox.size;
-        final rect = offset & size; // rectangle of the TextField
-
-        // check if tap is inside
-        if (rect.contains(event.position)) {
-          // tapped on TextField itself → do nothing
-          return;
+          // check if tap is outside text field
+          final renderBox = _textFocusNode.context?.findRenderObject() as RenderBox?;
+          if (renderBox != null) {
+            final offset = renderBox.localToGlobal(Offset.zero);
+            final size = renderBox.size;
+            final rect = offset & size;
+            if (rect.contains(event.position)) return;
+          }
+          currentFocus.unfocus();
         }
-      }
-      // tapped outside → unfocus
-      currentFocus.unfocus();
-    }
       },
       child: Scaffold(
-      extendBodyBehindAppBar: true,
-      resizeToAvoidBottomInset: false,
-      body: Stack(
-        children: [
-          MapBody(
-            propagateMemory: showMemory,
-            closeMemory: closeMemory
-          )
-          ,       
-          IgnorePointer( // so touches go to the map
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: RadialGradient(
-            center: AlignmentGeometry.xy(0, 0.075),
-            radius: 1.0,
-            colors: [
-              Colors.transparent,   // center is clear
-              Colors.black.withValues(alpha: 0.15),
-              Colors.black.withValues(alpha: 0.3),
-            ],
-            stops: [0.7, 0.9, 1.0],
-            
-          ),
-        ),
-      ),
-    ),
-          SearchBarWidget(focusNode: _textFocusNode),
-          const MapButtons(),
+        extendBodyBehindAppBar: true,
+        resizeToAvoidBottomInset: false,
+        body: Stack(
+          children: [
+            MapBody(
+              propagateMemory: showMemory,
+              closeMemory: closeMemory,
+            ),
 
-          Container(
-            margin: EdgeInsets.fromLTRB(10, 40, 10, 0),
-            child: TextField(
-              focusNode: _textFocusNode,
-              decoration: InputDecoration(
-                hintText: "Search",
-                hintStyle: TextStyle(
-                  color: Colors.grey
-                ),
-                filled: true,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(100),
-                  borderSide: BorderSide.none
-                ),
-                suffixIcon: Container(
-                  margin: const EdgeInsets.only(right: 12),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(50),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const AccountScreen()),
-                      );
-                    },
-                    child: const CircleAvatar(
-                      radius: 18,
-                      backgroundImage: AssetImage('assets/profile_placeholder.png'),
-                    ),
+            // 🌫 Gradient overlay
+            IgnorePointer(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: AlignmentGeometry.xy(0, 0.075),
+                    radius: 1.0,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.15),
+                      Colors.black.withValues(alpha: 0.3),
+                    ],
+                    stops: [0.7, 0.9, 1.0],
                   ),
                 ),
+              ),
+            ),
 
-                fillColor: Colors.white
-              )
-              
-            )),
+            // ✅ Single, clean search bar
+            SearchBarWidget(focusNode: _textFocusNode),
+
+            const MapButtons(),
+
+            // 🧠 Memory card overlay
             if (activeMemory != null)
               MemoryCard(
                 description: "Lorem ipsum dolor sit amet.",
@@ -137,11 +98,9 @@ class MyState extends State<MyScaffold> {
                 onClose: () => setMemoryInactive(),
                 isClosing: isClosing,
               ),
-        ],
-      )
-      
-    ,
-    )
+          ],
+        ),
+      ),
     );
   }
 }

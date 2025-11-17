@@ -67,7 +67,7 @@ class MapButtons extends StatelessWidget {
                         child: const Icon(
                           Icons.camera_alt,
                           size: 30,
-                          color: Colors.white,
+                          color: Colors.black,
                         ),
                       ),
                     ),
@@ -80,8 +80,8 @@ class MapButtons extends StatelessWidget {
 
          // Bin button
         Positioned(
-          bottom: 90,
-          right: 22,
+          bottom: 97,
+          right: 23,
           child: CircleButton(
             onTap: () {
               Navigator.pushNamed(context, '/bin');
