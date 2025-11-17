@@ -17,6 +17,7 @@ class MemoryData {
   late final double decay;
   final String? imageUrl; // Network image URL
   final String? memoryId;
+  final int? supabaseMemoryId;
 
   MemoryData({
     required this.addressString,
@@ -26,7 +27,8 @@ class MemoryData {
     this.head = true,
     this.imageUrl,
     this.memoryId,
-    this.description
+    this.description,
+    this.supabaseMemoryId,
   });
 
   @override

@@ -286,6 +286,7 @@ class StorageService {
             imageUrl: data['imageUrl'] as String?,
             memoryId: doc.id,
             description: data['description'] as String?,
+            supabaseMemoryId: data['supabaseMemoryId'] as int?,
           );
 
 

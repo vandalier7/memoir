@@ -218,11 +218,25 @@ class _JournalScreenState extends State<JournalScreen>
       print('✅ Image uploaded to Supabase: $fileName');
       print('🔗 Image URL: $imageUrl');
 
-      // 3. Save memory metadata to Firebase Firestore
+      // 3. Create memory in Supabase and get the numeric ID
+      final memoryResponse = await supabase
+        .from('memory')
+        .insert({
+          'userID': currentUser.uid,
+          'createdAt': DateTime.now().toIso8601String(),
+        })
+        .select()
+        .single();
+
+      final supabaseMemoryId = memoryResponse['memoryID'] as int;
+      print('✅ Created Supabase memory with ID: $supabaseMemoryId');
+
+      // 4. Save memory metadata to Firebase Firestore
       final firestore = FirebaseFirestore.instance;
     
       final memoryData = {
         'imageUrl': imageUrl,
+        'supabaseMemoryId': supabaseMemoryId,
         'addressString': addressString,
         'latitude': positionToUse.latitude,
         'longitude': positionToUse.longitude,
@@ -243,6 +257,7 @@ class _JournalScreenState extends State<JournalScreen>
       await docRef.update({'memoryId': docRef.id});
     
       print('✅ Memory saved to Firebase with ID: ${docRef.id}');
+      print('✅ Linked to Supabase memory ID: $supabaseMemoryId');
 
       snack.hideCurrentSnackBar();
       snack.showSnackBar(

@@ -3,12 +3,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:presentation/objects/memory_card.dart';
 
 class CommentsService {
-  // Singleton instance (matching your DatabaseService pattern)
+  // Singleton instance
   static final CommentsService _instance = CommentsService._internal();
   factory CommentsService() => _instance;
   CommentsService._internal();
 
-  // Get Supabase client
   final SupabaseClient _supabase = Supabase.instance.client;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
@@ -19,13 +18,13 @@ class CommentsService {
     if (currentUserId == null) throw Exception('Not authenticated');
 
     try {
-      // Get top-level comments (where headCommentID is null)
+      // Get top-level comments (where headcommentid is null)
       final response = await _supabase
           .from('comment')
           .select('*')
-          .eq('firestoreMemoryID', memoryId)
-          .isFilter('headCommentID', null)
-          .order('created_at', ascending: true);
+          .eq('memoryID', memoryId)
+          .isFilter('headcommentid', null)
+          .order('created_at', ascending: false); // Most recent first
 
       if (response == null || response.isEmpty) return [];
 
@@ -54,7 +53,6 @@ class CommentsService {
           text: data['comment'] as String,
           timestamp: DateTime.parse(data['created_at'] as String),
           repliedCommentID: data['repliedCommentID'] as int?,
-          headCommentID: data['headCommentID'] as int?,
           likesCount: data['likes_count'] as int? ?? 0,
           repliesCount: repliesCount,
           isLikedByMe: isLiked,
@@ -91,12 +89,15 @@ class CommentsService {
     try {
       final response = await _supabase
           .from('user')
-          .select('email')
+          .select('username, email')
           .eq('uid', userId)
           .maybeSingle();
 
       if (response != null) {
-        return response['email'] as String? ?? 'Anonymous';
+        // Prioritize username, fallback to email
+        return response['username'] as String? ?? 
+               response['email'] as String? ?? 
+               'Anonymous';
       }
       return 'Anonymous';
     } catch (e) {
@@ -128,7 +129,6 @@ class CommentsService {
         text: response['comment'] as String,
         timestamp: DateTime.parse(response['created_at'] as String),
         repliedCommentID: response['repliedCommentID'] as int?,
-        headCommentID: response['headCommentID'] as int?,
         likesCount: response['likes_count'] as int? ?? 0,
         repliesCount: 0, // Don't need to count for reply preview
         isLikedByMe: isLiked,
@@ -147,7 +147,7 @@ class CommentsService {
           .from('comment')
           .select('*')
           .eq('repliedCommentID', commentId)
-          .order('created_at', ascending: true);
+          .order('created_at', ascending: true); // Oldest first for replies
 
       if (response == null || response.isEmpty) return [];
 
@@ -164,7 +164,6 @@ class CommentsService {
           text: data['comment'] as String,
           timestamp: DateTime.parse(data['created_at'] as String),
           repliedCommentID: data['repliedCommentID'] as int?,
-          headCommentID: data['headCommentID'] as int?,
           likesCount: data['likes_count'] as int? ?? 0,
           repliesCount: 0,
           isLikedByMe: isLiked,
@@ -187,8 +186,8 @@ class CommentsService {
       final response = await _supabase
           .from('comment_likes')
           .select('id')
-          .eq('commentID', commentId)
-          .eq('userID', currentUserId!)
+          .eq('commentid', commentId)
+          .eq('userid', currentUserId!)
           .maybeSingle();
 
       return response != null;
@@ -198,23 +197,24 @@ class CommentsService {
     }
   }
 
-  // Post a new comment
+  // Post a new comment or reply
   Future<void> postComment({
     required int memoryId,
     required String text,
     int? replyToCommentId,
-    int? headCommentId, // Required if replying
+    int? headcommentid, // For nested replies - always points to the top-level comment
   }) async {
     if (currentUserId == null) throw Exception('Not authenticated');
 
     try {
       await _supabase.from('comment').insert({
-        'firestoreMemoryID': memoryId,
+        'memoryID': memoryId,
         'userID': currentUserId,
         'comment': text,
         'repliedCommentID': replyToCommentId,
-        'headCommentID': headCommentId ?? replyToCommentId, // If replying, set head
+        'headcommentid': headcommentid ?? replyToCommentId, // If replying, set to head
         'created_at': DateTime.now().toIso8601String(),
+        'likes_count': 0,
       });
       
       print('✅ Comment posted successfully');
@@ -225,15 +225,15 @@ class CommentsService {
   }
 
   // Like/unlike a comment
-  Future<void> toggleLike(int commentId) async {
+  Future<void> toggleCommentLike(int commentId) async {
     if (currentUserId == null) throw Exception('Not authenticated');
 
     try {
       final existingLike = await _supabase
           .from('comment_likes')
           .select('id')
-          .eq('commentID', commentId)
-          .eq('userID', currentUserId!)
+          .eq('commentid', commentId)
+          .eq('userid', currentUserId!)
           .maybeSingle();
 
       if (existingLike != null) {
@@ -241,8 +241,8 @@ class CommentsService {
         await _supabase
             .from('comment_likes')
             .delete()
-            .eq('commentID', commentId)
-            .eq('userID', currentUserId!);
+            .eq('commentid', commentId)
+            .eq('userid', currentUserId!);
 
         // Decrement like count
         await _supabase.rpc('decrement_comment_likes', params: {
@@ -253,8 +253,8 @@ class CommentsService {
       } else {
         // Like
         await _supabase.from('comment_likes').insert({
-          'commentID': commentId,
-          'userID': currentUserId,
+          'commentid': commentId,
+          'userid': currentUserId,
           'created_at': DateTime.now().toIso8601String(),
         });
 
@@ -266,7 +266,7 @@ class CommentsService {
         print('❤️ Comment liked');
       }
     } catch (e) {
-      print('❌ Error toggling like: $e');
+      print('❌ Error toggling comment like: $e');
       rethrow;
     }
   }
@@ -287,7 +287,7 @@ class CommentsService {
         throw Exception('You can only delete your own comments');
       }
 
-      // Delete comment (cascades to likes and replies)
+      // Delete comment (cascades to likes and replies if set up in DB)
       await _supabase
           .from('comment')
           .delete()
@@ -300,22 +300,22 @@ class CommentsService {
     }
   }
 
-  // Get likes and comments count for a memory (for memory card display)
-  Future<Map<String, int>> getMemoryCounts(int memoryId) async {
+  // Get memory stats (likes and comments count)
+  Future<Map<String, int>> getMemoryStats(int memoryId) async {
     try {
-      // Get likes count from likes table
+      // Get likes count from like table
       final likesResponse = await _supabase
-        .from('likes')
+        .from('like')
         .select()
-        .eq('firestoreMemoryID', memoryId)
+        .eq('memoryID', memoryId)
         .count();
 
       // Get top-level comments count (not replies)
       final commentsResponse = await _supabase
         .from('comment')
         .select()
-        .eq('firestoreMemoryID', memoryId)
-        .isFilter('headCommentID', null)
+        .eq('memoryID', memoryId)
+        .isFilter('headcommentid', null)
         .count();
     
       return {
@@ -323,10 +323,67 @@ class CommentsService {
         'comments': commentsResponse.count,
       };
     } catch (e) {
-      print('Error getting memory counts: $e');
+      print('Error getting memory stats: $e');
       return {'likes': 0, 'comments': 0};
     }
   }
+
+  // Check if current user liked the memory
+  Future<bool> checkIfMemoryLiked(int memoryId) async {
+    if (currentUserId == null) return false;
+
+    try {
+      final response = await _supabase
+          .from('like')
+          .select('id')
+          .eq('memoryID', memoryId)
+          .eq('userID', currentUserId!)
+          .maybeSingle();
+
+      return response != null;
+    } catch (e) {
+      print('Error checking memory like status: $e');
+      return false;
+    }
+  }
+
+  // Toggle memory like
+  Future<void> toggleMemoryLike(int memoryId) async {
+    if (currentUserId == null) throw Exception('Not authenticated');
+
+    try {
+      final existingLike = await _supabase
+          .from('like')
+          .select('id')
+          .eq('memoryID', memoryId)
+          .eq('userID', currentUserId!)
+          .maybeSingle();
+
+      if (existingLike != null) {
+        // Unlike
+        await _supabase
+            .from('like')
+            .delete()
+            .eq('memoryID', memoryId)
+            .eq('userID', currentUserId!);
+        
+        print('👎 Memory unliked');
+      } else {
+        // Like
+        await _supabase.from('like').insert({
+          'memoryID': memoryId,
+          'userID': currentUserId,
+          'created_at': DateTime.now().toIso8601String(),
+        });
+        
+        print('❤️ Memory liked');
+      }
+    } catch (e) {
+      print('❌ Error toggling memory like: $e');
+      rethrow;
+    }
+  }
 }
+
 // Global instance
 final commentsService = CommentsService();
