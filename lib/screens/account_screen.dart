@@ -1,7 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'settings_screen.dart';
 import '../app_theme.dart'; // for memoirTheme
 import '../processes/auth.dart';
+
 
 final user = FirebaseAuth.instance.currentUser;
 
@@ -25,7 +27,12 @@ class AccountScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             color: memoirTheme.onBackground,
-            onPressed: () {}, // placeholder
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SettingsScreen()),
+              );
+            },// placeholder
           ),
         ],
       ),
@@ -131,7 +138,7 @@ class AccountScreen extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: 30),
+            const SizedBox(height: 10),
           ],
         ),
       ),

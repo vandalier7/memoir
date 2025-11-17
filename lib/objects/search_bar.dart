@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+<<<<<<< HEAD
 import '../app_theme.dart'; // for memoirTheme colors
 import '../screens/account_screen.dart';
+=======
+import '../../app_theme.dart'; // adjust path if needed
+import '../screens/account_screen.dart';// ✅ added this import for navigation
+>>>>>>> account-settings
 
 class SearchBarWidget extends StatelessWidget {
   final FocusNode? focusNode;
@@ -17,7 +22,7 @@ class SearchBarWidget extends StatelessWidget {
       left: screenWidth * 0.02,
       right: screenWidth * 0.02,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end, // 👈 aligns everything to right
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           // 🔍 SEARCH BAR
           Container(
@@ -36,7 +41,7 @@ class SearchBarWidget extends StatelessWidget {
             child: Row(
               children: [
                 const SizedBox(width: 16),
-                // 🔤 Search field (fills most of the space)
+                // 🔤 Search field
                 Expanded(
                   child: TextField(
                     focusNode: focusNode,
@@ -47,13 +52,19 @@ class SearchBarWidget extends StatelessWidget {
                     ),
                   ),
                 ),
-                // 👤 Account button (now on the right)
+                // 👤 Account button
                 GestureDetector(
                   onTap: () {
                     Navigator.push(
+<<<<<<< HEAD
                         context,
                         MaterialPageRoute(builder: (context) => const AccountScreen()),
                       );
+=======
+                      context,
+                      MaterialPageRoute(builder: (context) => const AccountScreen()),
+                    );
+>>>>>>> account-settings
                   },
                   child: Padding(
                     padding: const EdgeInsets.only(right: 7),
@@ -90,7 +101,7 @@ class SearchBarWidget extends StatelessWidget {
                 ],
               ),
               child: Row(
-                mainAxisSize: MainAxisSize.min, // shrink to fit content
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.layers, size: 15, color: memoirTheme.onSurface),
                   const SizedBox(width: 6),
