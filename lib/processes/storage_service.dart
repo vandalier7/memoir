@@ -112,6 +112,21 @@ class StorageService {
     }
   }
 
+  Future<String?> _getUserName(String userId) async {
+    try {
+      final response = await _supabase
+        .from('user')
+        .select('username')
+        .eq('uid', userId)
+        .maybeSingle();
+
+      return response?['username'] as String?;
+    } catch (e) {
+      debugPrint('Error fetching username: $e');
+      return null;
+    }
+  }
+
   // Updated restoreImage from your code:
   Future<void> restoreImage(BinItem item) async {
     final userId = currentUserId;
@@ -219,7 +234,7 @@ class StorageService {
 
   StreamSubscription<QuerySnapshot>? _memorySub;
 
-  void listenUserMemories({bool Function(MemoryData)? filter}) {
+  void listenUserMemories({bool Function(MemoryData)? filter}) async {
   debugPrint('🔵 [1] listenUserMemories called');
   
   _memorySub?.cancel();
@@ -232,6 +247,10 @@ class StorageService {
    debugPrint('⚠️ Cannot listen to memories: user not logged in');
    return;
   }
+
+  // Fetch username once for this user
+  final userName = await _getUserName(userId);
+  debugPrint('🔵 [3.5] Got userName: $userName');
 
   debugPrint('🔵 [4] About to create Firestore listener...');
   
@@ -287,6 +306,8 @@ class StorageService {
             memoryId: doc.id,
             description: data['description'] as String?,
             supabaseMemoryId: data['supabaseMemoryId'] as int?,
+            userName: userName,
+            userId: userId,
           );
 
 

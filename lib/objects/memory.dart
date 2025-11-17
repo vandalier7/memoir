@@ -18,6 +18,8 @@ class MemoryData {
   final String? imageUrl; // Network image URL
   final String? memoryId;
   final int? supabaseMemoryId;
+  final String? userName;
+  final String? userId;
 
   MemoryData({
     required this.addressString,
@@ -29,6 +31,8 @@ class MemoryData {
     this.memoryId,
     this.description,
     this.supabaseMemoryId,
+    this.userName,
+    this.userId,
   });
 
   @override
