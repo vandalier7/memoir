@@ -458,10 +458,6 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
                 Colors.transparent,
               ],
             ),
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(20),
-            ),
           ),
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 30),
           child: Row(
@@ -690,6 +686,7 @@ Widget _buildActionButton({
 
   Widget _buildCommentsView() {
     return Scaffold(
+      backgroundColor: Colors.white,
       resizeToAvoidBottomInset: true,  // This makes it resize when keyboard appears
       body: Column(
         children: [
