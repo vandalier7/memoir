@@ -248,8 +248,7 @@ class _JournalScreenState extends State<JournalScreen>
         'likesCount': 0,
         'commentsCount': 0,
         'tags': tags,
-        'timestamp': FieldValue.serverTimestamp(),
-        'createdAt': DateTime.now().toIso8601String(),
+        'createdAt': FieldValue.serverTimestamp(),
       };
 
       final docRef = await firestore.collection('memories').add(memoryData);

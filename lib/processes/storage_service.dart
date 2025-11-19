@@ -308,6 +308,7 @@ class StorageService {
             supabaseMemoryId: data['supabaseMemoryId'] as int?,
             userName: userName,
             userId: userId,
+            timestamp: (data['createdAt'] as Timestamp?)?.toDate(),
           );
 
 

@@ -38,7 +38,6 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
   bool _isLoadingComments = false;
   bool _isLiked = false;
   bool _isLoadingLike = false;
-  bool _isDescriptionExpanded = false;
   int? _replyingToCommentId;
   String? _replyingToUserName;
   bool _isWishlisted = false;
@@ -47,7 +46,29 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
   int _commentsCount = 0;
   
   final TextEditingController _commentController = TextEditingController();
+  
+  String _getMemoryRelativeTime(DateTime timestamp) {
+    final now = DateTime.now();
+    final difference = now.difference(timestamp);
 
+    if (difference.inSeconds < 0) {
+      return 'Just now';
+    } else if (difference.inMinutes < 60) {
+      return difference.inMinutes == 0 ? 'Just now' : '${difference.inMinutes}m ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours}h ago';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays}d ago';
+    } else if (difference.inDays < 28) {
+      final weeks = (difference.inDays / 7).floor();
+      return '${weeks}w ago';
+    } else {
+      // 4 weeks or more - show date as MM-DD-YYYY
+      final month = timestamp.month.toString().padLeft(2, '0');
+      final day = timestamp.day.toString().padLeft(2, '0');
+      return '$month-$day-${timestamp.year}';
+      }
+    }
   @override
   void initState() {
     super.initState();
@@ -446,7 +467,7 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
       Positioned(
         top: 0,
         left: 0,
-        right: 60,  // Leave space for close button
+        right: 0,
         child: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -484,26 +505,6 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
           ),
         ),
       ),
-
-      // Close button
-      if (widget.onClose != null)
-        Positioned(
-          top: 8,
-          right: 8,
-          child: Container(
-            height: 36,
-            width: 36,
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.5),
-              shape: BoxShape.circle,
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.close, color: Colors.white, size: 20),
-              onPressed: _animateOut,
-              padding: EdgeInsets.zero,
-            ),
-          ),
-        ),
       
       // Page indicator
       if (widget.memories.length > 1)
@@ -581,38 +582,49 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Text(
-                    widget.memories[_currentIndex].userName ?? 'Unknown User',
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.memories[_currentIndex].userName ?? 'Unknown User',
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          )
+                        ),
+                        if (widget.memories[_currentIndex].timestamp != null)
+                          Text(
+                            _getMemoryRelativeTime(widget.memories[_currentIndex].timestamp!),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade300,
+                            ),
+                          ),
+                      ]
                     )
-                  )
+                  ),
                 ],
-              ),     
+              ),
 
               // Description
               if (widget.memories[_currentIndex].description != null && 
                   widget.memories[_currentIndex].description!.isNotEmpty) ...[
                 const SizedBox(height: 12),
-                GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _isDescriptionExpanded = !_isDescriptionExpanded;
-                    });
-                  },
-                  child: Text(
-                    widget.memories[_currentIndex].description!,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      height: 1.5,
-                      color: Colors.white,
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: 120,
+                  ),
+                  child: SingleChildScrollView(
+                    child: Text(
+                      widget.memories[_currentIndex].description!,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        height: 1.5,
+                        color: Colors.white,
+                      ),
                     ),
-                    maxLines: _isDescriptionExpanded ? null : 2,
-                    overflow: _isDescriptionExpanded 
-                        ? TextOverflow.visible 
-                        : TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -1290,18 +1302,25 @@ class CommentData {
     final now = DateTime.now();
     final difference = now.difference(timestamp);
 
-    if (difference.inSeconds < 60) {
-      return '${difference.inSeconds}s';
+    if (difference.inSeconds < 0) {
+    // Handle future timestamps (clock sync issues)
+    return 'Just now';
+    } else if (difference.inSeconds < 60) {
+      return '1s';
     } else if (difference.inMinutes < 60) {
       return '${difference.inMinutes}m';
     } else if (difference.inHours < 24) {
-      return '${difference.inHours}h';
+      return '${difference.inMinutes}m';
     } else if (difference.inDays < 7) {
-      final days = difference.inDays;
-      return days == 1 ? '1d' : '${days}d';
-    } else {
+      return '${difference.inDays}d';
+    } else if (difference.inDays < 28) {
       final weeks = (difference.inDays / 7).floor();
       return '${weeks}w';
+    } else {
+      // 4 weeks or more - show date as MM-DD-YYYY
+      final month = timestamp.month.toString().padLeft(2, '0');
+      final day = timestamp.day.toString().padLeft(2, '0');
+      return '$month-$day-${timestamp.year}';
     }
   }
 

@@ -20,6 +20,7 @@ class MemoryData {
   final int? supabaseMemoryId;
   final String? userName;
   final String? userId;
+  final DateTime? timestamp;
 
   MemoryData({
     required this.addressString,
@@ -33,6 +34,7 @@ class MemoryData {
     this.supabaseMemoryId,
     this.userName,
     this.userId,
+    this.timestamp,
   });
 
   @override
