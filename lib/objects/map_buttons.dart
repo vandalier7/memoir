@@ -53,41 +53,10 @@ class MapButtons extends StatelessWidget {
                       ),
                     ],
                   ),
-<<<<<<< HEAD
                   child: const Icon(
                     Icons.camera_alt,
                     size: 26,
                     color: Colors.white,
-=======
-                  child: Center(
-                    child: Container(
-                      width: 64,
-                      height: 64,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.transparent, // transparent background
-                      ),
-                      child: ShaderMask(
-                        shaderCallback: (Rect bounds) {
-                          return const LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              Color(0xFFF75270),
-                              Color.fromARGB(255, 250, 132, 154),
-                              Color.fromARGB(255, 245, 200, 157),
-                            ],
-                          ).createShader(bounds);
-                        },
-                        blendMode: BlendMode.srcIn,
-                        child: const Icon(
-                          Icons.camera_alt,
-                          size: 30,
-                          color: Colors.black,
-                        ),
-                      ),
-                    ),
->>>>>>> account-settings
                   ),
                 ),
               ),

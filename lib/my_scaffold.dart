@@ -4,10 +4,6 @@ import 'objects/map_buttons.dart';
 import 'objects/search_bar.dart';
 import 'objects/memory.dart';
 import 'objects/memory_card.dart';
-<<<<<<< HEAD
-import 'package:maplibre_gl/maplibre_gl.dart';
-=======
->>>>>>> account-settings
 
 class MyScaffold extends StatefulWidget {
   const MyScaffold({super.key});
@@ -69,8 +65,6 @@ class MyState extends State<MyScaffold> {
               closeMemory: closeMemory,
             ),
 
-<<<<<<< HEAD
-=======
             // 🌫 Gradient overlay
             IgnorePointer(
               child: Container(
@@ -95,7 +89,6 @@ class MyState extends State<MyScaffold> {
             const MapButtons(),
 
             // 🧠 Memory card overlay
->>>>>>> account-settings
             if (activeMemory != null)
               MemoryCard(
                 description: activeMemory!.description ?? "",

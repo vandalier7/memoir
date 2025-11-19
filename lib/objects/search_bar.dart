@@ -1,11 +1,6 @@
 import 'package:flutter/material.dart';
-<<<<<<< HEAD
 import '../app_theme.dart'; // for memoirTheme colors
 import '../screens/account_screen.dart';
-=======
-import '../../app_theme.dart'; // adjust path if needed
-import '../screens/account_screen.dart';// ✅ added this import for navigation
->>>>>>> account-settings
 
 class SearchBarWidget extends StatelessWidget {
   final FocusNode? focusNode;
@@ -56,15 +51,9 @@ class SearchBarWidget extends StatelessWidget {
                 GestureDetector(
                   onTap: () {
                     Navigator.push(
-<<<<<<< HEAD
                         context,
                         MaterialPageRoute(builder: (context) => const AccountScreen()),
                       );
-=======
-                      context,
-                      MaterialPageRoute(builder: (context) => const AccountScreen()),
-                    );
->>>>>>> account-settings
                   },
                   child: Padding(
                     padding: const EdgeInsets.only(right: 7),

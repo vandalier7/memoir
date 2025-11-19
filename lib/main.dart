@@ -48,13 +48,6 @@ void main() async {
     cameras = await availableCameras();
     print('✅ Cameras initialized: ${cameras.length} camera(s) found');
 
-<<<<<<< HEAD
-    
-
-
-
-=======
->>>>>>> account-settings
   } catch (e) {
     print('❌ Initialization error: $e');
     // You might want to show an error screen here instead of continuing
