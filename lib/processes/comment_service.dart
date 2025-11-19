@@ -51,7 +51,7 @@ class CommentsService {
           userName: userName,
           userId: data['userID'] as String,
           text: data['comment'] as String,
-          timestamp: DateTime.parse(data['created_at'] as String). toLocal(),
+          timestamp: DateTime.parse(data['created_at'] as String),
           repliedCommentID: data['repliedCommentID'] as int?,
           likesCount: data['likes_count'] as int? ?? 0,
           repliesCount: repliesCount,
@@ -127,7 +127,7 @@ class CommentsService {
         userName: userName,
         userId: response['userID'] as String,
         text: response['comment'] as String,
-        timestamp: DateTime.parse(response['created_at'] as String). toLocal(),
+        timestamp: DateTime.parse(response['created_at'] as String),
         repliedCommentID: response['repliedCommentID'] as int?,
         likesCount: response['likes_count'] as int? ?? 0,
         repliesCount: 0, // Don't need to count for reply preview
@@ -162,7 +162,7 @@ class CommentsService {
           userName: userName,
           userId: data['userID'] as String,
           text: data['comment'] as String,
-          timestamp: DateTime.parse(data['created_at'] as String). toLocal(),
+          timestamp: DateTime.parse(data['created_at'] as String),
           repliedCommentID: data['repliedCommentID'] as int?,
           likesCount: data['likes_count'] as int? ?? 0,
           repliesCount: 0,
@@ -213,7 +213,7 @@ class CommentsService {
         'comment': text,
         'repliedCommentID': replyToCommentId,
         'headcommentid': headcommentid ?? replyToCommentId, // If replying, set to head
-        'created_at': DateTime.now().toIso8601String(),
+        'created_at': DateTime.now().toUtc().toIso8601String(),
         'likes_count': 0,
       });
       

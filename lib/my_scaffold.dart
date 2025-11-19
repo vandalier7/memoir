@@ -1,3 +1,4 @@
+//my_scaffold
 import 'package:flutter/material.dart';
 import 'map_body.dart';
 import 'objects/map_buttons.dart';
@@ -92,7 +93,7 @@ class MyState extends State<MyScaffold> {
             const MapButtons(),
 
             // 🧠 Memory card overlay
-            if (activeMemories != null && selectedMemory != null)
+            if (activeMemories != null)
               MemoryCard(
                 memories: activeMemories!,
                 selectedMemory: selectedMemory!,

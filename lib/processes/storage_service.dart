@@ -1,3 +1,4 @@
+//storage_service.dart
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -308,7 +309,9 @@ class StorageService {
             supabaseMemoryId: data['supabaseMemoryId'] as int?,
             userName: userName,
             userId: userId,
-            timestamp: (data['createdAt'] as Timestamp?)?.toDate(),
+            timestamp: data['createdAt'] != null 
+              ? DateTime.parse(data['createdAt'] as String)
+              : null,
           );
 
 
