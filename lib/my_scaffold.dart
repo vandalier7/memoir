@@ -4,7 +4,6 @@ import 'objects/map_buttons.dart';
 import 'objects/search_bar.dart';
 import 'objects/memory.dart';
 import 'objects/memory_card.dart';
-import 'package:maplibre_gl/maplibre_gl.dart';
 
 class MyScaffold extends StatefulWidget {
   const MyScaffold({super.key});
@@ -18,7 +17,6 @@ class MyState extends State<MyScaffold> {
   MemoryData? selectedMemory;
   bool isClosing = false;
 
-
   final _textFocusNode = FocusNode();
 
   void showMemory(List<MemoryData> memories, MemoryData selected) {
@@ -31,7 +29,7 @@ class MyState extends State<MyScaffold> {
 
   void closeMemory() {
     setState(() {
-    isClosing = true;
+      isClosing = true;
     });
   }
 
@@ -49,53 +47,51 @@ class MyState extends State<MyScaffold> {
       onPointerDown: (event) {
         final currentFocus = FocusScope.of(context);
         if (_textFocusNode.hasFocus) {
-      // get RenderBox for TextField
-      final renderBox = _textFocusNode.context?.findRenderObject() as RenderBox?;
-      if (renderBox != null) {
-        final offset = renderBox.localToGlobal(Offset.zero);
-        final size = renderBox.size;
-        final rect = offset & size; // rectangle of the TextField
-
-        // check if tap is inside
-        if (rect.contains(event.position)) {
-          // tapped on TextField itself → do nothing
-          return;
+          // check if tap is outside text field
+          final renderBox = _textFocusNode.context?.findRenderObject() as RenderBox?;
+          if (renderBox != null) {
+            final offset = renderBox.localToGlobal(Offset.zero);
+            final size = renderBox.size;
+            final rect = offset & size;
+            if (rect.contains(event.position)) return;
+          }
+          currentFocus.unfocus();
         }
-      }
-      // tapped outside → unfocus
-      currentFocus.unfocus();
-    }
       },
       child: Scaffold(
-      extendBodyBehindAppBar: true,
-      resizeToAvoidBottomInset: false,
-      body: Stack(
-        children: [
-          MapBody(
-            propagateMemory: showMemory,
-            closeMemory: closeMemory
-          )
-          ,       
-          IgnorePointer( // so touches go to the map
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: RadialGradient(
-            center: AlignmentGeometry.xy(0, 0.075),
-            radius: 1.0,
-            colors: [
-              Colors.transparent,   // center is clear
-              Colors.black.withValues(alpha: 0.15),
-              Colors.black.withValues(alpha: 0.3),
-            ],
-            stops: [0.7, 0.9, 1.0],
-            
-          ),
-        ),
-      ),
-    ),
-          SearchBarWidget(focusNode: _textFocusNode),
-          const MapButtons(),
+        extendBodyBehindAppBar: true,
+        resizeToAvoidBottomInset: false,
+        body: Stack(
+          children: [
+            MapBody(
+              propagateMemory: showMemory,
+              closeMemory: closeMemory,
+            ),
 
+            // 🌫 Gradient overlay
+            IgnorePointer(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: AlignmentGeometry.xy(0, 0.075),
+                    radius: 1.0,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.15),
+                      Colors.black.withValues(alpha: 0.3),
+                    ],
+                    stops: [0.7, 0.9, 1.0],
+                  ),
+                ),
+              ),
+            ),
+
+            // ✅ Single, clean search bar
+            SearchBarWidget(focusNode: _textFocusNode),
+
+            const MapButtons(),
+
+            // 🧠 Memory card overlay
             if (activeMemories != null && selectedMemory != null)
               MemoryCard(
                 memories: activeMemories!,
@@ -103,11 +99,9 @@ class MyState extends State<MyScaffold> {
                 onClose: () => setMemoryInactive(),
                 isClosing: isClosing,
               ),
-        ],
-      )
-      
-    ,
-    )
+          ],
+        ),
+      ),
     );
   }
 }

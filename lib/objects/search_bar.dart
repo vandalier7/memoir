@@ -17,7 +17,7 @@ class SearchBarWidget extends StatelessWidget {
       left: screenWidth * 0.02,
       right: screenWidth * 0.02,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end, // 👈 aligns everything to right
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           // 🔍 SEARCH BAR
           Container(
@@ -36,7 +36,7 @@ class SearchBarWidget extends StatelessWidget {
             child: Row(
               children: [
                 const SizedBox(width: 16),
-                // 🔤 Search field (fills most of the space)
+                // 🔤 Search field
                 Expanded(
                   child: TextField(
                     focusNode: focusNode,
@@ -47,7 +47,7 @@ class SearchBarWidget extends StatelessWidget {
                     ),
                   ),
                 ),
-                // 👤 Account button (now on the right)
+                // 👤 Account button
                 GestureDetector(
                   onTap: () {
                     Navigator.push(
@@ -90,7 +90,7 @@ class SearchBarWidget extends StatelessWidget {
                 ],
               ),
               child: Row(
-                mainAxisSize: MainAxisSize.min, // shrink to fit content
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.layers, size: 15, color: memoirTheme.onSurface),
                   const SizedBox(width: 6),

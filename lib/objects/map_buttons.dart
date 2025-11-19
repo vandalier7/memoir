@@ -65,8 +65,8 @@ class MapButtons extends StatelessWidget {
         ),
         // Bin button - smaller and more subtle
         Positioned(
-          bottom: 90,
-          right: 22,
+          bottom: 97,
+          right: 23,
           child: CircleButton(
             onTap: () {
               Navigator.pushNamed(context, '/bin');
