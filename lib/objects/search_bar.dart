@@ -137,91 +137,93 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
       top: topPadding + 10,
       left: screenWidth * 0.02,
       right: screenWidth * 0.02,
-      child: GestureDetector(
-        // Prevent parent GestureDetector from unfocusing when tapping search UI
-        onTap: () {},
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            // 🔍 SEARCH BAR
-            Container(
-              height: 48,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.95),
-                borderRadius: BorderRadius.circular(100),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  const SizedBox(width: 16),
-                  // 🔤 Search field
-                  Expanded(
-                    child: TextField(
-                      controller: _searchController,
-                      focusNode: _internalFocusNode,
-                      enableInteractiveSelection: true,
-                      decoration: const InputDecoration(
-                        hintText: "Search users",
-                        hintStyle: TextStyle(color: Colors.grey),
-                        border: InputBorder.none,
-                      ),
-                    ),
-                  ),
-                  // 👤 Account button
-                  GestureDetector(
-                    onTap: () {
-                      // Remove focus completely
-                      FocusScope.of(context).unfocus();
-                      _internalFocusNode.unfocus();
-                      
-                      // Set flag to prevent refocus and clear focused state
-                      setState(() {
-                        _shouldPreventFocus = true;
-                        _isFocused = false;
-                      });
-                      
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => const AccountScreen()),
-                      ).then((_) {
-                        // When returning, ensure focus is cleared and keep prevention flag
-                        FocusScope.of(context).unfocus();
-                        // Reset flag after a brief delay
-                        Future.delayed(const Duration(milliseconds: 100), () {
-                          if (mounted) {
-                            setState(() {
-                              _shouldPreventFocus = false;
-                            });
-                          }
-                        });
-                      });
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.only(right: 7),
-                      child: CircleAvatar(
-                        radius: 18,
-                        backgroundColor: memoirTheme.primary.withOpacity(0.8),
-                        child: Icon(Icons.account_circle,
-                            color: memoirTheme.onPrimary, size: 22),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          // 🔍 SEARCH BAR
+          Container(
+            height: 48,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.95),
+              borderRadius: BorderRadius.circular(100),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
             ),
+            child: Row(
+              children: [
+                const SizedBox(width: 16),
+                // 🔤 Search field
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    focusNode: _internalFocusNode,
+                    enableInteractiveSelection: true,
+                    decoration: const InputDecoration(
+                      hintText: "Search users",
+                      hintStyle: TextStyle(color: Colors.grey),
+                      border: InputBorder.none,
+                    ),
+                  ),
+                ),
+                // 👤 Account button
+                GestureDetector(
+                  onTap: () {
+                    // Remove focus completely
+                    FocusScope.of(context).unfocus();
+                    _internalFocusNode.unfocus();
+                    
+                    // Set flag to prevent refocus and clear focused state
+                    setState(() {
+                      _shouldPreventFocus = true;
+                      _isFocused = false;
+                    });
+                    
+                    Navigator.pushNamed(
+                      context,
+                      "/account",
+                      arguments: storageService.currentUserId
+                    ).then((_) {
+                      // When returning, ensure focus is cleared and keep prevention flag
+                      FocusScope.of(context).unfocus();
+                      // Reset flag after a brief delay
+                      Future.delayed(const Duration(milliseconds: 100), () {
+                        if (mounted) {
+                          setState(() {
+                            _shouldPreventFocus = false;
+                          });
+                        }
+                      });
+                    });
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 7),
+                    child: CircleAvatar(
+                      radius: 18,
+                      backgroundColor: memoirTheme.primary.withOpacity(0.8),
+                      child: Icon(Icons.account_circle,
+                          color: memoirTheme.onPrimary, size: 22),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
 
-            const SizedBox(height: 10),
+          const SizedBox(height: 10),
 
-            // ✨ SEARCH RESULTS CARD (appears when focused and has results)
-            if (_isFocused && (_userResults.isNotEmpty || _isSearching))
-              AnimatedContainer(
+// ✨ SEARCH RESULTS CARD (appears when focused and has results)
+          if (_isFocused && (_userResults.isNotEmpty || _isSearching))
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                // Prevent dismissing when tapping inside results area
+              },
+              child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 curve: Curves.easeInOut,
                 constraints: BoxConstraints(
@@ -273,89 +275,114 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
                               bio: bio,
                               avatarUrl: avatarUrl,
                               onTapCallback: () {
+                                // Unfocus first
                                 _internalFocusNode.unfocus();
+                                FocusScope.of(context).unfocus();
+                                
+                                // Set flag to prevent refocus
+                                setState(() {
+                                  _shouldPreventFocus = true;
+                                  _isFocused = false;
+                                });
+                                
                                 debugPrint('Selected user: $username (ID: $userId)');
+                                
+                                // Navigate to the user's profile
+                                Navigator.pushNamed(
+                                  context,
+                                  "/account",
+                                  arguments: userId
+                                ).then((_) {
+                                  // Reset flag when returning
+                                  Future.delayed(const Duration(milliseconds: 100), () {
+                                    if (mounted) {
+                                      setState(() {
+                                        _shouldPreventFocus = false;
+                                      });
+                                    }
+                                  });
+                                });
                               },
                             );
                           },
                         ),
                       ),
               ),
+            ),
 
-            // Show "No results" message when search is complete but empty
-            if (_isFocused && 
-                !_isSearching && 
-                _userResults.isEmpty && 
-                _searchController.text.isNotEmpty)
-              Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.95),
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.search_off,
-                      color: Colors.grey.withOpacity(0.6),
-                      size: 20,
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'No users found',
-                      style: TextStyle(
-                        color: Colors.grey.withOpacity(0.8),
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
+          // Show "No results" message when search is complete but empty
+          if (_isFocused && 
+              !_isSearching && 
+              _userResults.isEmpty && 
+              _searchController.text.isNotEmpty)
+            Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.95),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
-
-            // ✨ FILTERS BUTTON (aligned right)
-            GestureDetector(
-              onTap: () {
-                debugPrint("Filters button tapped");
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: memoirTheme.surface,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 6,
-                      offset: const Offset(0, 3),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.search_off,
+                    color: Colors.grey.withOpacity(0.6),
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'No users found',
+                    style: TextStyle(
+                      color: Colors.grey.withOpacity(0.8),
+                      fontSize: 14,
                     ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.layers, size: 15, color: memoirTheme.onSurface),
-                    const SizedBox(width: 6),
-                    Text(
-                      "Filters",
-                      style: TextStyle(
-                          color: memoirTheme.onSurface,
-                          fontWeight: FontWeight.w400,
-                          fontSize: 13),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+
+          // ✨ FILTERS BUTTON (aligned right)
+          GestureDetector(
+            onTap: () {
+              debugPrint("Filters button tapped");
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: memoirTheme.surface,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 6,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.layers, size: 15, color: memoirTheme.onSurface),
+                  const SizedBox(width: 6),
+                  Text(
+                    "Filters",
+                    style: TextStyle(
+                        color: memoirTheme.onSurface,
+                        fontWeight: FontWeight.w400,
+                        fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

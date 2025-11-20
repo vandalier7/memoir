@@ -75,18 +75,9 @@ class SearchResultElement extends StatelessWidget {
   }
 
   void _handleTap(BuildContext context) {
-    // Call optional callback first
+    // Call the callback which handles all the logic
+    // The callback itself will do the navigation
     onTapCallback?.call();
-    
-    // Handle navigation based on type
-    switch (type) {
-      case SearchResultType.user:
-        Navigator.pushNamed(context, '/user-profile', arguments: id);
-        break;
-      case SearchResultType.place:
-        Navigator.pushNamed(context, '/place-details', arguments: id);
-        break;
-    }
   }
 
   Widget _buildLeading() {
