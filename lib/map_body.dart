@@ -45,6 +45,7 @@ class MapState extends State<MapBody> {
   void initState() {
     super.initState();
     _getLocation();
+    
   }
 
   // Add to MapState:
@@ -183,11 +184,13 @@ class MapState extends State<MapBody> {
       
     });
 
-    mapController.animateCamera(
+    await mapController.animateCamera(
       CameraUpdate.newLatLng(
         LatLng(pos.latitude, pos.longitude),
       ),
     );
+
+    toggleLoading(false);
   }
 
   Future<void> animateCameraWithOffset({

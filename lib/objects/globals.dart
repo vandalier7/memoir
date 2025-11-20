@@ -4,6 +4,7 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:presentation/processes/storage_service.dart';
 import 'package:presentation/processes/database_service.dart';
 import 'package:flutter/material.dart';
+import '../main.dart';
 
 late final num pixelRatio;
 
@@ -65,3 +66,9 @@ final StorageService storageService = StorageService();
 final databaseService = DatabaseService();
 
 String? activeUsername;
+
+final GlobalKey<RootState> rootKey = GlobalKey<RootState>();
+
+void toggleLoading(bool value) {
+  rootKey.currentState?.toggleLoading(value);
+}
