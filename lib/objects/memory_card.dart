@@ -491,50 +491,82 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
           left: 0,
           right: 0,
           bottom: 0,
-          child: GestureDetector(
-            onTap: () {}, // Prevents tap from propagating to background
-            child: SlideTransition(
-              position: _slideAnimation,
-              child: Card(
-                margin: EdgeInsets.zero,
-                elevation: 8,
-                color: Colors.transparent,
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(12),
-                    topRight: Radius.circular(12),
-                  ),
-                  side: BorderSide.none
-                ),
-                child: Column(
+          child: Column(
+            children: [
+              // Address above card
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                child: Row(
                   children: [
-                    // Drawer handle at the very top
-                    Container(
-                      margin: const EdgeInsets.only(top: 6, bottom: 2),
-                      width: 32,
-                      height: 3,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade400,
-                        borderRadius: BorderRadius.circular(2),
+                    Icon(
+                    Icons.location_on,
+                    size: 14,
+                    color: Colors.white.withOpacity(0.8),
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      widget.memories[_currentIndex].addressString,
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Colors.white.withOpacity(0.9),
+                        fontWeight: FontWeight.w500,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    // The actual content
-                    Expanded(
-                      child: Stack(
-                        children: [
-                          _buildMemoryView(),
-                          if (_showComments)
-                            _buildCommentsView(),
-                        ],
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: GestureDetector(
+                onTap: () {}, // Prevents tap from propagating to background
+                child: SlideTransition(
+                  position: _slideAnimation,
+                  child: Card(
+                    margin: EdgeInsets.zero,
+                    elevation: 8,
+                    color: Colors.transparent,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(12),
+                        topRight: Radius.circular(12),
                       ),
+                      side: BorderSide.none
                     ),
-                  ],
+                    child: Column(
+                      children: [
+                        // Drawer handle at the very top
+                        Container(
+                          margin: const EdgeInsets.only(top: 6, bottom: 2),
+                          width: 32,
+                          height: 3,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade400,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                        // The actual content
+                        Expanded(
+                          child: Stack(
+                            children: [
+                              _buildMemoryView(),
+                              if (_showComments)
+                                _buildCommentsView(),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
+          ],
         ),
-      ],
+      ),
+    ],
     );
   }
 
@@ -614,57 +646,13 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
                           ),
                   ),
 
-                  // Top gradient overlay for address (per page)
-                  if (isCurrentPage)
-                    Positioned(
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.black.withOpacity(0.7),
-                              Colors.black.withOpacity(0.5),
-                              Colors.transparent,
-                            ],
-                          ),
-                        ),
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 30),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.location_on,
-                              size: 18,
-                              color: Colors.white,
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                memory.addressString,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
                   // Bottom gradient overlay (per page)
                   if (isCurrentPage)
                     Positioned(
                       bottom: 0,
                       left: 0,
                       right: 0,
-                      height: 350,
+                      height: 280,
                       child: IgnorePointer(
                         child: Container(
                           decoration: BoxDecoration(
@@ -674,42 +662,12 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
                               colors: [
                                 Colors.transparent,
                                 Colors.black.withOpacity(0.3),
-                                Colors.black.withOpacity(0.6),
-                                Colors.black.withOpacity(0.8),
+                                Colors.black.withOpacity(0.7),
+                                Colors.black.withOpacity(0.85),
                               ],
                             ),
                           ),
                         ),
-                      ),
-                    ),
-
-                  // Action buttons (per page, above gradient)
-                  if (isCurrentPage)
-                    Positioned(
-                      right: 12,
-                      bottom: 100,
-                      child: Column(
-                        children: [
-                          _buildActionButton(
-                            icon: _isLiked ? Icons.favorite : Icons.favorite_border,
-                            label: _formatCount(_likesCount),
-                            onTap: _handleLike,
-                            isActive: _isLiked,
-                          ),
-                          const SizedBox(height: 20),
-                          _buildActionButton(
-                            icon: Icons.chat_bubble_outline,
-                            label: _formatCount(_commentsCount),
-                            onTap: _toggleComments,
-                          ),
-                          const SizedBox(height: 20),
-                          _buildActionButton(
-                            icon: _isWishlisted ? Icons.bookmark : Icons.bookmark_border,
-                            label: 'Wishlist',
-                            onTap: _handleWishlist,
-                            isActive: _isWishlisted,
-                          ),
-                        ],
                       ),
                     ),
 
@@ -728,6 +686,36 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
                       ),
                     ),
 
+                  // Action buttons (per page, above description)
+                  if (isCurrentPage)
+                    Positioned(
+                      right: 2,
+                      bottom: 140,
+                      child: Column(
+                        children: [
+                          _buildActionButton(
+                            icon: _isLiked ? Icons.favorite : Icons.favorite_border,
+                            label: _formatCount(_likesCount),
+                            onTap: _handleLike,
+                            isActive: _isLiked,
+                          ),
+                          const SizedBox(height: 12),
+                          _buildActionButton(
+                            icon: Icons.chat_bubble_outline,
+                            label: _formatCount(_commentsCount),
+                            onTap: _toggleComments,
+                          ),
+                          const SizedBox(height: 12),
+                          _buildActionButton(
+                            icon: _isWishlisted ? Icons.bookmark : Icons.bookmark_border,
+                            label: 'Wishlist',
+                            onTap: _handleWishlist,
+                            isActive: _isWishlisted,
+                          ),
+                        ],
+                      ),
+                    ),
+
                   // Content overlay - username and description (per page, above gradient)
                   if (isCurrentPage)
                     Positioned(
@@ -735,8 +723,8 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
                       left: 0,
                       right: 0,
                       child: Container(
-                        margin: const EdgeInsets.fromLTRB(20, 20, 80, 20),
-                        padding: const EdgeInsets.all(16),
+                        margin: const EdgeInsets.fromLTRB(16, 20, 16, 20),
+                        padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: Colors.black.withOpacity(0.4),
                           borderRadius: BorderRadius.circular(12),
@@ -745,11 +733,11 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // Owner name
+                            // Owner name and timestamp
                             Row(
                               children: [
                                 CircleAvatar(
-                                  radius: 16,
+                                  radius: 14,
                                   backgroundColor: Colors.grey.shade300,
                                   child: Text(
                                     memory.userName != null
@@ -758,97 +746,90 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       color: Colors.grey.shade700,
-                                      fontSize: 14,
+                                      fontSize: 12,
                                     ),
                                   ),
                                 ),
                                 const SizedBox(width: 8),
                                 Expanded(
-                                  child: Text(
-                                    memory.userName ?? 'Unknown User',
-                                    style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.white,
-                                    ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        memory.userName ?? 'Unknown User',
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      if (memory.timestamp != null)
+                                        Text(
+                                          _getMemoryRelativeTime(memory.timestamp!),
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.grey.shade300,
+                                          ),
+                                        ),
+                                    ],
                                   ),
                                 ),
                               ],
                             ),
 
-                            // Description or timestamp
+                            // Description
                             if (memory.description != null && memory.description!.isNotEmpty) ...[
-                              const SizedBox(height: 12),
+                              const SizedBox(height: 8),
                               GestureDetector(
                                 onTap: () {
                                   setState(() {
                                     _isDescriptionExpanded = !_isDescriptionExpanded;
                                   });
                                 },
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    if (_isDescriptionExpanded && memory.timestamp != null)
-                                      Padding(
-                                        padding: const EdgeInsets.only(bottom: 4),
-                                        child: Text(
-                                          _getMemoryRelativeTime(memory.timestamp!),
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey.shade300,
-                                          ),
-                                        ),
+                                child: AnimatedSize(
+                                  duration: const Duration(milliseconds: 200),
+                                  child: ConstrainedBox(
+                                    constraints: BoxConstraints(
+                                      maxHeight: _isDescriptionExpanded ? 150 : 40,
+                                    ),
+                                    child: ScrollConfiguration(
+                                      behavior: ScrollConfiguration.of(context).copyWith(
+                                        scrollbars: false,
                                       ),
-                                    AnimatedSize(
-                                      duration: const Duration(milliseconds: 200),
-                                      child: ConstrainedBox(
-                                        constraints: BoxConstraints(
-                                          maxHeight: _isDescriptionExpanded ? 200 : 20,
-                                        ),
-                                        child: ScrollConfiguration(
-                                          behavior: ScrollConfiguration.of(context).copyWith(
-                                            scrollbars: false,
-                                          ),
-                                          child: SingleChildScrollView(
-                                            physics: _isDescriptionExpanded
-                                                ? const ClampingScrollPhysics()
-                                                : const NeverScrollableScrollPhysics(),
-                                            child: Text(
+                                      child: SingleChildScrollView(
+                                        physics: _isDescriptionExpanded
+                                            ? const ClampingScrollPhysics()
+                                            : const NeverScrollableScrollPhysics(),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
                                               memory.description!,
                                               style: const TextStyle(
-                                                fontSize: 14,
-                                                height: 1.5,
+                                                fontSize: 13,
+                                                height: 1.4,
                                                 color: Colors.white,
                                               ),
                                               maxLines: _isDescriptionExpanded ? null : 1,
                                               overflow: _isDescriptionExpanded ? null : TextOverflow.ellipsis,
                                             ),
-                                          ),
+                                            if (!_isDescriptionExpanded && memory.description!.length > 30)
+                                              Padding(
+                                                padding: const EdgeInsets.only(top: 2),
+                                                child: Text(
+                                                  'See more...',
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    color: Colors.grey.shade400,
+                                                    fontStyle: FontStyle.italic,
+                                                  ),
+                                                ),
+                                              ),
+                                          ],
                                         ),
                                       ),
                                     ),
-                                    if (!_isDescriptionExpanded)
-                                      Padding(
-                                        padding: const EdgeInsets.only(top: 4),
-                                        child: Text(
-                                          'See more...',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey.shade400,
-                                            fontStyle: FontStyle.italic,
-                                          ),
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            ] else if (memory.timestamp != null) ...[
-                              const SizedBox(height: 12),
-                              Text(
-                                _getMemoryRelativeTime(memory.timestamp!),
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey.shade300,
+                                  ),
                                 ),
                               ),
                             ],
@@ -861,7 +842,7 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
             },
           ),
 
-          // Page indicator (stays on top across all pages)
+          /*// Page indicator (stays on top across all pages)
           if (widget.memories.length > 1)
             Positioned(
               top: 60,
@@ -875,23 +856,24 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
                       color: Colors.black.withOpacity(0.5),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Text(
-                      '${_currentIndex + 1} / ${widget.memories.length}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    child: Container(), //Text(
+                      //'${_currentIndex + 1} / ${widget.memories.length}',
+                      //style: const TextStyle(
+                      //color: Colors.white,
+                      //fontSize: 12,
+                      //fontWeight: FontWeight.w600,
+                    //),
+                  //),
                   ),
                 ),
               ),
-            ),
+            ),*/
         ],
       ),
     ),
   );
 }
+
 Widget _buildActionButton({
   required IconData icon,
   required String label,
@@ -900,23 +882,36 @@ Widget _buildActionButton({
 }) {
   return InkWell(
     onTap: onTap,
-    borderRadius: BorderRadius.circular(12),
+    borderRadius: BorderRadius.circular(16),
     child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             icon, 
-            size: 24, 
+            size: 28, 
             color: isActive ? (icon == Icons.favorite ? Colors.red : Colors.white) : Colors.white,
+            shadows: [
+              Shadow(
+                color: Colors.black.withOpacity(0.5),
+                blurRadius: 4,
+              ),
+            ],
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(
             label,
             style: TextStyle(
               fontSize: 12,
               color: Colors.white,
+              fontWeight: FontWeight.w600,
+              shadows: [
+                Shadow(
+                  color: Colors.black.withOpacity(0.5),
+                  blurRadius: 4,
+                ),
+              ],
             ),
           ),
         ],
