@@ -1,11 +1,14 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'settings_screen.dart';
 import '../app_theme.dart'; // for memoirTheme
 import '../processes/auth.dart';
 import '../objects/globals.dart';
 
 class AccountScreen extends StatefulWidget {
   final String? uid; // UID passed through navigation
+
+  // final user = FirebaseAuth.instance.currentUser;
 
   const AccountScreen({super.key, this.uid});
 
@@ -91,7 +94,12 @@ class _AccountScreenState extends State<AccountScreen> {
             IconButton(
               icon: const Icon(Icons.settings_outlined),
               color: memoirTheme.onBackground,
-              onPressed: () {}, // placeholder
+              onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SettingsScreen()),
+              );
+            },
             ),
         ],
       ),

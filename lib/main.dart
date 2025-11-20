@@ -18,7 +18,7 @@ import 'package:camera/camera.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fbauth;
 
 import 'objects/globals.dart';
-
+import 'screens/edit_profile.dart';
 import 'screens/bin_screen.dart';
 import 'camera_ui/camera_screen.dart';
 import 'camera_ui/journal_screen.dart';
@@ -48,10 +48,6 @@ void main() async {
     // Get available cameras
     cameras = await availableCameras();
     print('✅ Cameras initialized: ${cameras.length} camera(s) found');
-
-    
-
-
 
   } catch (e) {
     print('❌ Initialization error: $e');
@@ -106,7 +102,8 @@ class Root extends StatelessWidget {
             // ✅ Pass the imagePath and cameras to JournalScreen
             return PreviewScreen(imagePath: args.toString());
           }
-        }
+        },
+        '/editProfile': (context) => const EditProfileScreen(), 
       },
     );
   }

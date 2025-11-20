@@ -4,7 +4,6 @@ import 'objects/map_buttons.dart';
 import 'objects/search_bar.dart';
 import 'objects/memory.dart';
 import 'objects/memory_card.dart';
-import 'package:maplibre_gl/maplibre_gl.dart';
 
 class MyScaffold extends StatefulWidget {
   const MyScaffold({super.key});
@@ -105,6 +104,30 @@ class MyState extends State<MyScaffold> {
             ),
             const MapButtons(),
 
+            // 🌫 Gradient overlay
+            IgnorePointer(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: AlignmentGeometry.xy(0, 0.075),
+                    radius: 1.0,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.15),
+                      Colors.black.withValues(alpha: 0.3),
+                    ],
+                    stops: [0.7, 0.9, 1.0],
+                  ),
+                ),
+              ),
+            ),
+
+            // ✅ Single, clean search bar
+            SearchBarWidget(focusNode: _textFocusNode),
+
+            const MapButtons(),
+
+            // 🧠 Memory card overlay
             if (activeMemory != null)
               MemoryCard(
                 description: activeMemory!.description ?? "",
