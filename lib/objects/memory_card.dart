@@ -46,7 +46,11 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
   
   int _likesCount = 0;
   int _commentsCount = 0;
-  
+
+  Map<int, Map<String, dynamic>> _statsCache = {}; // Cache for stats
+  Map<int, bool> _likedCache = {}; // Cache for liked status
+  Map<String, bool> _wishlistCache = {}; // Cache for wishlist status
+
   final TextEditingController _commentController = TextEditingController();
   
   String _getMemoryRelativeTime(DateTime timestamp) {
@@ -98,6 +102,7 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
     
     _controller.forward();
     _loadMemoryStats();
+    _prefetchAdjacentMemoryStats();
 
     _commentController.addListener(() {
     setState(() {});
@@ -122,23 +127,51 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
   Future<void> _loadMemoryStats() async {
     final currentMemory = widget.memories[_currentIndex];
     final supabaseMemoryId = currentMemory.supabaseMemoryId;
-    
-    if (supabaseMemoryId == null) return;
+    final memoryId = currentMemory.memoryId;
+  
+    if (supabaseMemoryId == null) {
+      setState(() {
+        _likesCount = 0;
+        _commentsCount = 0;
+        _isLiked = false;
+        _isWishlisted = false;
+      });
+      return;
+    }
 
+    // Check cache first
+    if (_statsCache.containsKey(supabaseMemoryId)) {
+      setState(() {
+        _likesCount = _statsCache[supabaseMemoryId]!['likes'] ?? 0;
+        _commentsCount = _statsCache[supabaseMemoryId]!['comments'] ?? 0;
+        _isLiked = _likedCache[supabaseMemoryId] ?? false;
+        _isWishlisted = _wishlistCache[memoryId ?? ''] ?? false;
+      });
+      return;
+    }
+
+    // If not cached, fetch from network
     try {
       final stats = await commentsService.getMemoryStats(supabaseMemoryId);
       final isLiked = await commentsService.checkIfMemoryLiked(supabaseMemoryId);
-      
+    
       // Check wishlist status
       final currentUser = FirebaseAuth.instance.currentUser;
       bool isWishlisted = false;
-      if (currentUser != null && currentMemory.memoryId != null) {
+      if (currentUser != null && memoryId != null) {
         final firestore = FirebaseFirestore.instance;
         final wishlistRef = firestore
             .collection('wishlist')
-            .doc('${currentMemory.memoryId}_${currentUser.uid}');
+            .doc('${memoryId}_${currentUser.uid}');
         final doc = await wishlistRef.get();
         isWishlisted = doc.exists;
+      }
+
+      // Store in cache
+      _statsCache[supabaseMemoryId] = stats;
+      _likedCache[supabaseMemoryId] = isLiked;
+      if (memoryId != null) {
+        _wishlistCache[memoryId] = isWishlisted;
       }
 
       setState(() {
@@ -274,6 +307,9 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
       setState(() {
         _isLiked = !_isLiked;
         _likesCount += _isLiked ? 1 : -1;
+        // Update cache
+        _statsCache[supabaseMemoryId] = {'likes': _likesCount, 'comments': _commentsCount};
+        _likedCache[supabaseMemoryId] = _isLiked;
       });
     } catch (e) {
       print('Error handling like: $e');
@@ -301,7 +337,10 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
 
       if (doc.exists) {
         await wishlistRef.delete();
-        setState(() => _isWishlisted = false);
+        setState(() { 
+          _isWishlisted = false;
+           _wishlistCache[memoryId] = false;
+        });
       } else {
         await wishlistRef.set({
           'memoryId': memoryId,
@@ -311,7 +350,10 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
           'addressString': currentMemory.addressString,
           'timestamp': FieldValue.serverTimestamp(),
         });
-        setState(() => _isWishlisted = true);
+        setState(() { 
+          _isWishlisted = true;
+          _wishlistCache[memoryId] = true;
+        });
       }
     } catch (e) {
       print('Error handling wishlist: $e');
@@ -341,6 +383,8 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
       // Always increment comment count
       setState(() {
         _commentsCount++;
+        // Update cache
+        _statsCache[supabaseMemoryId] = {'likes': _likesCount, 'comments': _commentsCount};
         _replyingToCommentId = null;
         _replyingToUserName = null;
       });
@@ -358,6 +402,70 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
 
     } catch (e) {
       print('❌ Error sending comment: $e');
+    }
+  }
+
+  Future<void> _prefetchAdjacentMemoryStats() async {
+    // Prefetch previous memory
+    if (_currentIndex > 0) {
+      final prevMemory = widget.memories[_currentIndex - 1];
+      final prevSupabaseId = prevMemory.supabaseMemoryId;
+      final prevMemoryId = prevMemory.memoryId;
+    
+      if (prevSupabaseId != null && !_statsCache.containsKey(prevSupabaseId)) {
+        try {
+          final stats = await commentsService.getMemoryStats(prevSupabaseId);
+          final isLiked = await commentsService.checkIfMemoryLiked(prevSupabaseId);
+          _statsCache[prevSupabaseId] = stats;
+          _likedCache[prevSupabaseId] = isLiked;
+        
+          // Prefetch wishlist
+          if (prevMemoryId != null) {
+            final currentUser = FirebaseAuth.instance.currentUser;
+            if (currentUser != null) {
+              final firestore = FirebaseFirestore.instance;
+              final wishlistRef = firestore
+                  .collection('wishlist')
+                  .doc('${prevMemoryId}_${currentUser.uid}');
+              final doc = await wishlistRef.get();
+              _wishlistCache[prevMemoryId] = doc.exists;
+            }
+          }
+        } catch (e) {
+          print('Error prefetching prev memory stats: $e');
+        }
+      }
+    }
+  
+    // Prefetch next memory
+    if (_currentIndex < widget.memories.length - 1) {
+      final nextMemory = widget.memories[_currentIndex + 1];
+      final nextSupabaseId = nextMemory.supabaseMemoryId;
+      final nextMemoryId = nextMemory.memoryId;
+    
+      if (nextSupabaseId != null && !_statsCache.containsKey(nextSupabaseId)) {
+        try {
+          final stats = await commentsService.getMemoryStats(nextSupabaseId);
+          final isLiked = await commentsService.checkIfMemoryLiked(nextSupabaseId);
+          _statsCache[nextSupabaseId] = stats;
+          _likedCache[nextSupabaseId] = isLiked;
+        
+          // Prefetch wishlist
+          if (nextMemoryId != null) {
+            final currentUser = FirebaseAuth.instance.currentUser;
+            if (currentUser != null) {
+              final firestore = FirebaseFirestore.instance;
+              final wishlistRef = firestore
+                  .collection('wishlist')
+                  .doc('${nextMemoryId}_${currentUser.uid}');
+              final doc = await wishlistRef.get();
+              _wishlistCache[nextMemoryId] = doc.exists;
+            }
+          }
+        } catch (e) {
+          print('Error prefetching next memory stats: $e');
+        }
+      }
     }
   }
 
@@ -462,6 +570,7 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
                 _commentController.clear();
               });
               _loadMemoryStats();
+              _prefetchAdjacentMemoryStats();
             },
             itemCount: widget.memories.length,
             itemBuilder: (context, index) {
@@ -911,7 +1020,7 @@ Widget _buildActionButton({
                 left: 16,
                 right: 16,
                 top: 12,
-                bottom: 12
+                bottom: MediaQuery.of(context).viewInsets.bottom + 12,
               ),
               decoration: BoxDecoration(
                 color: Colors.white,
