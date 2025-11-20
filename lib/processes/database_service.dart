@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-//database_service.dart
-=======
 import 'package:presentation/objects/globals.dart';
->>>>>>> alpha-version
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../objects/globals.dart';
 

@@ -60,11 +60,8 @@ Future<void> loginUser(String email, String password) async {
       await databaseService.recordUser(
         FirebaseAuth.instance.currentUser!.uid, 
         email,
-<<<<<<< HEAD
-        FirebaseAuth.instance.currentUser!.uid
-=======
         FirebaseAuth.instance.currentUser!.uid.substring(1, 9)
->>>>>>> alpha-version
+        String username = databaseService.getActiveUsername(FirebaseAuth.instance.currentUser!uid);
       );
       debugPrint('User recorded in Supabase');
     }
