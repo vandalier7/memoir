@@ -686,11 +686,138 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
                       ),
                     ),
 
-                  // Action buttons (per page, above description)
+                  // Content overlay - username and description (per page, behind buttons)
                   if (isCurrentPage)
                     Positioned(
-                      right: 2,
-                      bottom: 140,
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      child: IgnorePointer(
+                        ignoring: false,
+                        child: Container(
+                          margin: const EdgeInsets.fromLTRB(8, 20, 8, 12),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.4),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Owner name and timestamp
+                              Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 14,
+                                    backgroundColor: Colors.grey.shade300,
+                                    child: Text(
+                                      memory.userName != null
+                                          ? memory.userName![0].toUpperCase()
+                                          : 'U',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.grey.shade700,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          memory.userName ?? 'Unknown User',
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        if (memory.timestamp != null)
+                                          Text(
+                                            _getMemoryRelativeTime(memory.timestamp!),
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: Colors.grey.shade300,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  // Add padding on right to avoid buttons
+                                  const SizedBox(width: 60),
+                                ],
+                              ),
+
+                              // Description
+                              if (memory.description != null && memory.description!.isNotEmpty) ...[
+                                const SizedBox(height: 8),
+                                GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      _isDescriptionExpanded = !_isDescriptionExpanded;
+                                    });
+                                  },
+                                  child: AnimatedSize(
+                                    duration: const Duration(milliseconds: 200),
+                                    child: ConstrainedBox(
+                                      constraints: BoxConstraints(
+                                        maxHeight: _isDescriptionExpanded ? 150 : 40,
+                                      ),
+                                      child: ScrollConfiguration(
+                                        behavior: ScrollConfiguration.of(context).copyWith(
+                                          scrollbars: false,
+                                        ),
+                                        child: SingleChildScrollView(
+                                          physics: _isDescriptionExpanded
+                                              ? const ClampingScrollPhysics()
+                                              : const NeverScrollableScrollPhysics(),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                memory.description!,
+                                                style: const TextStyle(
+                                                  fontSize: 13,
+                                                  height: 1.4,
+                                                  color: Colors.white,
+                                                ),
+                                                maxLines: _isDescriptionExpanded ? null : 1,
+                                                overflow: _isDescriptionExpanded ? null : TextOverflow.ellipsis,
+                                              ),
+                                              if (!_isDescriptionExpanded && memory.description!.length > 30)
+                                                Padding(
+                                                  padding: const EdgeInsets.only(top: 2),
+                                                  child: Text(
+                                                    'See more...',
+                                                    style: TextStyle(
+                                                      fontSize: 11,
+                                                      color: Colors.grey.shade400,
+                                                      fontStyle: FontStyle.italic,
+                                                    ),
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+
+                  // Action buttons (per page, on top of description)
+                  if (isCurrentPage)
+                    Positioned(
+                      right: 8,
+                      bottom: 80,
                       child: Column(
                         children: [
                           _buildActionButton(
@@ -715,159 +842,10 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
                         ],
                       ),
                     ),
-
-                  // Content overlay - username and description (per page, above gradient)
-                  if (isCurrentPage)
-                    Positioned(
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      child: Container(
-                        margin: const EdgeInsets.fromLTRB(16, 20, 16, 20),
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.4),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // Owner name and timestamp
-                            Row(
-                              children: [
-                                CircleAvatar(
-                                  radius: 14,
-                                  backgroundColor: Colors.grey.shade300,
-                                  child: Text(
-                                    memory.userName != null
-                                        ? memory.userName![0].toUpperCase()
-                                        : 'U',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.grey.shade700,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        memory.userName ?? 'Unknown User',
-                                        style: const TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                      if (memory.timestamp != null)
-                                        Text(
-                                          _getMemoryRelativeTime(memory.timestamp!),
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            color: Colors.grey.shade300,
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            // Description
-                            if (memory.description != null && memory.description!.isNotEmpty) ...[
-                              const SizedBox(height: 8),
-                              GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    _isDescriptionExpanded = !_isDescriptionExpanded;
-                                  });
-                                },
-                                child: AnimatedSize(
-                                  duration: const Duration(milliseconds: 200),
-                                  child: ConstrainedBox(
-                                    constraints: BoxConstraints(
-                                      maxHeight: _isDescriptionExpanded ? 150 : 40,
-                                    ),
-                                    child: ScrollConfiguration(
-                                      behavior: ScrollConfiguration.of(context).copyWith(
-                                        scrollbars: false,
-                                      ),
-                                      child: SingleChildScrollView(
-                                        physics: _isDescriptionExpanded
-                                            ? const ClampingScrollPhysics()
-                                            : const NeverScrollableScrollPhysics(),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              memory.description!,
-                                              style: const TextStyle(
-                                                fontSize: 13,
-                                                height: 1.4,
-                                                color: Colors.white,
-                                              ),
-                                              maxLines: _isDescriptionExpanded ? null : 1,
-                                              overflow: _isDescriptionExpanded ? null : TextOverflow.ellipsis,
-                                            ),
-                                            if (!_isDescriptionExpanded && memory.description!.length > 30)
-                                              Padding(
-                                                padding: const EdgeInsets.only(top: 2),
-                                                child: Text(
-                                                  'See more...',
-                                                  style: TextStyle(
-                                                    fontSize: 11,
-                                                    color: Colors.grey.shade400,
-                                                    fontStyle: FontStyle.italic,
-                                                  ),
-                                                ),
-                                              ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ),
                 ],
               );
             },
           ),
-
-          /*// Page indicator (stays on top across all pages)
-          if (widget.memories.length > 1)
-            Positioned(
-              top: 60,
-              left: 0,
-              right: 0,
-              child: IgnorePointer(
-                child: Center(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.5),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Container(), //Text(
-                      //'${_currentIndex + 1} / ${widget.memories.length}',
-                      //style: const TextStyle(
-                      //color: Colors.white,
-                      //fontSize: 12,
-                      //fontWeight: FontWeight.w600,
-                    //),
-                  //),
-                  ),
-                ),
-              ),
-            ),*/
         ],
       ),
     ),
