@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:presentation/camera_ui/preview_screen.dart';
+import 'package:presentation/screens/account_screen.dart';
 import 'app_theme.dart';
 
 
@@ -55,6 +56,7 @@ void main() async {
 
   if (fbauth.FirebaseAuth.instance.currentUser != null) {
     storageService.listenUserMemories();
+    activeUsername = await databaseService.getActiveUsername(fbauth.FirebaseAuth.instance.currentUser!.uid);
   }
   
 
@@ -87,6 +89,10 @@ class Root extends StatelessWidget {
             // 🛠 Fallback (in case no image was passed)
             return JournalScreen(imagePath: '', cameras: cameras);
           }
+        },
+        '/account': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments;
+          return AccountScreen(uid: args.toString());
         },
         '/bin': (context) => const BinScreen(),
         '/camera': (context) => CameraScreen(cameras: cameras,),

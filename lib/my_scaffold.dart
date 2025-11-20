@@ -19,6 +19,7 @@ class MyState extends State<MyScaffold> {
   bool isClosing = false;
 
   final _textFocusNode = FocusNode();
+  final _searchBarKey = GlobalKey(); // Add this key
 
   void showMemory(List<MemoryData> memories, MemoryData selected) {
     setState(() {
@@ -48,14 +49,31 @@ class MyState extends State<MyScaffold> {
       onPointerDown: (event) {
         final currentFocus = FocusScope.of(context);
         if (_textFocusNode.hasFocus) {
-          // check if tap is outside text field
-          final renderBox = _textFocusNode.context?.findRenderObject() as RenderBox?;
-          if (renderBox != null) {
-            final offset = renderBox.localToGlobal(Offset.zero);
-            final size = renderBox.size;
+          // Check if tap is inside TextField
+          final textFieldRenderBox = _textFocusNode.context?.findRenderObject() as RenderBox?;
+          if (textFieldRenderBox != null) {
+            final offset = textFieldRenderBox.localToGlobal(Offset.zero);
+            final size = textFieldRenderBox.size;
             final rect = offset & size;
-            if (rect.contains(event.position)) return;
+
+            if (rect.contains(event.position)) {
+              return; // Tapped on TextField
+            }
           }
+
+          // Check if tap is inside SearchBar widget (includes results)
+          final searchBarRenderBox = _searchBarKey.currentContext?.findRenderObject() as RenderBox?;
+          if (searchBarRenderBox != null) {
+            final offset = searchBarRenderBox.localToGlobal(Offset.zero);
+            final size = searchBarRenderBox.size;
+            final rect = offset & size;
+
+            if (rect.contains(event.position)) {
+              return; // Tapped on SearchBar area (including results)
+            }
+          }
+
+          // Tapped outside → unfocus
           currentFocus.unfocus();
         }
       },
@@ -66,8 +84,29 @@ class MyState extends State<MyScaffold> {
           children: [
             MapBody(
               propagateMemory: showMemory,
-              closeMemory: closeMemory,
+              closeMemory: closeMemory
             ),
+            IgnorePointer(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: AlignmentGeometry.xy(0, 0.075),
+                    radius: 1.0,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.15),
+                      Colors.black.withValues(alpha: 0.3),
+                    ],
+                    stops: [0.7, 0.9, 1.0],
+                  ),
+                ),
+              ),
+            ),
+            SearchBarWidget(
+              key: _searchBarKey, // Add the key here
+              focusNode: _textFocusNode,
+            ),
+            const MapButtons(),
 
             // 🌫 Gradient overlay
             IgnorePointer(
