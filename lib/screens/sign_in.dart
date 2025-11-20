@@ -94,6 +94,14 @@ class SignInState extends State<SignIn> with SingleTickerProviderStateMixin{
         FocusScope.of(context).unfocus();
       }
     });
+    finishLoading();
+  }
+
+  void finishLoading() async {
+    await Future.delayed(Duration(milliseconds: 500));
+    setState(() {
+      toggleLoading(false);
+    });
   }
 
   @override
@@ -376,8 +384,10 @@ class _LogInState extends State<LogIn> {
                           widget.emailController.text.trim(),
                           widget.passwordController.text.trim()
                         );  
-                        
+                        toggleLoading(true);
+                        await Future.delayed(Duration(seconds: 1));
                         if (!context.mounted) return;
+                        
                         Navigator.pushNamed(context, '/map');
                         
                       } on FirebaseAuthException catch (e) {
@@ -707,6 +717,8 @@ class _SignUpState extends State<SignUp> {
                           widget.emailController.text.trim(),
                           widget.passwordController.text.trim()
                         );
+                        toggleLoading(true);
+                        await Future.delayed(Duration(seconds: 1));
                         if (!context.mounted) return;
                         Navigator.pushNamed(context, '/map');
                       } on FirebaseAuthException catch (e) {

@@ -13,6 +13,7 @@ import 'my_scaffold.dart';
 import 'processes/auth.dart';
 
 import 'screens/sign_in.dart';
+import 'screens/loading_screen.dart';
 
 import 'package:camera/camera.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fbauth;
@@ -61,19 +62,40 @@ void main() async {
   
 
   MapLibreMap.useHybridComposition = true;
-  runApp(const Root());
+  
+  runApp(Root(key: rootKey));
 }
 
-class Root extends StatelessWidget {
+class Root extends StatefulWidget {
   const Root({super.key});
 
   @override
+  State<StatefulWidget> createState() => RootState();
+}
+
+class RootState extends State<Root> {
+  bool isLoading = true;
+
+  void toggleLoading(bool value) {
+    setState(() {
+      isLoading = value;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // pixelRatio = MediaQuery.of(context).devicePixelRatio;
     return MaterialApp(
       theme: ThemeData(colorScheme: memoirTheme),
       debugShowCheckedModeBanner: false,
       title: "Memoir",
+      builder: (context, child) {
+      return Stack(
+          children: [
+            child!,
+            LoadingScreen(ignoring: !isLoading),
+          ],
+        );
+      },
       // Directly show the main map screen wrapper (MyScaffold)
       home:  fbauth.FirebaseAuth.instance.currentUser != null ? MyScaffold() : SignInCard(), 
       // 🔗 Routes for navigation

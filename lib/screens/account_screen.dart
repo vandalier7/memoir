@@ -223,7 +223,9 @@ class _AccountScreenState extends State<AccountScreen> {
                       ),
                     ),
                     onPressed: () async {
+                      toggleLoading(true);
                       await logOut();
+                      await Future.delayed(Duration(milliseconds: 500));
                       if (!context.mounted) return;
                       Navigator.pushNamed(context, '/sign-in');
                     },

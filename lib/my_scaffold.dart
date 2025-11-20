@@ -5,6 +5,7 @@ import 'objects/map_buttons.dart';
 import 'objects/search_bar.dart';
 import 'objects/memory.dart';
 import 'objects/memory_card.dart';
+import 'screens/loading_screen.dart';
 
 class MyScaffold extends StatefulWidget {
   const MyScaffold({super.key});
@@ -84,24 +85,24 @@ class MyState extends State<MyScaffold> {
           children: [
             MapBody(
               propagateMemory: showMemory,
-              closeMemory: closeMemory
+              closeMemory: closeMemory,
             ),
-            IgnorePointer(
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    center: AlignmentGeometry.xy(0, 0.075),
-                    radius: 1.0,
-                    colors: [
-                      Colors.transparent,
-                      Colors.black.withValues(alpha: 0.15),
-                      Colors.black.withValues(alpha: 0.3),
-                    ],
-                    stops: [0.7, 0.9, 1.0],
-                  ),
-                ),
-              ),
-            ),
+            // IgnorePointer(
+            //   child: Container(
+            //     decoration: BoxDecoration(
+            //       gradient: RadialGradient(
+            //         center: AlignmentGeometry.xy(0, 0.075),
+            //         radius: 1.0,
+            //         colors: [
+            //           Colors.transparent,
+            //           Colors.black.withValues(alpha: 0.15),
+            //           Colors.black.withValues(alpha: 0.3),
+            //         ],
+            //         stops: [0.7, 0.9, 1.0],
+            //       ),
+            //     ),
+            //   ),
+            // ),
             SearchBarWidget(
               key: _searchBarKey, // Add the key here
               focusNode: _textFocusNode,
