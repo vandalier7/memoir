@@ -32,7 +32,7 @@ Future<void> registerUser(String username, String email, String password) async 
     debugPrint('User recorded in Supabase');
 
     storageService.listenUserMemories();
-    activeUsername = await databaseService.getActiveUsername(FirebaseAuth.instance.currentUser!.uid);
+    activeUsername = await databaseService.getUserName(FirebaseAuth.instance.currentUser!.uid);
 
     debugPrint('✅ Registered successfully');
   } catch (e) {
@@ -56,7 +56,7 @@ Future<void> loginUser(String email, String password) async {
 
     debugPrint('User exists in Supabase: $hasUser');
     
-    String username = await databaseService.getActiveUsername(FirebaseAuth.instance.currentUser!.uid);
+    String username = await databaseService.getUserName(FirebaseAuth.instance.currentUser!.uid);
     if (!hasUser) {
       await databaseService.recordUser(
         FirebaseAuth.instance.currentUser!.uid, 
@@ -67,7 +67,7 @@ Future<void> loginUser(String email, String password) async {
     }
 
     storageService.listenUserMemories();
-    activeUsername = await databaseService.getActiveUsername(FirebaseAuth.instance.currentUser!.uid);
+    activeUsername = await databaseService.getUserName(FirebaseAuth.instance.currentUser!.uid);
 
     debugPrint('✅ Logged in successfully');
   } catch (e) {

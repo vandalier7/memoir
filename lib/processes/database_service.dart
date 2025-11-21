@@ -1,3 +1,4 @@
+import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:presentation/objects/globals.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../objects/globals.dart';
@@ -31,16 +32,24 @@ class DatabaseService {
     }
   }
 
-  Future<void> recordMemory(String userID) async {
+  Future<int> recordMemory(String userID, LatLng position) async {
     String table = "memory";
     Map<String, dynamic> data = {
       'userID' : userID,
+      'latitude' : position.latitude,
+      'longitude' : position.longitude
     };
 
+    late final supabaseMemoryResponse;
+
     try {
-        await _supabase
+        supabaseMemoryResponse = await _supabase
           .from(table)
-          .insert(data);
+          .insert(data)
+          .select('memoryID')
+          .single();
+        
+        return supabaseMemoryResponse['memoryID'] as int;
 
     } catch (e) {
       print('Error inserting into $table: $e');
@@ -87,22 +96,7 @@ class DatabaseService {
     }
   }
 
-  Future<String> getActiveUsername(String userID) async {
-    const table = "user";
 
-    try {
-      final response = await _supabase
-          .from(table)
-          .select('username')   
-          .eq('uid', userID)
-          .single();            
-
-      return response['username'] as String;
-    } catch (e) {
-      print('Error querying $table: $e');
-      rethrow;
-    }
-  }
 
   /// Query records with filters
   Future<bool> isUserRecorded(String userID) async {
@@ -127,20 +121,18 @@ class DatabaseService {
     }
   }
 
-  Future<String?> getUserName(String userID) async {
+  Future<String> getUserName(String userID) async {
     const table = "user";
     try {
       // Select only the 'name' column
       final response = await _supabase
           .from(table)
-          .select('name')
+          .select('username')
           .eq('uid', userID)
           .maybeSingle(); // returns single row or null
 
-      if (response == null) return null;
-
       // response is Map<String, dynamic>
-      return response['name'] as String?;
+      return response!['username'] as String;
     } catch (e) {
       print('Error querying $table: $e');
       rethrow;

@@ -46,7 +46,7 @@ class _AccountScreenState extends State<AccountScreen> {
     try {
       // Fetch all data in parallel
       final results = await Future.wait([
-        databaseService.getActiveUsername(profileUid),
+        databaseService.getUserName(profileUid),
         databaseService.getFollowerCount(profileUid),
         databaseService.getFollowingCount(profileUid),
         databaseService.getMemoryCount(profileUid),

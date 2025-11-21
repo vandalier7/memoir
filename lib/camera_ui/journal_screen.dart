@@ -208,12 +208,9 @@ class _JournalScreenState extends State<JournalScreen>
       final imageUrl = await storageService.uploadImage(
         fileName,
         imageBytes,
-        "images" // bucket name
+        "images", // bucket name
+        positionToUse
       );
-
-      if (imageUrl == null) {
-        throw Exception('Failed to upload to image to Supabase');
-      }
 
       print('✅ Image uploaded to Supabase: $fileName');
       print('🔗 Image URL: $imageUrl');
@@ -244,16 +241,9 @@ class _JournalScreenState extends State<JournalScreen>
       print('✅ Memory saved to Firebase with ID: ${docRef.id}');
 
       // 4. Insert into Supabase memory table with Firestore ID
-      final supabaseMemoryResponse = await supabase
-        .from('memory')
-        .insert({
-          'userID': currentUser.uid,
-          'firestoreMemoryId': docRef.id,
-        })
-        .select('memoryID')
-        .single();
+      
 
-      final supabaseMemoryId = supabaseMemoryResponse['memoryID'] as int;
+      final supabaseMemoryId = await databaseService.recordMemory(currentUser.uid, positionToUse);
 
       // 5. Update Firestore with Supabase memory ID
       await docRef.update({

@@ -30,14 +30,13 @@ class StorageService {
     return '$userId/$folder';
   }
 
-  Future<String> uploadImage(String fileName, Uint8List bytes, String bucket) async {
+  Future<String> uploadImage(String fileName, Uint8List bytes, String bucket, LatLng position) async {
     await _supabase.storage
         .from(bucket)
             .uploadBinary(
               "$currentUserId/posted/$fileName", 
               bytes
             );
-    databaseService.recordMemory(currentUserId!);
 
     return _supabase.storage
         .from(bucket)
