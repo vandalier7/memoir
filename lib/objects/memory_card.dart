@@ -12,6 +12,7 @@ class MemoryCard extends StatefulWidget {
   final MemoryData selectedMemory;
   final VoidCallback? onClose;
   final bool isClosing;
+  final int? initialIndex;
 
   const MemoryCard({
     super.key,
@@ -19,6 +20,7 @@ class MemoryCard extends StatefulWidget {
     required this.selectedMemory,
     this.onClose,
     this.isClosing = false,
+    this.initialIndex
   });
 
   @override
@@ -80,50 +82,56 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
-    
-    _currentIndex = widget.memories.indexWhere(
-      (m) => m.position == widget.selectedMemory.position && 
-             m.addressString == widget.selectedMemory.addressString
-    );
-    if (_currentIndex == -1) _currentIndex = 0;
-    
-    _pageController = PageController(initialPage: _currentIndex);
-    
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 600),
-      vsync: this,
-    );
-    
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 1),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOutCubic,
-    ));
-    
-    _controller.forward();
 
-    _controller.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        // Slide animation finished, show address
-        setState(() {
-          showAddress = true;
-        });
-      } else if (status == AnimationStatus.reverse) {
-        // Animation reversed (closing), hide address
-        setState(() {
-          showAddress = false;
-        });
-      }
-    });
+    if (widget.initialIndex != null) {
+      _currentIndex = widget.initialIndex!;
+    } else {
+    
+      _currentIndex = widget.memories.indexWhere(
+        (m) => m.position == widget.selectedMemory.position && 
+              m.addressString == widget.selectedMemory.addressString
+      );
+      if (_currentIndex == -1) _currentIndex = 0;
+    }
+      
+      _pageController = PageController(initialPage: _currentIndex);
+      
+      _controller = AnimationController(
+        duration: const Duration(milliseconds: 600),
+        vsync: this,
+      );
+      
+      _slideAnimation = Tween<Offset>(
+        begin: const Offset(0, 1),
+        end: Offset.zero,
+      ).animate(CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeOutCubic,
+      ));
+      
+      _controller.forward();
 
-    _loadMemoryStats();
-    _prefetchAdjacentMemoryStats();
+      _controller.addStatusListener((status) {
+        if (status == AnimationStatus.completed) {
+          // Slide animation finished, show address
+          setState(() {
+            showAddress = true;
+          });
+        } else if (status == AnimationStatus.reverse) {
+          // Animation reversed (closing), hide address
+          setState(() {
+            showAddress = false;
+          });
+        }
+      });
 
-    _commentController.addListener(() {
-    setState(() {});
-    });
+      _loadMemoryStats();
+      _prefetchAdjacentMemoryStats();
+
+      _commentController.addListener(() {
+      setState(() {});
+      });
+    
   }
 
   @override

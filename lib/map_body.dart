@@ -14,7 +14,7 @@ import 'objects/globals.dart';
 import 'processes/location_iq.dart';
 
 class MapBody extends StatefulWidget {
-  final void Function(List<MemoryData>, MemoryData) propagateMemory;
+  final void Function(List<MemoryData>, MemoryData, int) propagateMemory;
   final void Function() closeMemory;
 
   const MapBody({super.key, required this.propagateMemory, required this.closeMemory});
@@ -614,7 +614,7 @@ class MapState extends State<MapBody> {
                         onTap: () async {
                           updateMapHold(true);
                           final memoriesAtLocation = groupedMemories[memory.position] ?? [memory];
-                          widget.propagateMemory(memoriesAtLocation, memory);
+                          widget.propagateMemory(memoriesAtLocation, activeMemories![index], index);
                           await animateCameraWithOffset(
                             target: memory.position,
                           );
@@ -627,6 +627,7 @@ class MapState extends State<MapBody> {
                               mood: memory.mood,
                               imageUrl: memory.imageUrl,
                               onClose: closePreview,
+                              memoryIndex: index,
                             ),
                             // Mood indicator dot
                             Positioned(

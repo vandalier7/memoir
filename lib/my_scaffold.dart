@@ -18,15 +18,17 @@ class MyState extends State<MyScaffold> {
   List<MemoryData>? activeMemories;
   MemoryData? selectedMemory;
   bool isClosing = false;
+  int activeMemoryIndex = 0;
 
   final _textFocusNode = FocusNode();
   final _searchBarKey = GlobalKey(); // Add this key
 
-  void showMemory(List<MemoryData> memories, MemoryData selected) {
+  void showMemory(List<MemoryData> memories, MemoryData selected, int index) {
     setState(() {
       activeMemories = memories;
       selectedMemory = selected;
       isClosing = false;
+      activeMemoryIndex = index;
     });
   }
 
@@ -139,6 +141,7 @@ class MyState extends State<MyScaffold> {
                 selectedMemory: selectedMemory!,
                 onClose: () => setMemoryInactive(),
                 isClosing: isClosing,
+                initialIndex: activeMemoryIndex,
               ),
           ],
         ),
