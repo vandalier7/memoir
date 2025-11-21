@@ -26,6 +26,8 @@ class MemoryCard extends StatefulWidget {
 }
 
 class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateMixin {
+  bool showAddress = false;
+
   Map<int, bool> _expandedReplies = {};
   Map<int, List<CommentData>> _repliesCache = {};
   Map<int, bool> _loadingReplies = {};
@@ -101,6 +103,21 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
     ));
     
     _controller.forward();
+
+    _controller.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        // Slide animation finished, show address
+        setState(() {
+          showAddress = true;
+        });
+      } else if (status == AnimationStatus.reverse) {
+        // Animation reversed (closing), hide address
+        setState(() {
+          showAddress = false;
+        });
+      }
+    });
+
     _loadMemoryStats();
     _prefetchAdjacentMemoryStats();
 
@@ -494,31 +511,46 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
           child: Column(
             children: [
               // Address above card
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-                child: Row(
-                  children: [
-                    Icon(
-                    Icons.location_on,
-                    size: 14,
-                    color: Colors.white.withOpacity(0.8),
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      widget.memories[_currentIndex].addressString,
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: Colors.white.withOpacity(0.9),
-                        fontWeight: FontWeight.w500,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+              SizedBox(
+                height: 32,
+                child: GestureDetector(
+                  onTap: () {}, // Prevents tap from propagating to background
+                  child: AnimatedOpacity(
+                    opacity: showAddress ? 1.0 : 0.0,
+                    duration: Duration(milliseconds: 300),
+                    child: Column( // ✅ Wrap Card in Column with address
+                      children: [
+                        // ✅ Address above card
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.location_on,
+                                size: 14,
+                                color: Colors.white.withOpacity(0.8),
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  widget.memories[_currentIndex].addressString,
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    color: Colors.white.withOpacity(0.9),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
+                ),
               ),
-            ),
             Expanded(
               child: GestureDetector(
                 onTap: () {}, // Prevents tap from propagating to background
