@@ -237,15 +237,25 @@ class MapState extends State<MapBody> {
             // memories.add(memory);
           }
           else if (memory.userId! == storageService.currentUserId) {
-            memory.finalDecay = 0; // if memory is yours, always show
-            memories.add(memory);
+             // if memory is yours, always show
+            if (!isWithinPixelThreshold(pos1: memory.position, pos2: positionToUse, pixelThreshold: clearanceRadius, currentZoom: mapZoom)) {
+                memories.add(memory);
+                memory.finalDecay = 0;
+            }
           }
-          else if (friends.contains(memory.userId!) && memory.decay - 6  <= mapZoom) {
-            memories.add(memory);
+          else if (friends.contains(memory.userId!) && memory.decay - 10  <= mapZoom) {
+            if (!isWithinPixelThreshold(pos1: memory.position, pos2: positionToUse, pixelThreshold: clearanceRadius, currentZoom: mapZoom)) {
+                memory.finalDecay = memory.decay - 10;
+                memories.add(memory);
+                
+            }
           }
-          else if (followedUsers.contains(memory.userId!) && memory.decay - 5 <= mapZoom) {
-            memory.finalDecay = memory.decay - 5;
-            memories.add(memory);
+          else if (followedUsers.contains(memory.userId!) && memory.decay - 10 <= mapZoom) {
+            if (!isWithinPixelThreshold(pos1: memory.position, pos2: positionToUse, pixelThreshold: clearanceRadius, currentZoom: mapZoom)) {
+                memory.finalDecay = memory.decay - 10;
+                memories.add(memory);
+                
+            }
           }
           
         }
