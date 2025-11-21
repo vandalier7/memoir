@@ -11,6 +11,7 @@ import '../models/posted_item.dart'; // Added import
 import '../objects/memory.dart'; // Kept from alpha
 import '../objects/globals.dart'; // Kept from alpha
 import 'dart:async';
+import 'dart:io';
 
 const String supabaseBucket = 'images';
 const String postedFolder = 'posted';
@@ -45,6 +46,42 @@ class StorageService {
         .getPublicUrl("$currentUserId/posted/$fileName");
   }
 
+// Updated to use "Bin Logic" (Internal Firebase ID + Timestamp)
+  Future<String?> uploadProfileImage(File imageFile) async {
+    // 1. Get Firebase UID internally (Just like fetchBinImages does)
+    final userId = currentUserId; 
+    
+    if (userId == null) {
+      print("Authentication Error: User is not logged in (Firebase).");
+      return null;
+    }
+
+    try {
+      // 2. Construct the path using Firebase UID as the folder name
+      // We add a timestamp to the filename to prevent image caching issues (The "v=" trick)
+      final String fileName = 'profile_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final String path = '$userId/$fileName';
+
+      // 3. Upload to Supabase 'profiles' bucket
+      // Note: Ensure your 'profiles' bucket policies allow 'anon' to INSERT/UPDATE
+      await _supabase.storage.from('profiles').upload(
+        path,
+        imageFile,
+        fileOptions: const FileOptions(
+          cacheControl: '3600', 
+          upsert: true
+        ),
+      );
+
+      // 4. Get the Public URL
+      final String imageUrl = _supabase.storage.from('profiles').getPublicUrl(path);
+      return imageUrl;
+
+    } catch (e) {
+      print('Error uploading profile image: $e');
+      return null;
+    }
+  }
   // --- NEW BIN LOGIC (Firestore + Supabase) ---
 
   // New function from your code:
@@ -302,7 +339,7 @@ class StorageService {
       onError: (error) {
         debugPrint('❌ Firestore error: $error');
       },
-    );
+     );
   
 }
 

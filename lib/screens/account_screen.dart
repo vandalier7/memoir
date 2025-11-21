@@ -4,6 +4,11 @@ import 'settings_screen.dart';
 import '../app_theme.dart'; // for memoirTheme
 import '../processes/auth.dart';
 import '../objects/globals.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../processes/storage_service.dart';
+import '../processes/database_service.dart';
 
 class AccountScreen extends StatefulWidget {
   final String? uid; // UID passed through navigation
@@ -17,8 +22,15 @@ class AccountScreen extends StatefulWidget {
 }
 
 class _AccountScreenState extends State<AccountScreen> {
+  final StorageService _storageService = StorageService();
+  final DatabaseService _databaseService = DatabaseService();
+  final SupabaseClient _supabase = Supabase.instance.client;
+
+  late final String _userId;
+
   bool _isLoading = true;
   String _username = "Loading...";
+  String? _profilepictureUrl;
   int _followerCount = 0;
   int _followingCount = 0;
   int _memoryCount = 0;
@@ -27,7 +39,76 @@ class _AccountScreenState extends State<AccountScreen> {
   @override
   void initState() {
     super.initState();
+    final currentUser = FirebaseAuth.instance.currentUser;
+    _userId = widget.uid ?? currentUser?.uid ?? '';
     _loadProfileData();
+  }
+
+  Future<void> _uploadFromGallery() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+
+    if (image != null) {
+      File imageFile = File(image.path);
+      
+      // Optional: Show loading indicator while uploading
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Uploading image...")),
+      );
+
+      String? imageUrl = await _storageService.uploadProfileImage(imageFile);
+
+      if (imageUrl != null) {
+        final String currentUserId = FirebaseAuth.instance.currentUser!.uid;
+        await _databaseService.updateUserAvatar(currentUserId, imageUrl);
+        
+        if (mounted) {
+          setState(() {
+            _profilepictureUrl = "$imageUrl?v=${DateTime.now().millisecondsSinceEpoch}";
+          });
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Profile picture updated successfully.")),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Failed to upload image.")),
+          );
+        }
+      }
+    }
+  }
+
+  void _showPickerOptions() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Wrap (
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Take Photo'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  // _uploadFromCamera();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Choose from Gallery'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _uploadFromGallery();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _loadProfileData() async {
@@ -46,12 +127,28 @@ class _AccountScreenState extends State<AccountScreen> {
     try {
       // Fetch all data in parallel
       final results = await Future.wait([
-        databaseService.getUserName(profileUid),
-        databaseService.getFollowerCount(profileUid),
-        databaseService.getFollowingCount(profileUid),
-        databaseService.getMemoryCount(profileUid),
+        databaseService.getUserName(_userId),
+        databaseService.getFollowerCount(_userId),
+        databaseService.getFollowingCount(_userId),
+        databaseService.getMemoryCount(_userId),
       ]);
 
+try {
+        final userData = await _supabase
+            .from('user')
+            .select('profile_pic_url')
+            .eq('uid', _userId) // Query using Firebase ID
+            .maybeSingle();
+        
+        if (userData != null && userData['profile_pic_url'] != null) {
+           setState(() {
+             _profilepictureUrl = userData['profile_pic_url'];
+           });
+        }
+      } catch (imgError) {
+        debugPrint("Could not load profile image: $imgError");
+      }
+      
       if (mounted) {
         setState(() {
           _username = results[0] as String? ?? "Unknown User";
@@ -75,8 +172,7 @@ class _AccountScreenState extends State<AccountScreen> {
   @override
   Widget build(BuildContext context) {
     final currentUser = FirebaseAuth.instance.currentUser;
-    final String profileUid = widget.uid ?? currentUser?.uid ?? '';
-    final bool isOwnProfile = profileUid == currentUser?.uid;
+    final bool isOwnProfile = (currentUser != null) && (_userId == currentUser.uid);
 
     return Scaffold(
       backgroundColor: memoirTheme.background,
@@ -114,10 +210,39 @@ class _AccountScreenState extends State<AccountScreen> {
               children: [
                 const SizedBox(height: 20),
 
-                CircleAvatar(
-                  radius: 50,
-                  backgroundImage: const AssetImage('assets/profile_placeholder.png'),
-                  backgroundColor: memoirTheme.surface,
+                GestureDetector(
+                  onTap: isOwnProfile ? _showPickerOptions : null,
+                  child: Stack(
+                    children: [
+                      CircleAvatar(
+                        radius: 50,
+                        backgroundColor: memoirTheme.surface,
+                        // Logic: If URL exists, use NetworkImage, else use Asset
+                        backgroundImage: _profilepictureUrl != null
+                            ? NetworkImage(_profilepictureUrl!) as ImageProvider
+                            : const AssetImage('assets/profile_placeholder.png'),
+                      ),
+                      // Optional: Add a small camera icon overlay for better UX
+                      if (isOwnProfile)
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: memoirTheme.primary,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: memoirTheme.background, width: 2),
+                            ),
+                            child: const Icon(
+                              Icons.edit,
+                              size: 14,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 10),
                 Text(
@@ -155,9 +280,7 @@ class _AccountScreenState extends State<AccountScreen> {
                       ),
                     ),
                     onPressed: () async {
-                      await databaseService.toggleFollow(profileUid);
-                      
-                      
+                      await databaseService.toggleFollow(_userId);
                       setState(() {
                         _loadProfileData();
                       });

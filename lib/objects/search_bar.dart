@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart'; // ✅ Added
+import '../processes/database_service.dart'; // ✅ Added
 import '../app_theme.dart';
 import '../screens/account_screen.dart';
 import 'search_result.dart';
@@ -24,7 +27,10 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
   List<Map<String, dynamic>> _userResults = [];
   bool _isSearching = false;
   Timer? _debounceTimer;
-  String _lastSearchQuery = ''; // Cache last query
+  String _lastSearchQuery = '';
+
+  // ✅ Get Current User ID for the Stream
+  final String _currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
   @override
   void initState() {
@@ -34,14 +40,12 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
     _searchController.addListener(_onSearchChanged);
   }
 
+  // ... [Keep your existing dispose, didChangeDependencies, focus/search logic] ...
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    
-    // Unfocus when returning to this screen
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_shouldPreventFocus && _internalFocusNode.hasFocus) {
-        
         _internalFocusNode.unfocus();
       }
       if (_shouldPreventFocus) {
@@ -64,23 +68,18 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
 
   void _onFocusChange() {
     if (_shouldPreventFocus && _internalFocusNode.hasFocus) {
-      // Immediately unfocus if we're preventing focus
       _internalFocusNode.unfocus();
       return;
     }
-    
     setState(() {
       _isFocused = _internalFocusNode.hasFocus;
     });
   }
 
   void _onSearchChanged() {
-    // Cancel previous timer
     _debounceTimer?.cancel();
-    
     final currentQuery = _searchController.text.trim();
     
-    // Clear results if search is empty
     if (currentQuery.isEmpty) {
       if (_lastSearchQuery.isNotEmpty || _userResults.isNotEmpty || _isSearching) {
         setState(() {
@@ -92,19 +91,16 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
       return;
     }
 
-    // If query hasn't changed and we have cached results, don't search again
     if (currentQuery == _lastSearchQuery && _userResults.isNotEmpty) {
       return;
     }
 
-    // Only show loading if not already loading
     if (!_isSearching) {
       setState(() {
         _isSearching = true;
       });
     }
 
-    // Set new timer for 500ms debounce
     _debounceTimer = Timer(const Duration(milliseconds: 500), () {
       _performSearch(currentQuery);
     });
@@ -113,12 +109,11 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
   Future<void> _performSearch(String query) async {
     try {
       final results = await databaseService.searchByUsername(query);
-      
       if (mounted) {
         setState(() {
           _userResults = results;
           _isSearching = false;
-          _lastSearchQuery = query; // Cache the query
+          _lastSearchQuery = query;
         });
       }
     } catch (e) {
@@ -127,7 +122,7 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
         setState(() {
           _userResults = [];
           _isSearching = false;
-          _lastSearchQuery = ''; // Clear cache on error
+          _lastSearchQuery = '';
         });
       }
     }
@@ -149,11 +144,11 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
           Container(
             height: 48,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.95),
+              color: Colors.white.withValues(alpha: 0.95), // Updated from withOpacity
               borderRadius: BorderRadius.circular(100),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 8,
                   offset: const Offset(0, 3),
                 ),
@@ -175,14 +170,13 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
                     ),
                   ),
                 ),
-                // 👤 Account button
+                
+                // 👤 ACCOUNT BUTTON (Updated to show Profile Picture)
                 GestureDetector(
                   onTap: () {
-                    // Remove focus completely
                     FocusScope.of(context).unfocus();
                     _internalFocusNode.unfocus();
                     
-                    // Set flag to prevent refocus and clear focused state
                     setState(() {
                       _shouldPreventFocus = true;
                       _isFocused = false;
@@ -193,9 +187,7 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
                       "/account",
                       arguments: storageService.currentUserId
                     ).then((_) {
-                      // When returning, ensure focus is cleared and keep prevention flag
                       FocusScope.of(context).unfocus();
-                      // Reset flag after a brief delay
                       Future.delayed(const Duration(milliseconds: 100), () {
                         if (mounted) {
                           setState(() {
@@ -207,11 +199,27 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
                   },
                   child: Padding(
                     padding: const EdgeInsets.only(right: 7),
-                    child: CircleAvatar(
-                      radius: 18,
-                      backgroundColor: memoirTheme.primary.withOpacity(0.8),
-                      child: Icon(Icons.account_circle,
-                          color: memoirTheme.onPrimary, size: 22),
+                    // ✅ STREAM BUILDER HERE
+                    child: StreamBuilder<Map<String, dynamic>>(
+                      stream: DatabaseService().getUserStream(_currentUserId),
+                      builder: (context, snapshot) {
+                        String? avatarUrl;
+                        if (snapshot.hasData) {
+                          avatarUrl = snapshot.data!['profile_pic_url'];
+                        }
+
+                        return CircleAvatar(
+                          radius: 18,
+                          backgroundColor: memoirTheme.primary.withValues(alpha: 0.2), // Lighter bg behind image
+                          // If URL exists, use it. If not, show default icon.
+                          backgroundImage: avatarUrl != null 
+                              ? NetworkImage("$avatarUrl?v=${DateTime.now().millisecondsSinceEpoch}") 
+                              : null,
+                          child: avatarUrl == null 
+                              ? Icon(Icons.account_circle, color: memoirTheme.primary, size: 28)
+                              : null, // Hide child icon if image exists
+                        );
+                      },
                     ),
                   ),
                 ),
@@ -221,13 +229,12 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
 
           const SizedBox(height: 10),
 
-// ✨ SEARCH RESULTS CARD (appears when focused and has results)
+          // ✨ SEARCH RESULTS CARD
           if (_isFocused && (_userResults.isNotEmpty || _isSearching))
+            // ... [Rest of your search results code remains exactly the same] ...
             GestureDetector(
               behavior: HitTestBehavior.opaque,
-              onTap: () {
-                // Prevent dismissing when tapping inside results area
-              },
+              onTap: () {},
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 curve: Curves.easeInOut,
@@ -236,11 +243,11 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
                 ),
                 margin: const EdgeInsets.only(bottom: 10),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.95),
+                  color: Colors.white.withValues(alpha: 0.95),
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 8,
                       offset: const Offset(0, 3),
                     ),
@@ -265,40 +272,28 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
                           separatorBuilder: (context, index) => Divider(
                             height: 1,
                             indent: 56,
-                            color: Colors.grey.withOpacity(0.2),
+                            color: Colors.grey.withValues(alpha: 0.2),
                           ),
                           itemBuilder: (context, index) {
                             final user = _userResults[index];
-                            final username = user['username'] ?? 'Unknown';
-                            final userId = user['uid'];
-                            final avatarUrl = user['avatar_url'];
-                            final bio = user['bio']; // Optional bio field
-                            
                             return SearchResultElement.user(
-                              userId: userId,
-                              username: username,
-                              bio: bio,
-                              avatarUrl: avatarUrl,
+                              userId: user['uid'],
+                              username: user['username'] ?? 'Unknown',
+                              bio: user['bio'],
+                              avatarUrl: user['avatar_url'],
                               onTapCallback: () {
-                                // Unfocus first
                                 _internalFocusNode.unfocus();
                                 FocusScope.of(context).unfocus();
-                                
-                                // Set flag to prevent refocus
                                 setState(() {
                                   _shouldPreventFocus = true;
                                   _isFocused = false;
                                 });
-                                
-                                debugPrint('Selected user: $username (ID: $userId)');
-                                
-                                // Navigate to the user's profile
+                                debugPrint('Selected user: ${user['username']}');
                                 Navigator.pushNamed(
                                   context,
                                   "/account",
-                                  arguments: userId
+                                  arguments: user['uid']
                                 ).then((_) {
-                                  // Reset flag when returning
                                   Future.delayed(const Duration(milliseconds: 100), () {
                                     if (mounted) {
                                       setState(() {
@@ -315,20 +310,17 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
               ),
             ),
 
-          // Show "No results" message when search is complete but empty
-          if (_isFocused && 
-              !_isSearching && 
-              _userResults.isEmpty && 
-              _searchController.text.isNotEmpty)
-            Container(
+          // Show "No results" message
+          if (_isFocused && !_isSearching && _userResults.isEmpty && _searchController.text.isNotEmpty)
+             Container(
               margin: const EdgeInsets.only(bottom: 10),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.95),
+                color: Colors.white.withValues(alpha: 0.95),
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 8,
                     offset: const Offset(0, 3),
                   ),
@@ -338,14 +330,14 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
                 children: [
                   Icon(
                     Icons.search_off,
-                    color: Colors.grey.withOpacity(0.6),
+                    color: Colors.grey.withValues(alpha: 0.6),
                     size: 20,
                   ),
                   const SizedBox(width: 12),
                   Text(
                     'No users found',
                     style: TextStyle(
-                      color: Colors.grey.withOpacity(0.8),
+                      color: Colors.grey.withValues(alpha: 0.8),
                       fontSize: 14,
                     ),
                   ),
@@ -353,7 +345,7 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
               ),
             ),
 
-          // ✨ FILTERS BUTTON (aligned right)
+          // ✨ FILTERS BUTTON
           GestureDetector(
             onTap: () {
               debugPrint("Filters button tapped");
@@ -365,7 +357,7 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
+                    color: Colors.black.withValues(alpha: 0.08),
                     blurRadius: 6,
                     offset: const Offset(0, 3),
                   ),

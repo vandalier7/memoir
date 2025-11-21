@@ -12,6 +12,15 @@ class DatabaseService {
   // Get Supabase client
   final SupabaseClient _supabase = Supabase.instance.client;
 
+  Future<void> updateUserAvatar(String userId, String url) async {
+    await _supabase.from('user').update({
+      'profile_pic_url': url,
+    }).eq('uid', userId);
+  }
+
+  Stream<Map<String, dynamic>> getUserStream(String userId) {
+    return _supabase.from('user').stream(primaryKey: ['uid']).eq('uid', userId).map((data) => data.first);
+  }
 
   Future<void> recordUser(String userID, String email, String username) async {
     String table = "user";

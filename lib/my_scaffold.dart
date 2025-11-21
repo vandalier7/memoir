@@ -6,6 +6,9 @@ import 'objects/search_bar.dart';
 import 'objects/memory.dart';
 import 'objects/memory_card.dart';
 import 'screens/loading_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../processes/database_service.dart';
+import 'screens/account_screen.dart';
 
 class MyScaffold extends StatefulWidget {
   const MyScaffold({super.key});
@@ -22,6 +25,8 @@ class MyState extends State<MyScaffold> {
 
   final _textFocusNode = FocusNode();
   final _searchBarKey = GlobalKey(); // Add this key
+
+  final String currentUserId = Supabase.instance.client.auth.currentUser?.id ?? '';
 
   void showMemory(List<MemoryData> memories, MemoryData selected, int index) {
     setState(() {
