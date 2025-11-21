@@ -1,3 +1,4 @@
+//map_body.dart
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -13,7 +14,7 @@ import 'objects/globals.dart';
 import 'processes/location_iq.dart';
 
 class MapBody extends StatefulWidget {
-  final void Function(MemoryData) propagateMemory;
+  final void Function(List<MemoryData>, MemoryData, int) propagateMemory;
   final void Function() closeMemory;
 
   const MapBody({super.key, required this.propagateMemory, required this.closeMemory});
@@ -612,7 +613,8 @@ class MapState extends State<MapBody> {
                       child: GestureDetector(
                         onTap: () async {
                           updateMapHold(true);
-                          widget.propagateMemory(memory);
+                          final memoriesAtLocation = groupedMemories[memory.position] ?? [memory];
+                          widget.propagateMemory(memoriesAtLocation, activeMemories![index], index);
                           await animateCameraWithOffset(
                             target: memory.position,
                           );
@@ -625,6 +627,7 @@ class MapState extends State<MapBody> {
                               mood: memory.mood,
                               imageUrl: memory.imageUrl,
                               onClose: closePreview,
+                              memoryIndex: index,
                             ),
                             // Mood indicator dot
                             Positioned(

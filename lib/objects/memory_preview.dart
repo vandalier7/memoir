@@ -8,6 +8,7 @@ class MemoryPreview extends StatelessWidget {
   final Mood mood;
   final String? imageUrl; // Network image URL
   final VoidCallback onClose;
+  final int memoryIndex;
 
   const MemoryPreview({
     super.key,
@@ -15,7 +16,7 @@ class MemoryPreview extends StatelessWidget {
     required this.mood,
     this.imageUrl,
     required this.onClose,
-    
+    required this.memoryIndex
   });
 
   @override

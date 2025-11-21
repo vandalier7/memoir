@@ -236,11 +236,31 @@ class _JournalScreenState extends State<JournalScreen>
         'tags': tags,
         'timestamp': FieldValue.serverTimestamp(),
         'createdAt': DateTime.now().toIso8601String(),
+        'head': true,
       };
 
       final docRef = await firestore.collection('memories').add(memoryData);
     
       print('✅ Memory saved to Firebase with ID: ${docRef.id}');
+
+      // 4. Insert into Supabase memory table with Firestore ID
+      final supabaseMemoryResponse = await supabase
+        .from('memory')
+        .insert({
+          'userID': currentUser.uid,
+          'firestoreMemoryId': docRef.id,
+        })
+        .select('memoryID')
+        .single();
+
+      final supabaseMemoryId = supabaseMemoryResponse['memoryID'] as int;
+
+      // 5. Update Firestore with Supabase memory ID
+      await docRef.update({
+        'supabaseMemoryId': supabaseMemoryId,
+      });
+
+      print('✅ Linked Firestore ${docRef.id} with Supabase memory ID: $supabaseMemoryId');
 
       snack.hideCurrentSnackBar();
       snack.showSnackBar(

@@ -1,3 +1,4 @@
+//my_scaffold
 import 'package:flutter/material.dart';
 import 'map_body.dart';
 import 'objects/map_buttons.dart';
@@ -14,16 +15,20 @@ class MyScaffold extends StatefulWidget {
 }
 
 class MyState extends State<MyScaffold> {
-  MemoryData? activeMemory;
+  List<MemoryData>? activeMemories;
+  MemoryData? selectedMemory;
   bool isClosing = false;
+  int activeMemoryIndex = 0;
 
   final _textFocusNode = FocusNode();
   final _searchBarKey = GlobalKey(); // Add this key
 
-  void showMemory(MemoryData memory) {
+  void showMemory(List<MemoryData> memories, MemoryData selected, int index) {
     setState(() {
-      activeMemory = memory;
+      activeMemories = memories;
+      selectedMemory = selected;
       isClosing = false;
+      activeMemoryIndex = index;
     });
   }
 
@@ -35,7 +40,8 @@ class MyState extends State<MyScaffold> {
 
   void setMemoryInactive() {
     setState(() {
-      activeMemory = null;
+      activeMemories = null;
+      selectedMemory = null;
     });
   }
 
@@ -129,15 +135,13 @@ class MyState extends State<MyScaffold> {
             const MapButtons(),
 
             // 🧠 Memory card overlay
-            if (activeMemory != null)
+            if (activeMemories != null)
               MemoryCard(
-                description: activeMemory!.description ?? "",
-                imageUrl: activeMemory!.imageUrl ?? "",
-                addressString: activeMemory!.addressString,
-                borderColor: const Color.fromARGB(255, 219, 198, 9),
-                borderWidth: 2,
+                memories: activeMemories!,
+                selectedMemory: selectedMemory!,
                 onClose: () => setMemoryInactive(),
                 isClosing: isClosing,
+                initialIndex: activeMemoryIndex,
               ),
           ],
         ),

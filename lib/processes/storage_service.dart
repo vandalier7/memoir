@@ -1,3 +1,4 @@
+//storage_service.dart
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -109,6 +110,21 @@ class StorageService {
     }
   }
 
+  Future<String?> _getUserName(String userId) async {
+    try {
+      final response = await _supabase
+        .from('user')
+        .select('username')
+        .eq('uid', userId)
+        .maybeSingle();
+
+      return response?['username'] as String?;
+    } catch (e) {
+      debugPrint('Error fetching username: $e');
+      return null;
+    }
+  }
+
   // Updated restoreImage from your code:
   Future<void> restoreImage(BinItem item) async {
     final userId = currentUserId;
@@ -216,7 +232,7 @@ class StorageService {
 
   StreamSubscription<QuerySnapshot>? _memorySub;
 
-  void listenUserMemories({bool Function(MemoryData)? filter}) {
+  void listenUserMemories({bool Function(MemoryData)? filter}) async {
   
   _memorySub?.cancel();
 
@@ -225,6 +241,10 @@ class StorageService {
   if (userId == null) {
    return;
   }
+
+  // Fetch username once for this user
+  final userName = await _getUserName(userId);
+  debugPrint('🔵 [3.5] Got userName: $userName');
 
   
   _memorySub = _firestore
@@ -252,13 +272,21 @@ class StorageService {
 
           final position = LatLng(lat, lng);
 
+          debugPrint('🟡 [7.${count}l] Creating MemoryData');
           final memory = MemoryData(
             head: data['head'] as bool? ?? false,
             mood: mood,
             addressString: data['addressString'] as String? ?? '',
             position: position,
             imageUrl: data['imageUrl'] as String?,
+            memoryId: doc.id,
             description: data['description'] as String?,
+            supabaseMemoryId: data['supabaseMemoryId'] as int?,
+            userName: userName,
+            userId: userId,
+            timestamp: data['createdAt'] != null 
+              ? DateTime.parse(data['createdAt'] as String)
+              : null,
           );
 
 

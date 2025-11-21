@@ -1,3 +1,4 @@
+//globals.dart
 import 'package:camera/camera.dart';
 import 'memory.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';

@@ -1,3 +1,4 @@
+//memory.dart
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
@@ -16,6 +17,11 @@ class MemoryData {
   final LatLng position;
   late final double decay;
   final String? imageUrl; // Network image URL
+  final String? memoryId;
+  final int? supabaseMemoryId;
+  final String? userName;
+  final String? userId;
+  final DateTime? timestamp;
 
   MemoryData({
     required this.addressString,
@@ -24,7 +30,12 @@ class MemoryData {
     this.decay = 16.0,
     this.head = true,
     this.imageUrl,
-    this.description
+    this.memoryId,
+    this.description,
+    this.supabaseMemoryId,
+    this.userName,
+    this.userId,
+    this.timestamp,
   });
 
   @override
