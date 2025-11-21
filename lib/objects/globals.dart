@@ -6,6 +6,7 @@ import 'package:presentation/processes/storage_service.dart';
 import 'package:presentation/processes/database_service.dart';
 import 'package:flutter/material.dart';
 import '../main.dart';
+import '../processes/image_service.dart';
 
 late final num pixelRatio;
 
@@ -84,3 +85,5 @@ Future<void> refreshFriendsAndFollowers() async {
   final init = await databaseService.fetchFilteredMemoryIds();
   await storageService.fetchOthersMemories(init);
 }
+
+Future<String> Function(String imageUrl) imageUrlToPath = getCachedImagePath;

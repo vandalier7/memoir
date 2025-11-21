@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:camera/camera.dart';
+import 'package:presentation/models/bin_item.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -15,15 +16,18 @@ import 'package:presentation/processes/location_iq.dart';
 import 'package:presentation/processes/storage_service.dart';
 
 import '../objects/globals.dart';
+import '../screens/bin_screen.dart';
 
 class JournalScreen extends StatefulWidget {
   final String imagePath;
   final List<CameraDescription> cameras;
+  late final BinItem? item;
   
-  const JournalScreen({
+  JournalScreen({
     Key? key, 
     required this.imagePath,
     required this.cameras,
+    this.item
   }) : super(key: key);
 
   @override
@@ -122,6 +126,42 @@ class _JournalScreenState extends State<JournalScreen>
       tags.add(t);
       tagController.clear();
     });
+  }
+
+  Future<void> _handleDiscard(BuildContext context) async {
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final File imageFile = File(widget.imagePath);
+      final imageBytes = await imageFile.readAsBytes();
+
+      // Use the new function via the global service
+      // This will upload to Supabase AND create the Firestore doc with 30-day TTL
+      await storageService.uploadAndStageImage(imageBytes);
+
+      if (context.mounted) {
+        Navigator.pop(context); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Image added to Bin'),
+            backgroundColor: Colors.grey, // Optional: Differentiate from error
+          ),
+        );
+        Navigator.pop(context); // Go back from preview screen
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save to bin: $e')),
+        );
+      }
+    }
   }
 
   Future<Uint8List?> _captureScreenshot() async {
@@ -259,10 +299,13 @@ class _JournalScreenState extends State<JournalScreen>
           backgroundColor: Colors.green,
         ),
       );
-
+      if (widget.item != null) {
+        await storageService.permanentlyDeleteFromBin(widget.item!);
+      }
       // Navigate back after successful save
-      await Future.delayed(const Duration(seconds: 1));
+      await Future.delayed(const Duration(milliseconds: 500));
       if (mounted) {
+        Navigator.pop(context);
         Navigator.pop(context);
       }
     } catch (e) {
@@ -421,8 +464,12 @@ class _JournalScreenState extends State<JournalScreen>
               top: 40,
               left: 20,
               child: GestureDetector(
-                onTap: () {
-                  // This pops back to camera
+                onTap: () async {
+                  
+                  if (widget.item == null) {
+                    _handleDiscard(context);
+                  }
+
                   Navigator.pop(context);
                 },
                 child: Container(

@@ -332,11 +332,10 @@ class _BinGridTile extends StatelessWidget {
           onToggleSelect(item.id);
         } else {
           // Navigate to preview screen
-          Navigator.push(
+          Navigator.pushNamed(
             context,
-            MaterialPageRoute(
-              builder: (context) => BinPreviewScreen(item: item),
-            ),
+            "/journal",
+            arguments: <dynamic> [item.imageUrl, item]
           ).then((didPost) {
             // Check if the preview screen popped with 'true' (meaning post was successful)
             if (didPost == true) {
