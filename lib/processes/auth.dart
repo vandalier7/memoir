@@ -31,8 +31,7 @@ Future<void> registerUser(String username, String email, String password) async 
     
     debugPrint('User recorded in Supabase');
 
-    storageService.listenUserMemories();
-    activeUsername = await databaseService.getUserName(FirebaseAuth.instance.currentUser!.uid);
+    await setUpSession();
 
     debugPrint('✅ Registered successfully');
   } catch (e) {
@@ -66,14 +65,19 @@ Future<void> loginUser(String email, String password) async {
       debugPrint('User recorded in Supabase');
     }
 
-    storageService.listenUserMemories();
-    activeUsername = await databaseService.getUserName(FirebaseAuth.instance.currentUser!.uid);
+    await setUpSession();
 
     debugPrint('✅ Logged in successfully');
   } catch (e) {
     debugPrint('❌ Login error: $e');
     rethrow;
   }
+}
+
+Future<void> setUpSession() async {
+  storageService.listenUserMemories();
+  activeUsername = await databaseService.getUserName(FirebaseAuth.instance.currentUser!.uid);
+  refreshFriendsAndFollowers();
 }
 
 Future<void> logOut() async {

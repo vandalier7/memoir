@@ -229,7 +229,7 @@ class MapState extends State<MapBody> {
       if (!value) {
         memories.clear();
         for (MemoryData memory in unfilteredMemories) {
-
+          
 
           if (memory.decay <= mapZoom || memory.position == positionToUse) {
             if (memory.position != positionToUse){
@@ -242,6 +242,16 @@ class MapState extends State<MapBody> {
             }
             // memories.add(memory);
           }
+          else if (memory.userId! == storageService.currentUserId) {
+            memories.add(memory);
+          }
+          else if (friends.contains(memory.userId!) && memory.decay * 2/3 <= mapZoom) {
+            memories.add(memory);
+          }
+          else if (followedUsers.contains(memory.userId!) && memory.decay * 3/5 <= mapZoom) {
+            memories.add(memory);
+          }
+          
         }
         // memories.add(neaby)
       } else {
@@ -249,7 +259,7 @@ class MapState extends State<MapBody> {
       }
       if (memories.isEmpty) {}
     });
-    
+    debugPrint(mapZoom.toString());
   }
 
   Future<void> updateLocation() async {

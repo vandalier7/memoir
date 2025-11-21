@@ -162,6 +162,67 @@ class DatabaseService {
     }
   }
 
+  Future<List<String>> getFriends(String userID) async {
+    const table = "following";
+
+    try {
+      // People you follow
+      final followingRes = await _supabase
+          .from(table)
+          .select("followingID")
+          .eq("followerID", userID);
+
+      final following = List<Map<String, dynamic>>.from(followingRes)
+          .map((row) => row["followingID"] as String)
+          .toSet(); // use a Set for fast intersection
+
+
+      // People who follow you
+      final followersRes = await _supabase
+          .from(table)
+          .select("followerID")
+          .eq("followingID", userID);
+
+      final followers = List<Map<String, dynamic>>.from(followersRes)
+          .map((row) => row["followerID"] as String)
+          .toSet();
+
+
+      // Intersection = friends
+      final friends = following.intersection(followers);
+
+      return friends.toList();
+    } catch (e) {
+      print("Error querying $table: $e");
+      rethrow;
+    }
+  }
+
+
+  Future<List<String>> getFollowingUsers(String userID) async {
+    String table = "following";
+    Map<String, dynamic>? filters = {'followerID' : userID};
+    try {
+      var query = _supabase.from(table).select("followingID");
+
+      // Apply filters
+      if (filters != null) {
+        filters.forEach((key, value) {
+          query = query.eq(key, value);
+        });
+      }
+
+      final response = await query;
+      final rows = List<Map<String, dynamic>>.from(response);
+
+      // extract the ID value
+      return rows.map((row) => row["followingID"] as String).toList();
+    } catch (e) {
+      print('Error querying $table: $e');
+      rethrow;
+    }
+  }
+
   Future<int> getFollowingCount(String userID) async {
 
     String table = "following";
@@ -241,6 +302,50 @@ class DatabaseService {
     }
   }
 
+  Future<List<int>> fetchFilteredMemoryIds({
+    LatLngBounds? bounds, // Optional: filter by map viewport
+  }) async {
+    final currentUserId = storageService.currentUserId;
+    if (currentUserId == null) return [];
+
+    try {
+      // ✅ Get allowed user IDs (friends + followed users)
+      final allowedUserIds = <String>{
+        ...friends,
+        ...followedUsers,
+      };
+
+      if (allowedUserIds.isEmpty) {
+        return []; // No friends/follows, return empty
+      }
+
+      // ✅ Query memory table
+      var query = _supabase
+        .from('memory')
+        .select('memoryID') // Supabase memory ID column
+        .inFilter('userID', allowedUserIds.toList())
+        .limit(500); // Filter by allowed users
+
+      
+
+      // ✅ Limit results
+
+
+      final response = await query;
+      
+      // ✅ Extract memoryID integers and convert to strings
+      final memoryIds = (response as List)
+        .map((row) => (row['memoryID'] as int))
+        .toList();
+
+      print('🔵 Fetched ${memoryIds.length} memory IDs from Supabase');
+      return memoryIds;
+
+    } catch (e) {
+      print('❌ Error fetching memory IDs: $e');
+      return [];
+    }
+  }
 
 }
 

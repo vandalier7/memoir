@@ -27,7 +27,7 @@ class MemoryData {
     required this.addressString,
     required this.position,
     required this.mood,
-    this.decay = 16.0,
+    this.decay = 18.0,
     this.head = true,
     this.imageUrl,
     this.memoryId,

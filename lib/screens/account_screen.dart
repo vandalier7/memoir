@@ -156,9 +156,13 @@ class _AccountScreenState extends State<AccountScreen> {
                     ),
                     onPressed: () async {
                       await databaseService.toggleFollow(profileUid);
+                      
+                      
                       setState(() {
                         _loadProfileData();
                       });
+
+                      await refreshFriendsAndFollowers();
                     },
                     child: const Text(
                       "Follow",

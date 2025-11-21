@@ -1,4 +1,6 @@
 //storage_service.dart
+import 'dart:ffi';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -306,5 +308,65 @@ class StorageService {
 
   void dispose() {
     _memorySub?.cancel();
+  }
+
+  Future<void> fetchOthersMemories(List<int> memoryIds) async {
+    
+    final currentUserId = this.currentUserId;
+    
+    // ✅ Keep track of memory IDs we're about to fetch
+    final fetchingIds = memoryIds.toSet();
+    
+    // ✅ Remove memories that:
+    // 1. Are being re-fetched (to avoid dupes)
+    // 2. Are others' memories that are no longer in the fetch list
+    unfilteredMemories.removeWhere((m) => 
+      fetchingIds.contains(m.supabaseMemoryId) || // ✅ Use supabaseMemoryId instead
+      (m.userId != currentUserId)
+    );
+    
+    // Fetch in batches of 10
+    for (int i = 0; i < memoryIds.length; i += 10) {
+      final batch = memoryIds.skip(i).take(10).toList();
+      
+      final snapshot = await _firestore
+        .collection('memories')
+        .where('supabaseMemoryId', whereIn: batch) // ✅ Query by supabaseMemoryId field
+        .get();
+      
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        final userId = data['userId'] as String?;
+        
+        // Fetch username for this memory's owner
+        final userName = userId != null ? await _getUserName(userId) : null;
+        
+        final lat = (data['latitude'] as num?)?.toDouble() ?? 0.0;
+        final lng = (data['longitude'] as num?)?.toDouble() ?? 0.0;
+        final moodVal = data['moodValue'] as int? ?? 1;
+        final mood = moodFromValue(moodVal);
+        final position = LatLng(lat, lng);
+
+        final memory = MemoryData(
+          head: data['head'] as bool? ?? false,
+          mood: mood,
+          addressString: data['addressString'] as String? ?? '',
+          position: position,
+          imageUrl: data['imageUrl'] as String?,
+          memoryId: doc.id,
+          description: data['description'] as String?,
+          supabaseMemoryId: data['supabaseMemoryId'] as int?,
+          userName: userName,
+          userId: userId,
+          timestamp: data['createdAt'] != null 
+            ? DateTime.parse(data['createdAt'] as String)
+            : null,
+        );
+
+        unfilteredMemories.add(memory);
+      }
+    }
+    
+    debugPrint('🟢 Fetched ${memoryIds.length} others\' memories');
   }
 }

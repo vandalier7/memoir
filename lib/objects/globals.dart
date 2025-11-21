@@ -73,3 +73,14 @@ final GlobalKey<RootState> rootKey = GlobalKey<RootState>();
 void toggleLoading(bool value) {
   rootKey.currentState?.toggleLoading(value);
 }
+
+List<String> followedUsers = [];
+List<String> friends = [];
+
+Future<void> refreshFriendsAndFollowers() async {
+  friends = await databaseService.getFriends(storageService.currentUserId!);
+  followedUsers = await databaseService.getFollowingUsers(storageService.currentUserId!);
+  
+  final init = await databaseService.fetchFilteredMemoryIds();
+  await storageService.fetchOthersMemories(init);
+}
