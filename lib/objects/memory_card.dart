@@ -516,7 +516,7 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
       
         // The actual card
         Positioned(
-          top: screenHeight * 0.3,
+          top: screenHeight * 0.275,
           left: 0,
           right: 0,
           bottom: 0,
@@ -524,377 +524,352 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
             children: [
               // Address above card
               SizedBox(
-                height: 32,
+                height: 28,
+                
+                  child: GestureDetector(
+                    onTap: () {}, // Prevents tap from propagating to background
+                    child: AnimatedOpacity(
+                      opacity: showAddress ? 1.0 : 0.0,
+                      duration: Duration(milliseconds: 300),
+                      child: GestureDetector(
+                        onTap: () {},
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20), // rounds container
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                spreadRadius: 2,
+                                blurRadius: 2,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Text(
+                            widget.memories[_currentIndex]
+                                .addressString
+                                .split(',')
+                                .take(2)
+                                .join(',')
+                                .trim(),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Color.fromARGB(255, 73, 73, 73).withOpacity(0.9),
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                    )
+
+                  ),
+              ),
+              SizedBox(height: 20),
+              Expanded(
                 child: GestureDetector(
                   onTap: () {}, // Prevents tap from propagating to background
-                  child: AnimatedOpacity(
-                    opacity: showAddress ? 1.0 : 0.0,
-                    duration: Duration(milliseconds: 300),
-                    child: Column( // ✅ Wrap Card in Column with address
-                      children: [
-                        // ✅ Address above card
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.location_on_rounded,
-                                size: 24,
-                                color: Colors.black.withOpacity(0.8),
-                              ),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  widget.memories[_currentIndex].addressString,
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    color: Colors.grey.shade800.withOpacity(0.9),
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
+                  child: SlideTransition(
+                    position: _slideAnimation,
+                    child: Card(
+                      margin: EdgeInsets.zero,
+                      elevation: 8,
+                      color: Colors.transparent,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(12),
+                          topRight: Radius.circular(12),
                         ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            Expanded(
-              child: GestureDetector(
-                onTap: () {}, // Prevents tap from propagating to background
-                child: SlideTransition(
-                  position: _slideAnimation,
-                  child: Card(
-                    margin: EdgeInsets.zero,
-                    elevation: 8,
-                    color: Colors.transparent,
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(12),
-                        topRight: Radius.circular(12),
+                        side: BorderSide.none
                       ),
-                      side: BorderSide.none
-                    ),
-                    child: Column(
-                      children: [
-                        // Drawer handle at the very top
-                        Container(
-                          margin: const EdgeInsets.only(top: 6, bottom: 2),
-                          width: 32,
-                          height: 3,
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade400,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                        // The actual content
-                        Expanded(
-                          child: Stack(
-                            children: [
-                              _buildMemoryView(),
-                              if (_showComments)
-                                _buildCommentsView(),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    ],
-    );
-  }
-
-  Widget _buildMemoryView() {
-  // Ensure PageController is on the right page
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    if (_pageController.hasClients && 
-        _pageController.page?.round() != _currentIndex) {
-      _pageController.jumpToPage(_currentIndex);
-    }
-  });
-  
-  return Padding(
-    padding: const EdgeInsets.only(left: 12, right: 12, bottom: 12),
-    child: ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: Stack(
-        children: [
-          // PageView with images
-          PageView.builder(
-            controller: _pageController,
-            onPageChanged: (index) {
-              setState(() {
-                _currentIndex = index;
-                _isDescriptionExpanded = false;
-                _showComments = false;
-                _comments = [];
-                _expandedReplies = {};
-                _repliesCache = {};
-                _loadingReplies = {};
-                _replyingToCommentId = null;
-                _replyingToUserName = null;
-                _commentController.clear();
-              });
-              _loadMemoryStats();
-              _prefetchAdjacentMemoryStats();
-            },
-            itemCount: widget.memories.length,
-            itemBuilder: (context, index) {
-              final memory = widget.memories[index];
-              final isCurrentPage = index == _currentIndex;
-              
-              return Stack(
-                children: [
-                  // Image
-                  Positioned.fill(
-                    child: memory.imageUrl != null && memory.imageUrl!.isNotEmpty
-                        ? CachedNetworkImage(
-                            imageUrl: memory.imageUrl!,
-                            fit: BoxFit.cover,
-                            placeholder: (context, url) => Container(
-                              color: Colors.grey.shade200,
-                              child: const Center(
-                                child: CircularProgressIndicator(),
-                              ),
-                            ),
-                            errorWidget: (context, url, error) => Container(
-                              color: Colors.grey.shade300,
-                              child: Center(
-                                child: Icon(
-                                  Icons.image_not_supported,
-                                  size: 60,
-                                  color: Colors.grey.shade500,
-                                ),
-                              ),
-                            ),
-                          )
-                        : Container(
-                            color: Colors.grey.shade200,
-                            child: Center(
-                              child: Icon(
-                                Icons.photo_library,
-                                size: 60,
-                                color: Colors.grey.shade400,
-                              ),
-                            ),
-                          ),
-                  ),
-
-                  // Bottom gradient overlay (per page)
-                  if (isCurrentPage && false)
-                    Positioned(
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      height: 280,
-                      child: IgnorePointer(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                Colors.transparent,
-                                Colors.black.withOpacity(0.3),
-                                Colors.black.withOpacity(0.7),
-                                Colors.black.withOpacity(0.85),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-
-                  // Tap area to collapse description (covers entire screen except buttons)
-                  if (isCurrentPage && _isDescriptionExpanded)
-                    Positioned.fill(
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _isDescriptionExpanded = false;
-                          });
-                        },
-                        child: Container(
-                          color: Colors.transparent,
-                        ),
-                      ),
-                    ),
-
-                  // Content overlay - username and description (per page, behind buttons)
-                  if (isCurrentPage || true)
-                    Positioned(
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      child: IgnorePointer(
-                        ignoring: false,
-                        child: Container(
-                          margin: const EdgeInsets.fromLTRB(8, 20, 60, 12),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // Owner name and timestamp
-                              Row(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 14,
-                                    backgroundColor: Colors.grey.shade300,
-                                    child: Text(
-                                      memory.userName != null
-                                          ? memory.userName![0].toUpperCase()
-                                          : 'U',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.grey.shade700,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          memory.userName ?? 'Unknown User',
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                        if (memory.timestamp != null)
-                                          Text(
-                                            _getMemoryRelativeTime(memory.timestamp!),
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              color: Colors.grey.shade300,
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                  // Add padding on right to avoid buttons
-                                  const SizedBox(width: 60),
-                                ],
-                              ),
-
-                              // Description
-                              if (memory.description != null && memory.description!.isNotEmpty) ...[
-                                const SizedBox(height: 8),
-                                GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      _isDescriptionExpanded = !_isDescriptionExpanded;
-                                    });
-                                  },
-                                  child: AnimatedSize(
-                                    duration: const Duration(milliseconds: 200),
-                                    child: ConstrainedBox(
-                                      constraints: BoxConstraints(
-                                        maxHeight: _isDescriptionExpanded ? 150 : 40,
-                                      ),
-                                      child: ScrollConfiguration(
-                                        behavior: ScrollConfiguration.of(context).copyWith(
-                                          scrollbars: false,
-                                        ),
-                                        child: SingleChildScrollView(
-                                          physics: _isDescriptionExpanded
-                                              ? const ClampingScrollPhysics()
-                                              : const NeverScrollableScrollPhysics(),
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                memory.description!,
-                                                style: const TextStyle(
-                                                  fontSize: 13,
-                                                  height: 1.4,
-                                                  color: Colors.white,
-                                                ),
-                                                maxLines: _isDescriptionExpanded ? null : 1,
-                                                overflow: _isDescriptionExpanded ? null : TextOverflow.ellipsis,
-                                              ),
-                                              if (!_isDescriptionExpanded && memory.description!.length > 30)
-                                                Padding(
-                                                  padding: const EdgeInsets.only(top: 2),
-                                                  child: Text(
-                                                    'See more...',
-                                                    style: TextStyle(
-                                                      fontSize: 11,
-                                                      color: Colors.grey.shade400,
-                                                      fontStyle: FontStyle.italic,
-                                                    ),
-                                                  ),
-                                                ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-
-                  // Action buttons (per page, on top of description)
-                  if (isCurrentPage || true)
-                    Positioned(
-                      right: 2,
-                      bottom: 8,
                       child: Column(
                         children: [
-                          _buildActionButton(
-                            icon: _isLiked ? Icons.favorite : Icons.favorite_border,
-                            label: _formatCount(_likesCount),
-                            onTap: _handleLike,
-                            isActive: _isLiked,
+                          // Drawer handle at the very top
+                          Container(
+                            margin: const EdgeInsets.only(top: 6, bottom: 2),
+                            width: 32,
+                            height: 3,
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade400,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
                           ),
-                          const SizedBox(height: 12),
-                          _buildActionButton(
-                            icon: Icons.chat_bubble_outline,
-                            label: _formatCount(_commentsCount),
-                            onTap: _toggleComments,
-                          ),
-                          const SizedBox(height: 12),
-                          _buildActionButton(
-                            icon: _isWishlisted ? Icons.location_on : Icons.location_on_outlined,
-                            label: 'Pin',
-                            onTap: _handleWishlist,
-                            isActive: _isWishlisted,
+                          // The actual content - PageView of complete cards
+                          Expanded(
+                            child: PageView.builder(
+                              controller: _pageController,
+                              onPageChanged: (index) {
+                                setState(() {
+                                  _currentIndex = index;
+                                  _isDescriptionExpanded = false;
+                                  _showComments = false;
+                                  _comments = [];
+                                  _expandedReplies = {};
+                                  _repliesCache = {};
+                                  _loadingReplies = {};
+                                  _replyingToCommentId = null;
+                                  _replyingToUserName = null;
+                                  _commentController.clear();
+                                });
+                                _loadMemoryStats();
+                                _prefetchAdjacentMemoryStats();
+                              },
+                              itemCount: widget.memories.length,
+                              itemBuilder: (context, index) {
+                                return _buildMemoryCard(index);
+                              },
+                            ),
                           ),
                         ],
                       ),
                     ),
-                ],
-              );
-            },
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMemoryCard(int index) {
+    final memory = widget.memories[index];
+    final isCurrentPage = index == _currentIndex;
+    
+    return Padding(
+      padding: const EdgeInsets.only(left: 12, right: 12, bottom: 12),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Stack(
+          children: [
+            // Memory view layer
+            _buildMemoryView(memory, isCurrentPage),
+            
+            // Comments overlay
+            if (_showComments && isCurrentPage)
+              _buildCommentsView(),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
+
+  Widget _buildMemoryView(MemoryData memory, bool isCurrentPage) {
+    return Stack(
+      children: [
+        // Image
+        Positioned.fill(
+          child: memory.imageUrl != null && memory.imageUrl!.isNotEmpty
+              ? CachedNetworkImage(
+                  imageUrl: memory.imageUrl!,
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => Container(
+                    color: Colors.grey.shade200,
+                    child: const Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                  ),
+                  errorWidget: (context, url, error) => Container(
+                    color: Colors.grey.shade300,
+                    child: Center(
+                      child: Icon(
+                        Icons.image_not_supported,
+                        size: 60,
+                        color: Colors.grey.shade500,
+                      ),
+                    ),
+                  ),
+                )
+              : Container(
+                  color: Colors.grey.shade200,
+                  child: Center(
+                    child: Icon(
+                      Icons.photo_library,
+                      size: 60,
+                      color: Colors.grey.shade400,
+                    ),
+                  ),
+                ),
+        ),
+
+        // Tap area to collapse description (covers entire screen except buttons)
+        if (isCurrentPage && _isDescriptionExpanded)
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _isDescriptionExpanded = false;
+                });
+              },
+              child: Container(
+                color: Colors.transparent,
+              ),
+            ),
+          ),
+
+        // Content overlay - username and description
+        Positioned(
+          bottom: 0,
+          left: 0,
+          right: 0,
+          child: IgnorePointer(
+            ignoring: false,
+            child: Container(
+              margin: const EdgeInsets.fromLTRB(8, 20, 60, 12),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.25),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Owner name and timestamp
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 14,
+                        backgroundColor: Colors.grey.shade300,
+                        child: Text(
+                          memory.userName != null
+                              ? memory.userName![0].toUpperCase()
+                              : 'U',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade700,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              memory.userName ?? 'Unknown User',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                            if (memory.timestamp != null)
+                              Text(
+                                _getMemoryRelativeTime(memory.timestamp!),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey.shade300,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      // Add padding on right to avoid buttons
+                      const SizedBox(width: 60),
+                    ],
+                  ),
+
+                  // Description
+                  if (memory.description != null && memory.description!.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _isDescriptionExpanded = !_isDescriptionExpanded;
+                        });
+                      },
+                      child: AnimatedSize(
+                        duration: const Duration(milliseconds: 200),
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxHeight: _isDescriptionExpanded ? 150 : 40,
+                          ),
+                          child: ScrollConfiguration(
+                            behavior: ScrollConfiguration.of(context).copyWith(
+                              scrollbars: false,
+                            ),
+                            child: SingleChildScrollView(
+                              physics: _isDescriptionExpanded
+                                  ? const ClampingScrollPhysics()
+                                  : const NeverScrollableScrollPhysics(),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    memory.description!,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      height: 1.4,
+                                      color: Colors.white,
+                                    ),
+                                    maxLines: _isDescriptionExpanded ? null : 1,
+                                    overflow: _isDescriptionExpanded ? null : TextOverflow.ellipsis,
+                                  ),
+                                  if (!_isDescriptionExpanded && memory.description!.length > 30)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 2),
+                                      child: Text(
+                                        'See more...',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.grey.shade400,
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+
+        // Action buttons (only on current page)
+        if (isCurrentPage || true)
+          Positioned(
+            right: 2,
+            bottom: 8,
+            child: Column(
+              children: [
+                _buildActionButton(
+                  icon: _isLiked ? Icons.favorite : Icons.favorite_border,
+                  label: _formatCount(_likesCount),
+                  onTap: _handleLike,
+                  isActive: _isLiked,
+                ),
+                const SizedBox(height: 12),
+                _buildActionButton(
+                  icon: Icons.chat_bubble_outline,
+                  label: _formatCount(_commentsCount),
+                  onTap: _toggleComments,
+                ),
+                const SizedBox(height: 12),
+                _buildActionButton(
+                  icon: _isWishlisted ? Icons.location_on : Icons.location_on_outlined,
+                  label: 'Pin',
+                  onTap: _handleWishlist,
+                  isActive: _isWishlisted,
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
 
 Widget _buildActionButton({
   required IconData icon,
@@ -944,13 +919,13 @@ Widget _buildActionButton({
 
   Widget _buildCommentsView() {
   return Padding(
-    padding: const EdgeInsets.only(left: 12, right: 12, bottom: 12),
+    padding: const EdgeInsets.only(left: 0, right: 0, bottom: 0),
     child: ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: Scaffold(
         backgroundColor: Colors.white,
-        resizeToAvoidBottomInset: false, // ✅ Changed to false
-        body: Stack( // ✅ Changed from Column to Stack
+        resizeToAvoidBottomInset: false,
+        body: Stack(
           children: [
             Column(
               children: [
@@ -1027,7 +1002,7 @@ Widget _buildActionButton({
                           : ListView.builder(
                               padding: EdgeInsets.only(
                                 top: 8,
-                                bottom: 80, // ✅ Add padding for input field
+                                bottom: 80,
                               ),
                               itemCount: _comments.length,
                               itemBuilder: (context, index) {
@@ -1038,7 +1013,7 @@ Widget _buildActionButton({
               ],
             ),
         
-            // ✅ Comment input positioned at bottom
+            // Comment input positioned at bottom
             Positioned(
               left: 0,
               right: 0,
@@ -1048,7 +1023,7 @@ Widget _buildActionButton({
                   left: 16,
                   right: 16,
                   top: 8,
-                  bottom: MediaQuery.of(context).viewInsets.bottom < 1 ? 8 : MediaQuery.of(context).viewInsets.bottom, // ✅ Responds to keyboard
+                  bottom: MediaQuery.of(context).viewInsets.bottom < 1 ? 8 : MediaQuery.of(context).viewInsets.bottom,
                 ),
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -1270,8 +1245,6 @@ Widget _buildActionButton({
                                 await commentsService.deleteComment(comment.id);
                                 _repliesCache.remove(comment.id);
                                 _expandedReplies.remove(comment.id);
-                                // Decrement by 1 + number of replies
-                                final totalDeleted = 1 + (comment.repliesCount);
                                 await _loadComments();
                                 setState(() => _commentsCount--);
                               } catch (e) {
@@ -1448,7 +1421,7 @@ Widget _buildActionButton({
                       onTap: () async {
                         try {
                           await commentsService.toggleCommentLike(reply.id);
-                          _loadReplies(parentCommentId); // Reload replies
+                          _loadReplies(parentCommentId);
                         } catch (e) {
                           print('Error liking reply: $e');
                         }
@@ -1489,8 +1462,8 @@ Widget _buildActionButton({
                           try {
                             await commentsService.deleteComment(reply.id);
                             setState(() => _commentsCount--);
-                            await _loadReplies(parentCommentId); // Reload replies
-                            await _loadComments(); // Reload comments to update reply count
+                            await _loadReplies(parentCommentId);
+                            await _loadComments();
                           } catch (e) {
                             print('Error deleting reply: $e');
                           }
@@ -1532,7 +1505,7 @@ Widget _buildActionButton({
   }
 }
 
-// Keep existing CommentData class unchanged
+// CommentData class
 class CommentData {
   final int id;
   final String userName;
@@ -1567,8 +1540,7 @@ class CommentData {
     final difference = now.difference(timestamp);
 
     if (difference.inSeconds < 0) {
-    // Handle future timestamps (clock sync issues)
-    return 'Just now';
+      return 'Just now';
     } else if (difference.inSeconds < 60) {
       return 'Just now';
     } else if (difference.inMinutes < 60) {
@@ -1581,7 +1553,6 @@ class CommentData {
       final weeks = (difference.inDays / 7).floor();
       return '${weeks}w';
     } else {
-      // 4 weeks or more - show date as MM-DD-YYYY
       final month = timestamp.month.toString().padLeft(2, '0');
       final day = timestamp.day.toString().padLeft(2, '0');
       return '$month-$day-${timestamp.year}';

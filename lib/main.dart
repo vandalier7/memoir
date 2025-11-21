@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:presentation/camera_ui/preview_screen.dart';
 import 'package:presentation/models/bin_item.dart';
@@ -32,6 +33,8 @@ void main() async {
     pixelRatio = WidgetsBinding.instance.platformDispatcher.views.first.devicePixelRatio;
     // print("✅ REAL pixelRatio: $pixelRatio");
   });
+
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky); 
 
   try {
     // Initialize Firebase before the app runs
