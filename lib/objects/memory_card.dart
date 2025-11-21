@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'memory.dart';
 
 class MemoryCard extends StatefulWidget {
@@ -690,7 +691,7 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
                   ),
 
                   // Bottom gradient overlay (per page)
-                  if (isCurrentPage)
+                  if (isCurrentPage && false)
                     Positioned(
                       bottom: 0,
                       left: 0,
@@ -730,7 +731,7 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
                     ),
 
                   // Content overlay - username and description (per page, behind buttons)
-                  if (isCurrentPage)
+                  if (isCurrentPage || true)
                     Positioned(
                       bottom: 0,
                       left: 0,
@@ -738,10 +739,10 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
                       child: IgnorePointer(
                         ignoring: false,
                         child: Container(
-                          margin: const EdgeInsets.fromLTRB(8, 20, 8, 12),
+                          margin: const EdgeInsets.fromLTRB(8, 20, 60, 12),
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.4),
+                            color: Colors.black.withOpacity(0.15),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Column(
@@ -857,10 +858,10 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
                     ),
 
                   // Action buttons (per page, on top of description)
-                  if (isCurrentPage)
+                  if (isCurrentPage || true)
                     Positioned(
-                      right: 0,
-                      bottom: 80,
+                      right: 2,
+                      bottom: 8,
                       child: Column(
                         children: [
                           _buildActionButton(
@@ -877,8 +878,8 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
                           ),
                           const SizedBox(height: 12),
                           _buildActionButton(
-                            icon: _isWishlisted ? Icons.bookmark : Icons.bookmark_border,
-                            label: 'Wishlist',
+                            icon: _isWishlisted ? Icons.location_on : Icons.location_on_outlined,
+                            label: 'Pin',
                             onTap: _handleWishlist,
                             isActive: _isWishlisted,
                           ),
