@@ -217,20 +217,15 @@ class StorageService {
   StreamSubscription<QuerySnapshot>? _memorySub;
 
   void listenUserMemories({bool Function(MemoryData)? filter}) {
-  debugPrint('🔵 [1] listenUserMemories called');
   
   _memorySub?.cancel();
-  debugPrint('🔵 [2] Previous subscription cancelled');
 
   final userId = currentUserId;
-  debugPrint('🔵 [3] Got userId: $userId');
   
   if (userId == null) {
-   debugPrint('⚠️ Cannot listen to memories: user not logged in');
    return;
   }
 
-  debugPrint('🔵 [4] About to create Firestore listener...');
   
   _memorySub = _firestore
     .collection('memories')
@@ -238,42 +233,25 @@ class StorageService {
     .snapshots()
     .listen(
       (snapshot) {
-        debugPrint('🟢 [5] Snapshot received with ${snapshot.docs.length} docs');
         
         unfilteredMemories.clear();
-        debugPrint('🟢 [6] Cleared unfilteredMemories');
 
-        debugPrint('🟡 [6.5] snapshot.docs type: ${snapshot.docs.runtimeType}');
-        debugPrint('🟡 [6.6] About to enter for loop...');
         
         int count = 0;
         for (var doc in snapshot.docs) {
-          debugPrint('🟡 [7.$count] INSIDE for loop - processing doc');
           
-          debugPrint('🟡 [7.${count}a] About to call doc.data()');
           final data = doc.data();
-          debugPrint('🟡 [7.${count}b] Got data: ${data.keys}');
           
-          debugPrint('🟡 [7.${count}c] Parsing latitude');
           final lat = (data['latitude'] as num?)?.toDouble() ?? 0.0;
-          debugPrint('🟡 [7.${count}d] lat = $lat');
           
-          debugPrint('🟡 [7.${count}e] Parsing longitude');
           final lng = (data['longitude'] as num?)?.toDouble() ?? 0.0;
-          debugPrint('🟡 [7.${count}f] lng = $lng');
 
-          debugPrint('🟡 [7.${count}g] Getting moodValue');
           final moodVal = data['moodValue'] as int? ?? 1;
-          debugPrint('🟡 [7.${count}h] moodVal = $moodVal, calling moodFromValue()');
           
           final mood = moodFromValue(moodVal);
-          debugPrint('🟡 [7.${count}i] mood = $mood');
 
-          debugPrint('🟡 [7.${count}j] Creating LatLng');
           final position = LatLng(lat, lng);
-          debugPrint('🟡 [7.${count}k] position created');
 
-          debugPrint('🟡 [7.${count}l] Creating MemoryData');
           final memory = MemoryData(
             head: data['head'] as bool? ?? false,
             mood: mood,
@@ -284,14 +262,10 @@ class StorageService {
           );
 
 
-          debugPrint('🟡 [7.${count}o] Checking filter');
           if (filter == null || filter(memory)) {
-            debugPrint('🟡 [7.${count}p] Adding to unfilteredMemories');
             unfilteredMemories.add(memory);
-            debugPrint('🟡 [7.${count}q] Added successfully');
           }
           
-          debugPrint('🟡 [7.${count}r] Doc complete');
           count++;
         }
         debugPrint('🟢 [7] Finished processing $count memories');
@@ -301,7 +275,6 @@ class StorageService {
       },
     );
   
-  debugPrint('🔵 [8] Listener setup complete (but stream is async)');
 }
 
   void dispose() {

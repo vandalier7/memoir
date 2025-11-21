@@ -99,10 +99,10 @@ class MyState extends State<MyScaffold> {
             //     ),
             //   ),
             // ),
-            SearchBarWidget(
-              key: _searchBarKey, // Add the key here
-              focusNode: _textFocusNode,
-            ),
+            // SearchBarWidget(
+            //   key: _searchBarKey, // Add the key here
+            //   focusNode: _textFocusNode,
+            // ),
             const MapButtons(),
 
             // 🌫 Gradient overlay
@@ -124,7 +124,7 @@ class MyState extends State<MyScaffold> {
             ),
 
             // ✅ Single, clean search bar
-            SearchBarWidget(focusNode: _textFocusNode),
+            SearchBarWidget(focusNode: _textFocusNode, key: _searchBarKey,),
 
             const MapButtons(),
 
