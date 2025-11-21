@@ -37,10 +37,15 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    
     // Unfocus when returning to this screen
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_shouldPreventFocus && _internalFocusNode.hasFocus) {
+        
         _internalFocusNode.unfocus();
+      }
+      if (_shouldPreventFocus) {
+        FocusScope.of(context).unfocus();
       }
     });
   }
@@ -164,7 +169,7 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
                     focusNode: _internalFocusNode,
                     enableInteractiveSelection: true,
                     decoration: const InputDecoration(
-                      hintText: "Search users",
+                      hintText: "Search",
                       hintStyle: TextStyle(color: Colors.grey),
                       border: InputBorder.none,
                     ),

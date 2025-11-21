@@ -78,6 +78,8 @@ class MyState extends State<MyScaffold> {
 
           // Tapped outside → unfocus
           currentFocus.unfocus();
+          _textFocusNode.unfocus();
+          FocusScope.of(context).unfocus();
         }
       },
       child: Scaffold(
