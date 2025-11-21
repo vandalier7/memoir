@@ -16,6 +16,7 @@ class MemoryData {
   final String addressString;
   final LatLng position;
   late final double decay;
+  double finalDecay;
   final String? imageUrl; // Network image URL
   final String? memoryId;
   final int? supabaseMemoryId;
@@ -28,6 +29,7 @@ class MemoryData {
     required this.position,
     required this.mood,
     this.decay = 18.0,
+    this.finalDecay = 18.0,
     this.head = true,
     this.imageUrl,
     this.memoryId,
@@ -63,13 +65,14 @@ class MemoryPin extends StatefulWidget {
   final bool isClustered;
   final void Function(bool value) holdingCallback;
   final double decay;
+  double finalDecay = 18.00;
   final double mapZoom;
   final void Function(List<MemoryData>) onShowMemories; // Changed to list
   final bool showPreview; // Control from parent
   final VoidCallback onClosePreview; // Callback to close
   final void Function(List<MemoryData>) onLongPress; // Callback with new memories
 
-  const MemoryPin({
+  MemoryPin({
     super.key,
     this.size = const Size(50, 50),
     required this.memories,
@@ -79,6 +82,7 @@ class MemoryPin extends StatefulWidget {
     required this.isClustered,
     required this.holdingCallback,
     required this.decay,
+    required this.finalDecay,
     required this.mapZoom,
     required this.onShowMemories,
     this.showPreview = false,
@@ -93,7 +97,8 @@ class MemoryPin extends StatefulWidget {
     bool isHoldingMap,
     bool isClustered,
     void Function(bool value) holdingCallback, {
-    double decay = 16.0,
+    double decay = 18.0,
+    double finalDecay = 18.0,
     double mapZoom = 14.0,
     Key? key,
     Size size = const Size(50, 50),
@@ -108,6 +113,7 @@ class MemoryPin extends StatefulWidget {
       memories: memories,
       position: position,
       decay: decay,
+      finalDecay: finalDecay,
       mapController: mapController,
       isHoldingMap: isHoldingMap,
       isClustered: isClustered,
@@ -141,6 +147,7 @@ class MemoryPin extends StatefulWidget {
       memories: [data],
       position: data.position,
       decay: data.decay,
+      finalDecay: 18.00,
       mapController: mapController,
       isHoldingMap: isHoldingMap,
       isClustered: isClustered,
@@ -220,10 +227,6 @@ class _MemoryPinState extends State<MemoryPin>
       return const SizedBox.shrink();
     }
 
-    // Debug print to check state
-    debugPrint(
-        "MemoryPin build - showPreview: ${widget.showPreview}, isHoldingMap: ${widget.isHoldingMap}");
-
     // Calculate dimensions and offsets
     final pinWidth = 50.0;
     final previewWidth = widget.showPreview ? 100.0 : 0.0;
@@ -257,9 +260,9 @@ class _MemoryPinState extends State<MemoryPin>
           },
           onTap: () async {
             // Only process if pin is visible and map isn't being held
-            if (widget.decay > widget.mapZoom || !widget.isHoldingMap) return;
-            debugPrint("${widget.decay}");
-            if (widget.decay <= widget.mapZoom) {
+            if (widget.finalDecay > widget.mapZoom || !widget.isHoldingMap) return;
+            debugPrint("${widget.finalDecay}");
+            if (widget.finalDecay <= widget.mapZoom) {
               // Get screen size
               final screenSize = MediaQuery.of(context).size;
               final screenCenterX = screenSize.width / 2;
@@ -324,7 +327,7 @@ class _MemoryPinState extends State<MemoryPin>
             ignoring: true,
             child: AnimatedOpacity(
               opacity:
-                  (!widget.isHoldingMap && widget.decay <= widget.mapZoom && widget.isClustered)
+                  (!widget.isHoldingMap && widget.finalDecay <= widget.mapZoom && widget.isClustered)
                       ? 1.0
                       : 0.0,
               duration: Duration(milliseconds: 100),

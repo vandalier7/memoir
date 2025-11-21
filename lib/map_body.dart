@@ -54,73 +54,67 @@ class MapState extends State<MapBody> {
   bool isClusteringInProgress = false;
 
   Future<void> _performScreenSpaceClustering() async {
-    if (isClusteringInProgress) return;
-    isClusteringInProgress = true;
+  if (isClusteringInProgress) return;
+  isClusteringInProgress = true;
 
-    try {
-      final Map<LatLng, List<LatLng>> clusters = {};
-      final Set<LatLng> clustered = {};
-      final double clusterThresholdPixels = 50.0; // Adjust this
+  try {
+    final Map<LatLng, List<LatLng>> clusters = {};
+    final Set<LatLng> clustered = {};
+    final double clusterThresholdPixels = 50.0;
+    
+    final groupedMemories = groupMemoriesByPosition(memories);
+    final positions = groupedMemories.keys.toList();
+    final nearbyPos = _findNearbyMemoryPosition();
+    
+    for (final pos1 in positions) {
+      if (clustered.contains(pos1)) continue;
+      if (pos1 == nearbyPos) continue;
       
-      // Get all permanent cluster positions
-      final groupedMemories = groupMemoriesByPosition(memories);
-      final positions = groupedMemories.keys.toList();
-
-      // Find the nearby memory position to exclude from clustering
-      final nearbyPos = _findNearbyMemoryPosition();
+      final screen1 = await mapController.toScreenLocation(pos1);
+      final List<LatLng> cluster = [pos1];
+      clustered.add(pos1);
       
-      for (final pos1 in positions) {
-        if (clustered.contains(pos1)) continue;
-        if (pos1 == nearbyPos) continue;
+      for (final pos2 in positions) {
+        if (pos2 == nearbyPos) continue;
+        if (pos1 == pos2) continue;
+        if (clustered.contains(pos2)) continue;
         
-        final screen1 = await mapController.toScreenLocation(pos1);
-        final List<LatLng> cluster = [pos1];
-        clustered.add(pos1);
+        final screen2 = await mapController.toScreenLocation(pos2);
         
-        // Find nearby positions
-        for (final pos2 in positions) {
-          if (pos2 == nearbyPos) continue;
-          if (pos1 == pos2) continue;
-          if (clustered.contains(pos2)) continue;
-          
-          final screen2 = await mapController.toScreenLocation(pos2);
-          
-          final dx = (screen1.x - screen2.x) / pixelRatio!;
-          final dy = (screen1.y - screen2.y) / pixelRatio!;
-          final distance = sqrt(dx * dx + dy * dy);
-          
-          if (distance < clusterThresholdPixels) {
-            cluster.add(pos2);
-            clustered.add(pos2);
-          }
+        final dx = (screen1.x - screen2.x) / pixelRatio!;
+        final dy = (screen1.y - screen2.y) / pixelRatio!;
+        final distance = sqrt(dx * dx + dy * dy);
+        
+        if (distance < clusterThresholdPixels) {
+          cluster.add(pos2);
+          clustered.add(pos2);
         }
-        
-        // Calculate centroid of cluster positions
-        LatLng clusterCenter;
-        if (cluster.length == 1) {
-          clusterCenter = cluster.first;
-        } else {
-          double avgLat = 0;
-          double avgLng = 0;
-          for (final pos in cluster) {
-            avgLat += pos.latitude;
-            avgLng += pos.longitude;
-          }
-          avgLat /= cluster.length;
-          avgLng /= cluster.length;
-          clusterCenter = LatLng(avgLat, avgLng);
+      }
+      
+      // ONLY ADD IF ACTUALLY CLUSTERED WITH OTHERS
+      if (cluster.length > 1) {
+        double avgLat = 0;
+        double avgLng = 0;
+        for (final pos in cluster) {
+          avgLat += pos.latitude;
+          avgLng += pos.longitude;
         }
+        avgLat /= cluster.length;
+        avgLng /= cluster.length;
+        final clusterCenter = LatLng(avgLat, avgLng);
         
         clusters[clusterCenter] = cluster;
       }
-      
-      setState(() {
-        screenSpaceClusters = clusters;
-      });
-    } finally {
-      isClusteringInProgress = false;
+      // If cluster.length == 1, don't add it to clusters map
     }
+    
+    setState(() {
+      screenSpaceClusters = clusters;
+    });
+  } finally {
+    isClusteringInProgress = false;
   }
+}
 
   // Find memory position closest to user within clusterRadius
   LatLng? _findNearbyMemoryPosition() {
@@ -243,12 +237,14 @@ class MapState extends State<MapBody> {
             // memories.add(memory);
           }
           else if (memory.userId! == storageService.currentUserId) {
+            memory.finalDecay = 0; // if memory is yours, always show
             memories.add(memory);
           }
-          else if (friends.contains(memory.userId!) && memory.decay * 2/3 <= mapZoom) {
+          else if (friends.contains(memory.userId!) && memory.decay - 6  <= mapZoom) {
             memories.add(memory);
           }
-          else if (followedUsers.contains(memory.userId!) && memory.decay * 3/5 <= mapZoom) {
+          else if (followedUsers.contains(memory.userId!) && memory.decay - 5 <= mapZoom) {
+            memory.finalDecay = memory.decay - 5;
             memories.add(memory);
           }
           
@@ -259,6 +255,9 @@ class MapState extends State<MapBody> {
       }
       if (memories.isEmpty) {}
     });
+    for (MemoryData memory in memories) {
+      debugPrint(memory.addressString);
+    }
     debugPrint(mapZoom.toString());
   }
 
@@ -452,6 +451,7 @@ class MapState extends State<MapBody> {
             !clusteredPositions.contains(entry.key),
             updateMapHold,
             decay: entry.value.first.decay,
+            finalDecay: entry.value.first.finalDecay ,
             mapZoom: mapZoom,
             showPreview: false,
             onShowMemories: showMemories,
