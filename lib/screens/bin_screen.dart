@@ -3,7 +3,6 @@ import '../processes/storage_service.dart';
 import '../models/bin_item.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'posted_screen.dart';
-import 'bin_preview_screen.dart'; // Added this import
 import '../my_scaffold.dart'; // Kept from alpha-version
 import '../objects/globals.dart'; // Kept from alpha-version
 
@@ -114,15 +113,13 @@ class _BinScreenState extends State<BinScreen> {
   // Helper function from your new code
   String _formatDuration(Duration duration) {
     if (duration.inDays > 1) {
-      return '${duration.inDays} days left';
+      return '${duration.inDays}d';
     } else if (duration.inDays == 1) {
-      return '1 day left';
+      return '1d';
     } else if (duration.inHours > 1) {
-      return '${duration.inHours} hours left';
-    } else if (duration.inHours == 1) {
-      return '1 hour left';
+      return '${duration.inHours}h ${duration.inMinutes % 60}m';
     } else if (duration.inMinutes > 1) {
-      return '${duration.inMinutes} minutes left';
+      return '${duration.inMinutes}m';
     } else {
       return 'Expires soon';
     }
@@ -259,18 +256,16 @@ class _BinScreenState extends State<BinScreen> {
                 }
               });
             },
-            icon: Icon(
-              _isMultiSelectMode ? Icons.delete_forever : Icons.delete,
-              size: 18,
-            ),
-            label: Text(
-              _isMultiSelectMode
-                  ? 'Delete (${_selectedIds.length})'
-                  : 'Delete',
-            ),
+            icon: !_isMultiSelectMode ? null : Icon(Icons.delete_forever, size: 18),
+            label: _isMultiSelectMode ? 
+            Text('${_selectedIds.length}') :
+            Icon(Icons.delete, size: 18),
+
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red[700],
-              foregroundColor: Colors.white,
+              backgroundColor: Colors.transparent,
+              foregroundColor: Colors.red,
+              shadowColor: Colors.transparent,
+              alignment: _isMultiSelectMode ? Alignment.centerLeft : Alignment.center,
               padding:
                   const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
             ),
@@ -293,13 +288,7 @@ class _BinScreenState extends State<BinScreen> {
                   color: Color.fromARGB(255, 37, 6, 6),
                   fontWeight: FontWeight.bold,
                   fontSize: 18)),
-          IconButton(
-            icon: const Icon(Icons.outbox, color: Color.fromARGB(255, 37, 6, 6)),
-            onPressed: () {
-              Navigator.push(context,
-                  MaterialPageRoute(builder: (context) => const PostedScreen()));
-            },
-          ),
+          
         ],
       ),
     );
@@ -332,11 +321,10 @@ class _BinGridTile extends StatelessWidget {
           onToggleSelect(item.id);
         } else {
           // Navigate to preview screen
-          Navigator.push(
+          Navigator.pushNamed(
             context,
-            MaterialPageRoute(
-              builder: (context) => BinPreviewScreen(item: item),
-            ),
+            "/journal",
+            arguments: <dynamic> [item.imageUrl, item]
           ).then((didPost) {
             // Check if the preview screen popped with 'true' (meaning post was successful)
             if (didPost == true) {
@@ -346,9 +334,12 @@ class _BinGridTile extends StatelessWidget {
         }
       },
       child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
         child: Stack(
           fit: StackFit.expand,
           children: [
+
+              
             CachedNetworkImage(
               imageUrl: item.imageUrl,
               fit: BoxFit.cover,
@@ -356,6 +347,7 @@ class _BinGridTile extends StatelessWidget {
                   Container(color: Colors.black.withAlpha(100)),
               errorWidget: (context, url, error) => const Icon(Icons.error),
             ),
+
 
             // Gradient for text visibility
             Container(
@@ -398,14 +390,20 @@ class _BinGridTile extends StatelessWidget {
               bottom: 5,
               left: 5,
               right: 5,
-              child: Text(
-                isSelected ? '' : remainingTime,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    shadows: [Shadow(blurRadius: 2.0, color: Colors.black)]),
-              ),
+              child: Row(
+                children: [
+                  Icon(Icons.access_time_sharp, color: Colors.white, size: 16),
+                  SizedBox(width: 5),
+                  Text(
+                    isSelected ? '' : remainingTime,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        shadows: [Shadow(blurRadius: 2.0, color: Colors.black)]),
+                  ),
+                ],
+              )
             ),
           ],
         ),

@@ -223,6 +223,30 @@ class DatabaseService {
     }
   }
 
+  Future<List<String>> getFollowers(String userID) async {
+    String table = "following";
+    Map<String, dynamic>? filters = {'followingID' : userID};
+    try {
+      var query = _supabase.from(table).select("followerID");
+
+      // Apply filters
+      if (filters != null) {
+        filters.forEach((key, value) {
+          query = query.eq(key, value);
+        });
+      }
+
+      final response = await query;
+      final rows = List<Map<String, dynamic>>.from(response);
+
+      // extract the ID value
+      return rows.map((row) => row["followerID"] as String).toList();
+    } catch (e) {
+      print('Error querying $table: $e');
+      rethrow;
+    }
+  }
+
   Future<int> getFollowingCount(String userID) async {
 
     String table = "following";

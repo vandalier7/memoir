@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:presentation/camera_ui/preview_screen.dart';
+import 'package:presentation/models/bin_item.dart';
 import 'package:presentation/screens/account_screen.dart';
 import 'app_theme.dart';
 
@@ -10,7 +12,7 @@ import 'firebase_options.dart';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'my_scaffold.dart';
-import 'processes/auth.dart';
+import 'screens/bin_screen.dart';
 
 import 'screens/sign_in.dart';
 import 'screens/loading_screen.dart';
@@ -31,6 +33,8 @@ void main() async {
     pixelRatio = WidgetsBinding.instance.platformDispatcher.views.first.devicePixelRatio;
     // print("✅ REAL pixelRatio: $pixelRatio");
   });
+
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky); 
 
   try {
     // Initialize Firebase before the app runs
@@ -108,6 +112,38 @@ class RootState extends State<Root> {
           if (args is String) {
             // ✅ Pass the imagePath and cameras to JournalScreen
             return JournalScreen(imagePath: args, cameras: cameras);
+          }
+          else if (args is List<dynamic>) {
+            // ✅ Pass the imagePath and cameras to JournalScreen
+            
+            return FutureBuilder(
+              future: imageUrlToPath(args.first as String), 
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Container(
+                    height: 5000,
+                    width: 5000,
+                    color: Colors.black,
+                    child: Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                  ); // Loading state
+                }
+                
+                if (snapshot.hasError) {
+                  return Icon(Icons.error); // Error state
+                }
+
+                final filepath = snapshot.data!;
+                BinItem item = args.last as BinItem;
+
+                return JournalScreen(imagePath: filepath, cameras: cameras, item: item,);
+              }
+            );
+            
+
+
+
           } else {
             // 🛠 Fallback (in case no image was passed)
             return JournalScreen(imagePath: '', cameras: cameras);

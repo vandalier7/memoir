@@ -260,7 +260,7 @@ class _MemoryPinState extends State<MemoryPin>
           },
           onTap: () async {
             // Only process if pin is visible and map isn't being held
-            if (widget.finalDecay > widget.mapZoom || !widget.isHoldingMap) return;
+            if (widget.finalDecay > widget.mapZoom || !widget.isHoldingMap || !widget.isClustered) return;
             debugPrint("${widget.finalDecay}");
             if (widget.finalDecay <= widget.mapZoom) {
               // Get screen size

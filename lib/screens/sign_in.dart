@@ -806,13 +806,13 @@ String? validatePassword(String? value) {
   final hasNumber = RegExp(r'\d');
 
   if (!hasUppercase.hasMatch(value)) {
-    return 'Password must contain at least one uppercase letter';
+    return 'Needs a number, uppercase and lowercase letter';
   }
   if (!hasLowercase.hasMatch(value)) {
-    return 'Password must contain at least one lowercase letter';
+    return 'Needs a number, uppercase and lowercase letter';
   }
   if (!hasNumber.hasMatch(value)) {
-    return 'Password must contain at least one number';
+    return 'Needs a number, uppercase and lowercase letter';
   }
 
   return null; // ✅ Valid
