@@ -493,13 +493,16 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
     return Stack(
       children: [
         // Tap outside to close
-        Positioned.fill(
-          child: GestureDetector(
-            onTap: _animateOut,
-            child: Container(
-              color: Colors.black.withOpacity(0.3),
-            ),
+        IgnorePointer(
+          child: Container(
+            color: Colors.black.withOpacity(0.0),
           ),
+        ),
+        // Tap detector
+        Listener(
+          behavior: HitTestBehavior.translucent,
+          onPointerDown: (_) => _animateOut(),
+          child: Container(), // Empty container for hit testing
         ),
       
         // The actual card
@@ -526,9 +529,9 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
                           child: Row(
                             children: [
                               Icon(
-                                Icons.location_on,
-                                size: 14,
-                                color: Colors.white.withOpacity(0.8),
+                                Icons.location_on_rounded,
+                                size: 24,
+                                color: Colors.black.withOpacity(0.8),
                               ),
                               const SizedBox(width: 4),
                               Expanded(
@@ -536,7 +539,7 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
                                   widget.memories[_currentIndex].addressString,
                                   style: TextStyle(
                                     fontSize: 15,
-                                    color: Colors.white.withOpacity(0.9),
+                                    color: Colors.grey.shade800.withOpacity(0.9),
                                     fontWeight: FontWeight.w500,
                                   ),
                                   maxLines: 1,
