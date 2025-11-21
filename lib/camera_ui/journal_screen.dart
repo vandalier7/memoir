@@ -50,6 +50,7 @@ class _JournalScreenState extends State<JournalScreen>
   bool isEmojiPickerOpen = false;
   String selectedMood = '';
   int selectedMoodValue = 0;
+  bool isLoading = false;
 
   // Moods with emojis
   final List<Map<String, dynamic>> moods = [
@@ -110,6 +111,12 @@ class _JournalScreenState extends State<JournalScreen>
     isMoodOpen
         ? _moodDrawerController.forward()
         : _moodDrawerController.reverse();
+  }
+
+  void toggleLoad(bool value) {
+    setState(() {
+      isLoading = value;
+    });
   }
 
   void _toggleJournal() {
@@ -395,247 +402,339 @@ class _JournalScreenState extends State<JournalScreen>
 
     return Scaffold(
       backgroundColor: Colors.black,
-      body: GestureDetector(
-        onTap: () {
-          if (isMoodOpen) {
-            setState(() {
-              isMoodOpen = false;
-              _moodDrawerController.reverse();
-            });
-          }
-          if (isEmojiPickerOpen) {
-            setState(() => isEmojiPickerOpen = false);
-          }
-        },
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // Wrap everything in RepaintBoundary for screenshot
-            RepaintBoundary(
-              key: _screenshotKey,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  // Background Image
-                  Positioned.fill(
-                    child: Image.file(
-                      File(widget.imagePath),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-
-                  // Overlay items
-                  Positioned.fill(
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        return Stack(
-                          children: overlays.asMap().entries.map((entry) {
-                            final idx = entry.key;
-                            final item = entry.value;
-                            return _DraggableResizableOverlay(
-                              key: ValueKey(item.id),
-                              item: item,
-                              parentSize:
-                                  Size(constraints.maxWidth, constraints.maxHeight),
-                              onUpdate: (updated) {
-                                setState(() => overlays[idx] = updated);
-                              },
-                              onRemove: () {
-                                setState(() => overlays.removeAt(idx));
-                              },
-                              onDragStart: () {
-                                setState(() => isDraggingOverlay = true);
-                              },
-                              onDragEnd: () {
-                                setState(() => isDraggingOverlay = false);
-                              },
-                            );
-                          }).toList(),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Close button
-            Positioned(
-              top: 40,
-              left: 20,
-              child: GestureDetector(
-                onTap: () async {
-                  
-                  if (widget.item == null) {
-                    _handleDiscard(context);
-                  }
-
-                  Navigator.pop(context);
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.3),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.close, color: Colors.white),
-                ),
-              ),
-            ),
-
-            // Top right action buttons
-            Positioned(
-              top: 40,
-              right: 20,
-              child: Row(
-                children: [
-                  _buildActionButton(
-                    icon: Icons.text_fields,
-                    onTap: _showTextOverlayDialog,
-                  ),
-                  const SizedBox(width: 10),
-                  _buildActionButton(
-                    icon: Icons.emoji_emotions,
-                    onTap: _showEmojiPicker,
-                  ),
-                  const SizedBox(width: 10),
-                  _buildActionButton(
-                    icon: Icons.music_note,
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Music feature coming soon!'),
-                          duration: Duration(seconds: 1),
+      body: Stack(
+        children: [
+          // Main content
+          GestureDetector(
+            onTap: () {
+              if (isMoodOpen) {
+                setState(() {
+                  isMoodOpen = false;
+                  _moodDrawerController.reverse();
+                });
+              }
+              if (isEmojiPickerOpen) {
+                setState(() => isEmojiPickerOpen = false);
+              }
+            },
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // Wrap everything in RepaintBoundary for screenshot
+                RepaintBoundary(
+                  key: _screenshotKey,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      // Background Image
+                      Positioned.fill(
+                        child: Image.file(
+                          File(widget.imagePath),
+                          fit: BoxFit.cover,
                         ),
-                      );
-                    },
+                      ),
+
+                      // Overlay items
+                      Positioned.fill(
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            return Stack(
+                              children: overlays.asMap().entries.map((entry) {
+                                final idx = entry.key;
+                                final item = entry.value;
+                                return _DraggableResizableOverlay(
+                                  key: ValueKey(item.id),
+                                  item: item,
+                                  parentSize:
+                                      Size(constraints.maxWidth, constraints.maxHeight),
+                                  onUpdate: (updated) {
+                                    setState(() => overlays[idx] = updated);
+                                  },
+                                  onRemove: () {
+                                    setState(() => overlays.removeAt(idx));
+                                  },
+                                  onDragStart: () {
+                                    setState(() => isDraggingOverlay = true);
+                                  },
+                                  onDragEnd: () {
+                                    setState(() => isDraggingOverlay = false);
+                                  },
+                                );
+                              }).toList(),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                ),
 
-            // Emoji Picker
-            if (isEmojiPickerOpen) _buildEmojiPicker(),
+                // Close button
+                Positioned(
+                  top: 40,
+                  left: 20,
+                  child: GestureDetector(
+                    onTap: () async {
+                      if (isLoading) return;
+                      
+                      if (widget.item == null) {
+                        // toggleLoad(true);
+                        await _handleDiscard(context);
+                        // toggleLoad(false);
+                      }
 
-            // Mood Button
-            if (!isDraggingOverlay)
-              Positioned(
-                left: 20,
-                bottom: 140 + bottomSafe,
-                child: _buildMoodButton(),
-              ),
-
-            // Add to Journal pill
-            if (!isDraggingOverlay)
-              Positioned(
-                bottom: 80 + bottomSafe,
-                left: 20,
-                right: 20,
-                child: GestureDetector(
-                  onTap: _toggleJournal,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 250),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(30),
-                      border: Border.all(color: Colors.white10),
+                      Navigator.pop(context);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.3),
+                        shape: BoxShape.circle,
+                      ),
+                      child: isLoading
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : const Icon(Icons.close, color: Colors.white),
                     ),
+                  ),
+                ),
+
+                // Top right action buttons
+                Positioned(
+                  top: 40,
+                  right: 20,
+                  child: Row(
+                    children: [
+                      _buildActionButton(
+                        icon: Icons.text_fields,
+                        onTap: _showTextOverlayDialog,
+                      ),
+                      const SizedBox(width: 10),
+                      _buildActionButton(
+                        icon: Icons.emoji_emotions,
+                        onTap: _showEmojiPicker,
+                      ),
+                      const SizedBox(width: 10),
+                      _buildActionButton(
+                        icon: Icons.music_note,
+                        onTap: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Music feature coming soon!'),
+                              duration: Duration(seconds: 1),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Emoji Picker
+                if (isEmojiPickerOpen) _buildEmojiPicker(),
+
+                // Add to Journal pill
+                if (!isDraggingOverlay)
+                  Positioned(
+                    bottom: 80 + bottomSafe,
+                    left: 20,
+                    right: 20,
+                    child: GestureDetector(
+                      onTap: _toggleJournal,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 250),
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(30),
+                          border: Border.all(color: Colors.white10),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Add to Journal',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 16,
+                              ),
+                            ),
+                            AnimatedRotation(
+                              turns: isJournalOpen ? 0.5 : 0.0,
+                              duration: const Duration(milliseconds: 300),
+                              child: const Icon(
+                                Icons.keyboard_arrow_up,
+                                color: Colors.white70,
+                                size: 22,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Bottom Journal Drawer
+                if (!isDraggingOverlay) _buildBottomJournalDrawer(),
+
+                // Mood Drawer (now attached to bottom button)
+                if (!isDraggingOverlay) _buildMoodDrawer(),
+
+                // Trash can (shown when dragging overlays)
+                if (isDraggingOverlay)
+                  Positioned(
+                    bottom: 20 + bottomSafe,
+                    left: MediaQuery.of(context).size.width / 2 - 35,
+                    child: Container(
+                      width: 70,
+                      height: 70,
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.8),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.red.withOpacity(0.5),
+                            blurRadius: 20,
+                            spreadRadius: 5,
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.delete,
+                        color: Colors.white,
+                        size: 35,
+                      ),
+                    ),
+                  ),
+
+                // Share Memory button with mood selector
+                if (!isDraggingOverlay)
+                  Positioned(
+                    left: 20,
+                    right: 20,
+                    bottom: 10 + bottomSafe,
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'Add to Journal',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
+                        // Mood side button
+                        GestureDetector(
+                          onTap: () {
+                            if (isLoading) return;
+                            _toggleMood();
+                          },
+                          child: Container(
+                            height: 54,
+                            width: 54,
+                            decoration: BoxDecoration(
+                              color: palette[0].withOpacity(0.9),
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(14),
+                                bottomLeft: Radius.circular(14),
+                              ),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.2),
+                                width: 1,
+                              ),
+                            ),
+                            child: Center(
+                              child: selectedMood.isEmpty ? 
+                              Icon(Icons.keyboard_arrow_up_rounded) :
+                              Text(
+                                    moods.firstWhere(
+                                        (m) => m['label'] == selectedMood,
+                                        orElse: () => {'emoji': '😊'},
+                                      )['emoji'] as String,
+                                style: const TextStyle(fontSize: 24),
+                              ),
+                            ),
                           ),
                         ),
-                        AnimatedRotation(
-                          turns: isJournalOpen ? 0.5 : 0.0,
-                          duration: const Duration(milliseconds: 300),
-                          child: const Icon(
-                            Icons.keyboard_arrow_up,
-                            color: Colors.white70,
-                            size: 22,
+                        
+                        // Main Share Memory button
+                        Expanded(
+                          child: SizedBox(
+                            height: 54,
+                            child: ElevatedButton(
+                              onPressed: () async {
+                                if (isLoading) return;
+                                
+                                // If no mood selected, show mood picker
+                                if (selectedMood.isEmpty) {
+                                  _toggleMood();
+                                  return;
+                                }
+                                
+                                // Otherwise, proceed with upload
+                                toggleLoad(true);
+                                await saveToSupabase();
+                                toggleLoad(false);
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: palette[0].withOpacity(0.9),
+                                shape: const RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.only(
+                                    topRight: Radius.circular(14),
+                                    bottomRight: Radius.circular(14),
+                                  ),
+                                ),
+                                elevation: 0,
+                              ),
+                              child: isLoading
+                                  ? const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation<Color>(
+                                            Colors.white),
+                                      ),
+                                    )
+                                  : Text(
+                                      selectedMood.isEmpty
+                                          ? 'Select Mood'
+                                          : 'Share Memory',
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700),
+                                    ),
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                ),
-              ),
-
-            // Bottom Journal Drawer
-            if (isJournalOpen) _buildBottomJournalDrawer(),
-
-            // Mood Drawer
-            if (!isDraggingOverlay) _buildMoodDrawer(),
-
-            // Trash can (shown when dragging overlays)
-            if (isDraggingOverlay)
-              Positioned(
-                bottom: 20 + bottomSafe,
-                left: MediaQuery.of(context).size.width / 2 - 35,
-                child: Container(
-                  width: 70,
-                  height: 70,
-                  decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.8),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.red.withOpacity(0.5),
-                        blurRadius: 20,
-                        spreadRadius: 5,
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.delete,
-                    color: Colors.white,
-                    size: 35,
+              ],
+            ),
+          ),
+          
+          // Loading overlay
+          if (isLoading)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withOpacity(0.5),
+                child: const Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                   ),
                 ),
               ),
-
-            // Share Memory button
-            if (!isDraggingOverlay)
-              Positioned(
-                left: 20,
-                right: 20,
-                bottom: 10 + bottomSafe,
-                child: SizedBox(
-                  height: 54,
-                  child: ElevatedButton(
-                    onPressed: saveToSupabase,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: palette[0].withOpacity(0.9),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    child: const Text(
-                      'Share Memory',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }
 
   Widget _buildActionButton({required IconData icon, required VoidCallback onTap}) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: isLoading ? null : onTap,
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
@@ -695,36 +794,12 @@ class _JournalScreenState extends State<JournalScreen>
     );
   }
 
-  Widget _buildMoodButton() {
-    return GestureDetector(
-      onTap: _toggleMood,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.06),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.white10),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.mood, color: Colors.white, size: 18),
-            const SizedBox(width: 8),
-            Text(
-              selectedMood.isEmpty ? 'Mood' : selectedMood,
-              style: const TextStyle(color: Colors.white),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildMoodDrawer() {
     final bottomSafe = MediaQuery.of(context).padding.bottom;
     return Positioned(
       left: 20,
-      bottom: 184 + bottomSafe,
+      right: 20,
+      bottom: 70 + bottomSafe,
       child: SizeTransition(
         sizeFactor: _moodDrawerController,
         axisAlignment: -1.0,
@@ -736,7 +811,7 @@ class _JournalScreenState extends State<JournalScreen>
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
                 child: Container(
-                  width: 180,
+                  width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: Colors.blueGrey.withOpacity(0.18),
@@ -745,38 +820,46 @@ class _JournalScreenState extends State<JournalScreen>
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
-                    children: moods.map((m) {
-                      final isSelected = selectedMood == m['label'];
-                      return ListTile(
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                        leading: Text(m['emoji']!,
-                            style: const TextStyle(fontSize: 20)),
-                        title: Text(
-                          m['label']!,
-                          style: TextStyle(
-                            color: isSelected ? palette[0] : Colors.white,
-                            fontWeight:
-                                isSelected ? FontWeight.w700 : FontWeight.w500,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      
+                      ...moods.map((m) {
+                        final isSelected = selectedMood == m['label'];
+                        return ListTile(
+                          dense: true,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                          leading: Text(m['emoji']!,
+                              style: const TextStyle(fontSize: 20)),
+                          title: Text(
+                            m['label']!,
+                            style: TextStyle(
+                              color: isSelected ? palette[1] : Colors.white,
+                              fontWeight:
+                                  isSelected ? FontWeight.w700 : FontWeight.w500,
+                              fontSize: 14,
+                            ),
                           ),
-                        ),
-                        onTap: () {
-                          setState(() {
-                            selectedMood = m['label'] as String;
-                            selectedMoodValue = m['value'] as int;
-                          });
-                          _toggleMood();
-                        },
-                      );
-                    }).toList(),
+                          onTap: () {
+                            setState(() {
+                              selectedMood = m['label'] as String;
+                              selectedMoodValue = m['value'] as int;
+                            });
+                            _toggleMood();
+                          },
+                        );
+                      }).toList(),
+                    ],
                   ),
                 ),
               ),
             ),
             Container(
               width: 2,
-              height: 4,
-              color: Colors.white.withOpacity(0.3),
+              height: 8,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(1),
+              ),
             ),
           ],
         ),
@@ -785,121 +868,156 @@ class _JournalScreenState extends State<JournalScreen>
   }
 
   Widget _buildBottomJournalDrawer() {
-    final height = MediaQuery.of(context).size.height * 0.46;
-    return AnimatedBuilder(
-      animation: _bottomDrawerController,
-      builder: (context, child) {
-        final value = _bottomDrawerController.value;
-        return Positioned(
-          left: 0,
-          right: 0,
-          bottom: -height + (height * value) + 60,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 12),
-                padding: const EdgeInsets.all(14),
-                height: height,
-                decoration: BoxDecoration(
-                  color: Colors.grey.withOpacity(0.22),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white10),
+  final bottomSafe = MediaQuery.of(context).padding.bottom;
+  
+  return AnimatedBuilder(
+    animation: _bottomDrawerController,
+    builder: (context, child) {
+      final value = _bottomDrawerController.value;
+      
+      return Positioned(
+        bottom: 80 + bottomSafe,
+        left: 20,
+        right: 20,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Expandable content (appears above the button)
+            ClipRect(
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                heightFactor: value, // This makes it expand/collapse smoothly
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                      child: Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.withOpacity(0.22),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.white10),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SizedBox(
+                              height: 30,
+                              child: Row(
+                                children: [
+                                  const Expanded(
+                                    child: Text(
+                                      'Journal Entry',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.close, color: Colors.white, size: 20),
+                                    onPressed: _toggleJournal,
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Divider(color: Colors.white12),
+                            const SizedBox(height: 8),
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.35),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              child: TextField(
+                                controller: whatsController,
+                                maxLines: 5,
+                                style: const TextStyle(color: Colors.white),
+                                decoration: const InputDecoration(
+                                  border: InputBorder.none,
+                                  hintText: 'Describe the moment...',
+                                  hintStyle: TextStyle(color: Colors.white54),
+                                ),
+                              ),
+                            ),
+                            if (tags.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 6,
+                                children: tags
+                                    .map((t) => Chip(
+                                          label: Text(t),
+                                          backgroundColor: Colors.white12,
+                                          labelStyle: const TextStyle(color: Colors.white),
+                                          onDeleted: () {
+                                            setState(() => tags.remove(t));
+                                          },
+                                        ))
+                                    .toList(),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              ),
+            ),
+            
+            // "Add to Journal" button (always visible)
+            GestureDetector(
+              onTap: _toggleJournal,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                decoration: BoxDecoration(
+                  color: isJournalOpen 
+                      ? Colors.white.withOpacity(0.12)
+                      : Colors.white.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(30),
+                  border: Border.all(
+                    color: isJournalOpen ? Colors.white24 : Colors.white10,
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        const Expanded(
-                          child: Text(
-                            'Journal Entry',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close, color: Colors.white),
-                          onPressed: _toggleJournal,
-                        ),
-                      ],
-                    ),
-                    const Divider(color: Colors.white12),
-                    const SizedBox(height: 8),
-                    const Text("What's happening?",
-                        style: TextStyle(color: Colors.white70)),
-                    const SizedBox(height: 8),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.35),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: TextField(
-                        controller: whatsController,
-                        maxLines: 3,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(
-                          border: InputBorder.none,
-                          hintText: 'Describe the moment...',
-                          hintStyle: TextStyle(color: Colors.white54),
-                        ),
+                    const Text(
+                      'Add to Journal',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    const Text("Tags", style: TextStyle(color: Colors.white70)),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: tagController,
-                            style: const TextStyle(color: Colors.white),
-                            decoration: const InputDecoration(
-                              border: InputBorder.none,
-                              hintText: 'Add a tag',
-                              hintStyle: TextStyle(color: Colors.white54),
-                              filled: true,
-                              fillColor: Colors.black26,
-                              contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 8),
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: _addTag,
-                          icon: const Icon(Icons.add, color: Colors.white),
-                        ),
-                      ],
-                    ),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: tags
-                          .map((t) => Chip(
-                                label: Text(t),
-                                backgroundColor: Colors.white12,
-                                labelStyle: const TextStyle(color: Colors.white),
-                                onDeleted: () {
-                                  setState(() => tags.remove(t));
-                                },
-                              ))
-                          .toList(),
+                    AnimatedRotation(
+                      turns: isJournalOpen ? 0.5 : 0.0,
+                      duration: const Duration(milliseconds: 300),
+                      child: const Icon(
+                        Icons.keyboard_arrow_up,
+                        color: Colors.white70,
+                        size: 22,
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
-          ),
-        );
-      },
-    );
-  }
+          ],
+        ),
+      );
+    },
+  );
 }
+    }
 
 class _OverlayItem {
   final String id;
