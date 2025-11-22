@@ -1,3 +1,5 @@
+import 'dart:async';
+import "package:presentation/processes/notifications_service.dart";
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:presentation/objects/globals.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -8,6 +10,10 @@ class DatabaseService {
   static final DatabaseService _instance = DatabaseService._internal();
   factory DatabaseService() => _instance;
   DatabaseService._internal();
+
+  //Notifications
+  final Map<String, Timer> _followNotificationTimers = {};
+  final Map<String, bool> _pendingFollowNotifications = {};
 
   // Get Supabase client
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -320,6 +326,44 @@ class DatabaseService {
           'followingID': userID,
         });
         print('Now following $userID');
+
+        // 🔔 BATCH FOLLOW NOTIFICATION
+        // Cancel existing timer if user is rapidly following
+        _followNotificationTimers[userID]?.cancel();
+      
+        // Mark that this user has a pending notification
+        _pendingFollowNotifications[userID] = true;
+      
+        // Create a debounced timer - only send notification after 2 seconds of inactivity
+        _followNotificationTimers[userID] = Timer(const Duration(seconds: 2), () async {
+          // Only send if still marked as pending (not unfollowed in the meantime)
+          if (_pendingFollowNotifications[userID] == true) {
+            try {
+              final currentUserData = await _supabase
+                .from('user')
+                .select('username, profile_pic_url')
+                .eq('uid', storageService.currentUserId!)
+                .single();
+
+              await notificationService.createNotification(
+                recipientId: userID,
+                type: 'follow',
+                actorId: storageService.currentUserId!,
+                actorName: currentUserData['username'] ?? 'Someone',
+                actorAvatar: currentUserData['profile_pic_url'],
+              );
+            
+              print('✅ Follow notification sent to $userID');
+            } catch (e) {
+              print('Error creating follow notification: $e');
+            }
+          
+            // Clean up
+            _pendingFollowNotifications.remove(userID);
+            _followNotificationTimers.remove(userID);
+          }
+        });
+
         return true;
       } else {
         // Already following → delete
@@ -329,6 +373,11 @@ class DatabaseService {
             .eq('followerID', storageService.currentUserId!)
             .eq('followingID', userID);
         print('Unfollowed $userID');
+
+        // 🔔 Cancel pending notification if user unfollows before timer fires
+        _followNotificationTimers[userID]?.cancel();
+        _pendingFollowNotifications[userID] = false;
+
         return false;
       }
     } catch (e) {

@@ -17,6 +17,8 @@ import 'screens/bin_screen.dart';
 import 'screens/sign_in.dart';
 import 'screens/loading_screen.dart';
 
+import 'objects/notifications_screen.dart';
+
 import 'package:camera/camera.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fbauth;
 
@@ -162,7 +164,8 @@ class RootState extends State<Root> {
             return PreviewScreen(imagePath: args.toString());
           }
         },
-        '/editProfile': (context) => const EditProfileScreen(), 
+        '/editProfile': (context) => const EditProfileScreen(),
+        '/notifications': (context) => const NotificationsScreen(), 
       },
     );
   }

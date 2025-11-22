@@ -1,3 +1,4 @@
+import 'package:presentation/processes/notifications_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:presentation/objects/memory_card.dart';
@@ -216,6 +217,56 @@ class CommentsService {
         'created_at': DateTime.now().toUtc().toIso8601String(),
         'likes_count': 0,
       });
+
+      // 🔔 CREATE NOTIFICATION
+      try {
+        final currentUserData = await _supabase
+          .from('user')
+          .select('username, profile_pic_url')
+          .eq('uid', currentUserId!)
+          .single();
+
+        if (replyToCommentId != null) {
+          // Reply notification
+          final originalComment = await _supabase
+            .from('comment')
+            .select('userID')
+            .eq('id', replyToCommentId)
+            .single();
+    
+          await notificationService.createNotification(
+            recipientId: originalComment['userID'] as String,
+            type: 'comment_reply',
+            actorId: currentUserId!,
+            actorName: currentUserData['username'] ?? 'Someone',
+            actorAvatar: currentUserData['profile_pic_url'],
+            commentId: replyToCommentId,
+            commentText: text,
+            memoryId: memoryId,
+          );
+        } else {
+          // New comment notification
+          final memory = await _supabase
+            .from('memory')
+            .select('userID')
+            .eq('memoryID', memoryId)
+            .single();
+    
+          await notificationService.createNotification(
+            recipientId: memory['userID'] as String,
+            type: 'memory_comment',
+            actorId: currentUserId!,
+            actorName: currentUserData['username'] ?? 'Someone',
+            actorAvatar: currentUserData['profile_pic_url'],
+            commentText: text,
+            memoryId: memoryId,
+          );
+        }
+      } catch (e) {
+        print('Error creating comment notification: $e');
+      }
+
+      print('✅ Comment posted successfully');
       
       print('✅ Comment posted successfully');
     } catch (e) {
@@ -262,6 +313,33 @@ class CommentsService {
         await _supabase.rpc('increment_comment_likes', params: {
           'comment_id': commentId,
         });
+
+        // 🔔 CREATE NOTIFICATION
+        try {
+          final comment = await _supabase
+            .from('comment')
+            .select('userID, memoryID')
+            .eq('id', commentId)
+            .single();
+  
+          final currentUserData = await _supabase
+            .from('user')
+            .select('username, profile_pic_url')
+            .eq('uid', currentUserId!)
+            .single();
+
+          await notificationService.createNotification(
+            recipientId: comment['userID'] as String,
+            type: 'comment_like',
+            actorId: currentUserId!,
+            actorName: currentUserData['username'] ?? 'Someone',
+            actorAvatar: currentUserData['profile_pic_url'],
+            commentId: commentId,
+            memoryId: comment['memoryID'] as int,
+          );
+        } catch (e) {
+          print('Error creating comment like notification: $e');
+        }
         
         print('❤️ Comment liked');
       }
@@ -376,6 +454,34 @@ class CommentsService {
           'created_at': DateTime.now().toIso8601String(),
         });
         
+        // 🔔 CREATE NOTIFICATION - Add this block
+        try {
+          // Get memory owner ID
+          final memory = await _supabase
+            .from('memory')
+            .select('userID')
+            .eq('memoryID', memoryId)
+            .single();
+  
+          final memoryOwnerId = memory['userID'] as String;
+          final currentUserData = await _supabase
+            .from('user')
+            .select('username, profile_pic_url')
+            .eq('uid', currentUserId!)
+            .single();
+
+          await notificationService.createNotification(
+            recipientId: memoryOwnerId,
+            type: 'memory_like',
+            actorId: currentUserId!,
+            actorName: currentUserData['username'] ?? 'Someone',
+            actorAvatar: currentUserData['profile_pic_url'],
+            memoryId: memoryId,
+          );
+        } catch (e) {
+          print('Error creating like notification: $e');
+        }
+
         print('❤️ Memory liked');
       }
     } catch (e) {

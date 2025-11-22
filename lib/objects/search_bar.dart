@@ -1,3 +1,4 @@
+import 'package:presentation/processes/notifications_service.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -365,70 +366,116 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
           Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            // 🔔 NOTIFICATION BUTTON
-            GestureDetector(
-              onTap: () {
-                Navigator.pushNamed(context, '/notifications');
-              },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: memoirTheme.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.08),
-                        blurRadius: 6,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: Icon(
-                    Icons.notifications_outlined,
-                    size: 18,
-                    color: memoirTheme.onSurface,
-                  ),
-                ),
-              ),
-    
-              const SizedBox(width: 8),
-    
-              // ✨ FILTERS BUTTON
-              GestureDetector(
+            // 🔔 NOTIFICATION BUTTON WITH BADGE
+            StreamBuilder<int>(
+              stream: notificationService.getUnreadCount(),
+              builder: (context, snapshot) {
+                final unreadCount = snapshot.data ?? 0;
+        
+              return GestureDetector(
                 onTap: () {
-                  debugPrint("Filters button tapped");
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: memoirTheme.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.08),
-                        blurRadius: 6,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
+                  Navigator.pushNamed(context, '/notifications');
+              },
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: memoirTheme.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.08),
+                          blurRadius: 6,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      Icons.notifications_outlined,
+                      size: 18,
+                      color: memoirTheme.onSurface,
+                    ),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.layers, size: 15, color: memoirTheme.onSurface),
-                      const SizedBox(width: 6),
-                      Text(
-                        "Filters",
-                        style: TextStyle(
-                          color: memoirTheme.onSurface,
-                          fontWeight: FontWeight.w400,
-                          fontSize: 13),
+              
+                  // Unread badge
+                  if (unreadCount > 0)
+                    Positioned(
+                      right: -4,
+                      top: -4,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white,
+                            width: 2,
+                          ),
+                        ),
+                    constraints: const BoxConstraints(
+                      minWidth: 18,
+                      minHeight: 18,
+                    ),
+                    child: Center(
+                      child: Text(
+                        unreadCount > 99 ? '99+' : '$unreadCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          height: 1,
+                        ),
                       ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
+        );
+      },
+    ),
+    
+    const SizedBox(width: 8),
+
+    // ✨ FILTERS BUTTON
+    GestureDetector(
+      onTap: () {
+        debugPrint("Filters button tapped");
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: memoirTheme.surface,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 6,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.layers, size: 15, color: memoirTheme.onSurface),
+            const SizedBox(width: 6),
+            Text(
+              "Filters",
+              style: TextStyle(
+                color: memoirTheme.onSurface,
+                fontWeight: FontWeight.w400,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  ],
+),
         ],
       ),
     );
