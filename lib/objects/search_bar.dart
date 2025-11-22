@@ -368,7 +368,7 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
             // 🔔 NOTIFICATION BUTTON
             GestureDetector(
               onTap: () {
-                Navigator.pushNamed(context, '/notifications');
+                //TODO: Navigator.pushNamed(context, '/notifications');
               },
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
