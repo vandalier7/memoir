@@ -82,7 +82,7 @@ class SettingsScreen extends StatelessWidget {
             icon: Icons.notifications_outlined,
             title: "Notifications",
             trailing: Transform.scale(
-              scale: 0.7, // 🔽 make it 80% of original size
+              scale: 0.7, // 
               child: Switch(
                 value: true,
                 materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,

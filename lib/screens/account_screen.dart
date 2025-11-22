@@ -120,62 +120,64 @@ class _AccountScreenState extends State<AccountScreen> {
   }
 
   Future<void> _loadProfileData() async {
-    // _isLoading = true;
-    final currentUser = FirebaseAuth.instance.currentUser;
-    final String profileUid = widget.uid ?? currentUser?.uid ?? '';
+  final currentUser = FirebaseAuth.instance.currentUser;
+  final String profileUid = widget.uid ?? currentUser?.uid ?? '';
 
-    if (profileUid.isEmpty) {
-      setState(() {
-        _isLoading = false;
-        _errorMessage = "No user ID available";
-      });
-      return;
-    }
+  if (profileUid.isEmpty) {
+    setState(() {
+      _isLoading = false;
+      _errorMessage = "No user ID available";
+    });
+    return;
+  }
+
+  try {
+    // ✅ Get username safely
+    final username = await databaseService.getUserName(_userId);
+
+    // ✅ Get other counts
+    final results = await Future.wait([
+      databaseService.getFollowerCount(_userId),
+      databaseService.getFollowingCount(_userId),
+      databaseService.getMemoryCount(_userId),
+    ]);
 
     try {
-      // Fetch all data in parallel
-      final results = await Future.wait([
-        databaseService.getUserName(_userId),
-        databaseService.getFollowerCount(_userId),
-        databaseService.getFollowingCount(_userId),
-        databaseService.getMemoryCount(_userId),
-      ]);
+      final userData = await _supabase
+          .from('user')
+          .select('profile_pic_url')
+          .eq('uid', _userId)
+          .maybeSingle();
 
-try {
-        final userData = await _supabase
-            .from('user')
-            .select('profile_pic_url')
-            .eq('uid', _userId) // Query using Firebase ID
-            .maybeSingle();
-        
-        if (userData != null && userData['profile_pic_url'] != null) {
-           setState(() {
-             _profilepictureUrl = userData['profile_pic_url'];
-           });
-        }
-      } catch (imgError) {
-        debugPrint("Could not load profile image: $imgError");
-      }
-      
-      if (mounted) {
+      if (userData != null && userData['profile_pic_url'] != null) {
         setState(() {
-          _username = results[0] as String? ?? "Unknown User";
-          _followerCount = results[1] as int? ?? 0;
-          _followingCount = results[2] as int? ?? 0;
-          _memoryCount = results[3] as int? ?? 0;
-          _isLoading = false;
+          _profilepictureUrl = userData['profile_pic_url'];
         });
       }
-    } catch (e) {
-      debugPrint('Error loading profile data: $e');
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = "Failed to load profile";
-        });
-      }
+    } catch (imgError) {
+      debugPrint("Could not load profile image: $imgError");
+    }
+
+    if (mounted) {
+      setState(() {
+        _username = username ?? "Unknown User";
+        _followerCount = results[0] as int? ?? 0;
+        _followingCount = results[1] as int? ?? 0;
+        _memoryCount = results[2] as int? ?? 0;
+        _isLoading = false;
+      });
+    }
+  } catch (e) {
+    debugPrint('Error loading profile data: $e');
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = "Failed to load profile";
+      });
     }
   }
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -264,16 +266,35 @@ try {
                 const SizedBox(height: 12),
 
                 // Dynamic stats
-                Row(
+               Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _statItem("Followers", _followerCount.toString()),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.pushNamed(
+                          context,
+                          '/followers-following',
+                          arguments: _userId, // Pass the profile's userId
+                        );
+                      },
+                      child: _statItem("Followers", _followerCount.toString()),
+                    ),
                     _dotDivider(),
-                    _statItem("Following", _followingCount.toString()),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.pushNamed(
+                          context,
+                          '/followers-following',
+                          arguments: _userId,
+                        );
+                      },
+                      child: _statItem("Following", _followingCount.toString()),
+                    ),
                     _dotDivider(),
                     _statItem("Memories", _memoryCount.toString()),
                   ],
                 ),
+
 
                 const SizedBox(height: 20),
 

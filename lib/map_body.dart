@@ -52,10 +52,20 @@ class MapState extends State<MapBody> {
   // Add to MapState:
   Map<LatLng, List<LatLng>> screenSpaceClusters = {};
   bool isClusteringInProgress = false;
+  DateTime? _lastClusteringTime;
+  static const Duration _clusteringDebounce = Duration(milliseconds: 500);
 
   Future<void> _performScreenSpaceClustering() async {
+    // Debounce clustering to run max every 500ms
+    final now = DateTime.now();
+    if (_lastClusteringTime != null && 
+        now.difference(_lastClusteringTime!) < _clusteringDebounce) {
+      return; // Skip if called too soon
+    }
+
     if (isClusteringInProgress) return;
     isClusteringInProgress = true;
+    _lastClusteringTime = now;
 
     try {
       final Map<LatLng, List<LatLng>> clusters = {};
@@ -81,8 +91,8 @@ class MapState extends State<MapBody> {
           
           final screen2 = await mapController.toScreenLocation(pos2);
           
-          final dx = (screen1.x - screen2.x) / pixelRatio!;
-          final dy = (screen1.y - screen2.y) / pixelRatio!;
+          final dx = (screen1.x - screen2.x) / pixelRatio;
+          final dy = (screen1.y - screen2.y) / pixelRatio;
           final distance = sqrt(dx * dx + dy * dy);
           
           if (distance < clusterThresholdPixels) {
@@ -106,9 +116,11 @@ class MapState extends State<MapBody> {
         }
       }
       
-      setState(() {
-        screenSpaceClusters = clusters;
-      });
+      if (mounted) {
+        setState(() {
+          screenSpaceClusters = clusters;
+        });
+      }
     } finally {
       isClusteringInProgress = false;
     }
@@ -259,64 +271,70 @@ class MapState extends State<MapBody> {
   }
 
   void updateMapHold(bool value) {
+    // Skip if value hasn't changed
+    if (isHoldingMap == value) return;
+
+    setState(() {
+      isHoldingMap = value;
+    });
+
+    // Only rebuild memory list when releasing the map (value = false)
+    if (!value) {
+      _rebuildVisibleMemories();
+    }
+  }
+
+  void _rebuildVisibleMemories() {
     // Skip position-based filtering if no current position
     final positionToUse = currentPosition != null 
         ? (nearestMemoryPosition ?? currentPosition!)
         : null;
 
-    setState(() {
-      isHoldingMap = value;
-      if (!value) {
-        memories.clear();
-        for (MemoryData memory in unfilteredMemories) {
-          if (positionToUse == null) {
-            // No location - show based on decay only
-            if (memory.decay <= mapZoom) {
-              memories.add(memory);
-            } else if (memory.userId! == storageService.currentUserId) {
-              memory.finalDecay = 0;
-              memories.add(memory);
-            } else if (friends.contains(memory.userId!) && memory.decay - 10 <= mapZoom) {
-              memory.finalDecay = memory.decay - 10;
-              memories.add(memory);
-            } else if (followedUsers.contains(memory.userId!) && memory.decay - 10 <= mapZoom) {
-              memory.finalDecay = memory.decay - 10;
+    memories.clear();
+    for (MemoryData memory in unfilteredMemories) {
+      if (positionToUse == null) {
+        // No location - show based on decay only
+        if (memory.decay <= mapZoom) {
+          memories.add(memory);
+        } else if (memory.userId! == storageService.currentUserId) {
+          memory.finalDecay = 0;
+          memories.add(memory);
+        } else if (friends.contains(memory.userId!) && memory.decay - 10 <= mapZoom) {
+          memory.finalDecay = memory.decay - 10;
+          memories.add(memory);
+        } else if (followedUsers.contains(memory.userId!) && memory.decay - 10 <= mapZoom) {
+          memory.finalDecay = memory.decay - 10;
+          memories.add(memory);
+        }
+      } else {
+        // Has location - use position-based filtering
+        if (memory.decay <= mapZoom || memory.position == positionToUse) {
+          if (memory.position != positionToUse){
+            if (!isWithinPixelThreshold(pos1: memory.position, pos2: positionToUse, pixelThreshold: clearanceRadius, currentZoom: mapZoom)) {
               memories.add(memory);
             }
           } else {
-            // Has location - use position-based filtering
-            if (memory.decay <= mapZoom || memory.position == positionToUse) {
-              if (memory.position != positionToUse){
-                if (!isWithinPixelThreshold(pos1: memory.position, pos2: positionToUse, pixelThreshold: clearanceRadius, currentZoom: mapZoom)) {
-                  memories.add(memory);
-                }
-              } else {
-                memories.add(memory);
-              }
-            } else if (memory.userId! == storageService.currentUserId) {
-              if (!isWithinPixelThreshold(pos1: memory.position, pos2: positionToUse, pixelThreshold: clearanceRadius, currentZoom: mapZoom)) {
-                memories.add(memory);
-                memory.finalDecay = 0;
-              }
-            } else if (friends.contains(memory.userId!) && memory.decay - 10 <= mapZoom) {
-              if (!isWithinPixelThreshold(pos1: memory.position, pos2: positionToUse, pixelThreshold: clearanceRadius, currentZoom: mapZoom)) {
-                memory.finalDecay = memory.decay - 10;
-                memories.add(memory);
-              }
-            } else if (followedUsers.contains(memory.userId!) && memory.decay - 10 <= mapZoom) {
-              if (!isWithinPixelThreshold(pos1: memory.position, pos2: positionToUse, pixelThreshold: clearanceRadius, currentZoom: mapZoom)) {
-                memory.finalDecay = memory.decay - 10;
-                memories.add(memory);
-              }
-            }
+            memories.add(memory);
+          }
+        } else if (memory.userId! == storageService.currentUserId) {
+          if (!isWithinPixelThreshold(pos1: memory.position, pos2: positionToUse, pixelThreshold: clearanceRadius, currentZoom: mapZoom)) {
+            memories.add(memory);
+            memory.finalDecay = 0;
+          }
+        } else if (friends.contains(memory.userId!) && memory.decay - 10 <= mapZoom) {
+          if (!isWithinPixelThreshold(pos1: memory.position, pos2: positionToUse, pixelThreshold: clearanceRadius, currentZoom: mapZoom)) {
+            memory.finalDecay = memory.decay - 10;
+            memories.add(memory);
+          }
+        } else if (followedUsers.contains(memory.userId!) && memory.decay - 10 <= mapZoom) {
+          if (!isWithinPixelThreshold(pos1: memory.position, pos2: positionToUse, pixelThreshold: clearanceRadius, currentZoom: mapZoom)) {
+            memory.finalDecay = memory.decay - 10;
+            memories.add(memory);
           }
         }
       }
-    });
+    }
     
-    // for (MemoryData memory in memories) {
-    //   debugPrint(memory.addressString);
-    // }
     debugPrint(hasLocationError.toString());
   }
 
@@ -447,7 +465,8 @@ class MapState extends State<MapBody> {
           }
         },
         onPointerMove: (event) {
-          if (event.delta.distance > 1) {
+          // Only update if movement is significant (>5 pixels) to avoid constant updates
+          if (event.delta.distance > 5) {
             updateMapHold(true);
             isAnimatingToMemory = false;
           }
