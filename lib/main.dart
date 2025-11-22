@@ -17,7 +17,7 @@ import 'screens/bin_screen.dart';
 import 'screens/sign_in.dart';
 import 'screens/loading_screen.dart';
 
-import 'objects/notifications_screen.dart';
+import 'screens/notifications_screen.dart';
 
 import 'package:camera/camera.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fbauth;
