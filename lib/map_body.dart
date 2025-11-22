@@ -190,7 +190,10 @@ class MapState extends State<MapBody> {
 
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
+        permission = await Geolocator.requestPermission().timeout(
+        Duration(seconds: 5),
+        onTimeout: () => LocationPermission.unableToDetermine,
+      );
       }
       
       if (permission == LocationPermission.denied ||
@@ -731,10 +734,10 @@ Future<Position?> getUserLocation() async {
 
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
+      // permission = await Geolocator.requestPermission();
+      // if (permission == LocationPermission.denied) {
         return null;
-      }
+      // }
     }
 
     if (permission == LocationPermission.deniedForever) {
