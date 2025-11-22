@@ -205,7 +205,7 @@ class _JournalScreenState extends State<JournalScreen>
     }
 
     snack.showSnackBar(const SnackBar(content: Text('Uploading...')));
-    LatLng positionToUse = nearestMemoryPosition ?? currentPosition;
+    LatLng positionToUse = nearestMemoryPosition ?? currentPosition!;
 
     try{
       // Get current location and address

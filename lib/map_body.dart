@@ -1,4 +1,4 @@
-//map_body.dart
+// map_body.dart
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -30,8 +30,9 @@ class MapState extends State<MapBody> {
   bool isHoldingMap = false;
   bool considerTapAsDouble = false;
   bool isAnimatingToMemory = false;
-
   
+  // Location error tracking
+  String? locationErrorMessage;
   
   List<MemoryData>? activeMemories;
 
@@ -45,83 +46,82 @@ class MapState extends State<MapBody> {
   @override
   void initState() {
     super.initState();
-    _getLocation();
-    
+    getLocation();
   }
 
   // Add to MapState:
-  Map<LatLng, List<LatLng>> screenSpaceClusters = {}; // Maps cluster center to list of positions
+  Map<LatLng, List<LatLng>> screenSpaceClusters = {};
   bool isClusteringInProgress = false;
 
   Future<void> _performScreenSpaceClustering() async {
-  if (isClusteringInProgress) return;
-  isClusteringInProgress = true;
+    if (isClusteringInProgress) return;
+    isClusteringInProgress = true;
 
-  try {
-    final Map<LatLng, List<LatLng>> clusters = {};
-    final Set<LatLng> clustered = {};
-    final double clusterThresholdPixels = 50.0;
-    
-    final groupedMemories = groupMemoriesByPosition(memories);
-    final positions = groupedMemories.keys.toList();
-    final nearbyPos = _findNearbyMemoryPosition();
-    
-    for (final pos1 in positions) {
-      if (clustered.contains(pos1)) continue;
-      if (pos1 == nearbyPos) continue;
+    try {
+      final Map<LatLng, List<LatLng>> clusters = {};
+      final Set<LatLng> clustered = {};
+      final double clusterThresholdPixels = 50.0;
       
-      final screen1 = await mapController.toScreenLocation(pos1);
-      final List<LatLng> cluster = [pos1];
-      clustered.add(pos1);
+      final groupedMemories = groupMemoriesByPosition(memories);
+      final positions = groupedMemories.keys.toList();
+      final nearbyPos = _findNearbyMemoryPosition();
       
-      for (final pos2 in positions) {
-        if (pos2 == nearbyPos) continue;
-        if (pos1 == pos2) continue;
-        if (clustered.contains(pos2)) continue;
+      for (final pos1 in positions) {
+        if (clustered.contains(pos1)) continue;
+        if (pos1 == nearbyPos) continue;
         
-        final screen2 = await mapController.toScreenLocation(pos2);
+        final screen1 = await mapController.toScreenLocation(pos1);
+        final List<LatLng> cluster = [pos1];
+        clustered.add(pos1);
         
-        final dx = (screen1.x - screen2.x) / pixelRatio!;
-        final dy = (screen1.y - screen2.y) / pixelRatio!;
-        final distance = sqrt(dx * dx + dy * dy);
+        for (final pos2 in positions) {
+          if (pos2 == nearbyPos) continue;
+          if (pos1 == pos2) continue;
+          if (clustered.contains(pos2)) continue;
+          
+          final screen2 = await mapController.toScreenLocation(pos2);
+          
+          final dx = (screen1.x - screen2.x) / pixelRatio!;
+          final dy = (screen1.y - screen2.y) / pixelRatio!;
+          final distance = sqrt(dx * dx + dy * dy);
+          
+          if (distance < clusterThresholdPixels) {
+            cluster.add(pos2);
+            clustered.add(pos2);
+          }
+        }
         
-        if (distance < clusterThresholdPixels) {
-          cluster.add(pos2);
-          clustered.add(pos2);
+        if (cluster.length > 1) {
+          double avgLat = 0;
+          double avgLng = 0;
+          for (final pos in cluster) {
+            avgLat += pos.latitude;
+            avgLng += pos.longitude;
+          }
+          avgLat /= cluster.length;
+          avgLng /= cluster.length;
+          final clusterCenter = LatLng(avgLat, avgLng);
+          
+          clusters[clusterCenter] = cluster;
         }
       }
       
-      // ONLY ADD IF ACTUALLY CLUSTERED WITH OTHERS
-      if (cluster.length > 1) {
-        double avgLat = 0;
-        double avgLng = 0;
-        for (final pos in cluster) {
-          avgLat += pos.latitude;
-          avgLng += pos.longitude;
-        }
-        avgLat /= cluster.length;
-        avgLng /= cluster.length;
-        final clusterCenter = LatLng(avgLat, avgLng);
-        
-        clusters[clusterCenter] = cluster;
-      }
-      // If cluster.length == 1, don't add it to clusters map
+      setState(() {
+        screenSpaceClusters = clusters;
+      });
+    } finally {
+      isClusteringInProgress = false;
     }
-    
-    setState(() {
-      screenSpaceClusters = clusters;
-    });
-  } finally {
-    isClusteringInProgress = false;
   }
-}
 
-  // Find memory position closest to user within clusterRadius
   LatLng? _findNearbyMemoryPosition() {
+    // Return null if no current position
+    if (currentPosition == null) return null;
+    
     final groupedMemories = groupMemoriesByPosition(memories);
     
     for (final position in groupedMemories.keys) {
-      final distance = distanceBetween(currentPosition, position);
+      final distance = distanceBetween(currentPosition!, position);
       if (distance <= clusterRadius) {
         return position;
       }
@@ -129,12 +129,27 @@ class MapState extends State<MapBody> {
     return null;
   }
 
+  void panToCurrentPosition() async {
+    closePreview();
+    widget.closeMemory();
+    updateMapHold(true);
+    
+    final targetPosition = nearestMemoryPosition ?? currentPosition!;
+    
+    await mapController.animateCamera(
+        CameraUpdate.newLatLng(targetPosition),
+        duration: Duration(milliseconds: 1000));
+  }
+
   void zoomToCurrentPosition () async {
+    // Don't zoom if no location
+    if (currentPosition == null) return;
+    
     updateMapHold(true);
     closePreview();
     widget.closeMemory();
     
-    final targetPosition = nearestMemoryPosition ?? currentPosition;
+    final targetPosition = nearestMemoryPosition ?? currentPosition!;
     
     await mapController.animateCamera(
         CameraUpdate.newLatLngZoom(targetPosition, 18),
@@ -161,31 +176,61 @@ class MapState extends State<MapBody> {
     considerTapAsDouble = false;
   }
 
-  Future<void> _getLocation() async {
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) return;
+  Future<void> getLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        setState(() {
+          hasLocationError = true;
+          locationErrorMessage = 'Location services disabled';
+        });
+        toggleLoading(false);
+        return;
+      }
 
-    LocationPermission permission = await Geolocator.requestPermission();
-    if (permission == LocationPermission.denied ||
-        permission == LocationPermission.deniedForever) {
-      return;
-    }
-
-    Position pos = await Geolocator.getCurrentPosition(
-        locationSettings: AndroidSettings(accuracy: LocationAccuracy.high));
-
-    setState(() {
-      currentPosition = LatLng(pos.latitude, pos.longitude);
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
       
-    });
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        setState(() {
+          hasLocationError = true;
+          locationErrorMessage = permission == LocationPermission.deniedForever 
+              ? 'Location permission permanently denied'
+              : 'Location permission denied';
+        });
+        toggleLoading(false);
+        return;
+      }
 
-    await mapController.animateCamera(
-      CameraUpdate.newLatLng(
-        LatLng(pos.latitude, pos.longitude),
-      ),
-    );
+      if (!hasLocationError) return;
 
-    toggleLoading(false);
+      Position pos = await Geolocator.getCurrentPosition(
+          locationSettings: AndroidSettings(accuracy: LocationAccuracy.high));
+
+      setState(() {
+        currentPosition = LatLng(pos.latitude, pos.longitude);
+        hasLocationError = false;
+        locationErrorMessage = null;
+      });
+
+      await mapController.animateCamera(
+        CameraUpdate.newLatLng(
+          LatLng(pos.latitude, pos.longitude),
+        ),
+      );
+
+      toggleLoading(false);
+    } catch (e) {
+      debugPrint('Location error: $e');
+      setState(() {
+        hasLocationError = true;
+        locationErrorMessage = 'Failed to get location';
+      });
+      toggleLoading(false);
+    }
   }
 
   Future<void> animateCameraWithOffset({
@@ -214,73 +259,80 @@ class MapState extends State<MapBody> {
   }
 
   void updateMapHold(bool value) {
-
-    final positionToUse = nearestMemoryPosition ?? currentPosition;
-
+    // Skip position-based filtering if no current position
+    final positionToUse = currentPosition != null 
+        ? (nearestMemoryPosition ?? currentPosition!)
+        : null;
 
     setState(() {
       isHoldingMap = value;
       if (!value) {
         memories.clear();
         for (MemoryData memory in unfilteredMemories) {
-          
-
-          if (memory.decay <= mapZoom || memory.position == positionToUse) {
-            if (memory.position != positionToUse){
+          if (positionToUse == null) {
+            // No location - show based on decay only
+            if (memory.decay <= mapZoom) {
+              memories.add(memory);
+            } else if (memory.userId! == storageService.currentUserId) {
+              memory.finalDecay = 0;
+              memories.add(memory);
+            } else if (friends.contains(memory.userId!) && memory.decay - 10 <= mapZoom) {
+              memory.finalDecay = memory.decay - 10;
+              memories.add(memory);
+            } else if (followedUsers.contains(memory.userId!) && memory.decay - 10 <= mapZoom) {
+              memory.finalDecay = memory.decay - 10;
+              memories.add(memory);
+            }
+          } else {
+            // Has location - use position-based filtering
+            if (memory.decay <= mapZoom || memory.position == positionToUse) {
+              if (memory.position != positionToUse){
+                if (!isWithinPixelThreshold(pos1: memory.position, pos2: positionToUse, pixelThreshold: clearanceRadius, currentZoom: mapZoom)) {
+                  memories.add(memory);
+                }
+              } else {
+                memories.add(memory);
+              }
+            } else if (memory.userId! == storageService.currentUserId) {
               if (!isWithinPixelThreshold(pos1: memory.position, pos2: positionToUse, pixelThreshold: clearanceRadius, currentZoom: mapZoom)) {
+                memories.add(memory);
+                memory.finalDecay = 0;
+              }
+            } else if (friends.contains(memory.userId!) && memory.decay - 10 <= mapZoom) {
+              if (!isWithinPixelThreshold(pos1: memory.position, pos2: positionToUse, pixelThreshold: clearanceRadius, currentZoom: mapZoom)) {
+                memory.finalDecay = memory.decay - 10;
+                memories.add(memory);
+              }
+            } else if (followedUsers.contains(memory.userId!) && memory.decay - 10 <= mapZoom) {
+              if (!isWithinPixelThreshold(pos1: memory.position, pos2: positionToUse, pixelThreshold: clearanceRadius, currentZoom: mapZoom)) {
+                memory.finalDecay = memory.decay - 10;
                 memories.add(memory);
               }
             }
-            else {
-              memories.add(memory);
-            }
-            // memories.add(memory);
           }
-          else if (memory.userId! == storageService.currentUserId) {
-             // if memory is yours, always show
-            if (!isWithinPixelThreshold(pos1: memory.position, pos2: positionToUse, pixelThreshold: clearanceRadius, currentZoom: mapZoom)) {
-                memories.add(memory);
-                memory.finalDecay = 0;
-            }
-          }
-          else if (friends.contains(memory.userId!) && memory.decay - 10  <= mapZoom) {
-            if (!isWithinPixelThreshold(pos1: memory.position, pos2: positionToUse, pixelThreshold: clearanceRadius, currentZoom: mapZoom)) {
-                memory.finalDecay = memory.decay - 10;
-                memories.add(memory);
-                
-            }
-          }
-          else if (followedUsers.contains(memory.userId!) && memory.decay - 10 <= mapZoom) {
-            if (!isWithinPixelThreshold(pos1: memory.position, pos2: positionToUse, pixelThreshold: clearanceRadius, currentZoom: mapZoom)) {
-                memory.finalDecay = memory.decay - 10;
-                memories.add(memory);
-                
-            }
-          }
-          
         }
-        // memories.add(neaby)
-      } else {
-        
       }
-      if (memories.isEmpty) {}
     });
-    for (MemoryData memory in memories) {
-      debugPrint(memory.addressString);
-    }
-    debugPrint(mapZoom.toString());
+    
+    // for (MemoryData memory in memories) {
+    //   debugPrint(memory.addressString);
+    // }
+    debugPrint(hasLocationError.toString());
   }
 
   Future<void> updateLocation() async {
     var pos = await getUserLocation();
-    currentPosition = LatLng(pos!.latitude, pos.longitude);
-
-    _updateScreenPoint();
-    _updateAddress();
+    if (pos != null) {
+      currentPosition = LatLng(pos.latitude, pos.longitude);
+      _updateScreenPoint();
+      _updateAddress();
+    }
   }
 
   Future<void> _updateAddress() async {
-    final info = await getAddressFromLocation(currentPosition, locIQ);
+    if (currentPosition == null) return;
+    
+    final info = await getAddressFromLocation(currentPosition!, locIQ);
     debugPrint(info);
 
     setState(() {
@@ -295,8 +347,15 @@ class MapState extends State<MapBody> {
   }
 
   Future<void> _updateScreenPoint() async {
+    if (currentPosition == null) {
+      setState(() {
+        screenPoint = null;
+      });
+      return;
+    }
+    
     nearestMemoryPosition = _findNearbyMemoryPosition();
-    final positionToUse = nearestMemoryPosition ?? currentPosition;
+    final positionToUse = nearestMemoryPosition ?? currentPosition!;
     
     final point = await mapController.toScreenLocation(positionToUse);
     setState(() {
@@ -361,13 +420,14 @@ class MapState extends State<MapBody> {
     updateMapHold(false);
   }
 
+  // Expose location error state for MapButtons
+  bool get showLocationError => hasLocationError;
+
   @override
   Widget build(BuildContext context) {
     final groupedMemories = groupMemoriesByPosition(memories);
-    final nearbyMemoryPosition = _findNearbyMemoryPosition();
+    final nearbyMemoryPosition = currentPosition != null ? _findNearbyMemoryPosition() : null;
     
-    
-    // Build a set of positions that are part of multi-position clusters
     final Set<LatLng> clusteredPositions = {};
     for (final entry in screenSpaceClusters.entries) {
       if (entry.value.length > 1) {
@@ -399,7 +459,6 @@ class MapState extends State<MapBody> {
               "https://api.maptiler.com/maps/dataviz/style.json?key=gyEpeYKGmrox3x3xvhNk",
           onMapCreated: (controller) async {
             mapController = controller;
-
             await updateLocation();
           },
           onCameraIdle: () async {
@@ -409,8 +468,6 @@ class MapState extends State<MapBody> {
             _updateScreenPoint();
             updateMapHold(false);
             
-            
-            // Perform screen-space clustering after camera stops
             await _performScreenSpaceClustering();
             
             if (!isAnimatingToMemory) {
@@ -424,24 +481,6 @@ class MapState extends State<MapBody> {
             updateMapHold(true);
           },
           onMapLongClick: (point, latLng) {
-          //   double closestDist = double.maxFinite;
-          //   late MemoryData closestMemory;
-          //   for (MemoryData memory in memories){
-          //     if (!memory.head) {continue;}
-              
-          //     double dist = distanceBetween(memory.position, latLng);
-          //     if (dist < closestDist) {
-          //       closestMemory = memory;
-          //       closestDist = dist;
-          //     }
-          //   }
-          //   debugPrint("$closestDist");
-          //   if (closestDist <= clusterRadius) {
-          //     _newAddMemory(closestMemory.position, false);
-          //   }
-          //   else {
-          //     _newAddMemory(latLng, true);
-          //   }
           },
           initialCameraPosition: CameraPosition(
             target: LatLng(14.5995, 120.9842),
@@ -450,7 +489,7 @@ class MapState extends State<MapBody> {
         ),
       ),
 
-      // Render individual memory pins (skip if near user position)
+      // Render individual memory pins
       for (final entry in groupedMemories.entries)
         if (entry.key != nearbyMemoryPosition)
           MemoryPin.ofMemories(
@@ -461,7 +500,7 @@ class MapState extends State<MapBody> {
             !clusteredPositions.contains(entry.key),
             updateMapHold,
             decay: entry.value.first.decay,
-            finalDecay: entry.value.first.finalDecay ,
+            finalDecay: entry.value.first.finalDecay,
             mapZoom: mapZoom,
             showPreview: false,
             onShowMemories: showMemories,
@@ -508,8 +547,8 @@ class MapState extends State<MapBody> {
             },
           ),
 
-      // UserPin - displays at nearby memory position if within clusterRadius
-      if (screenPoint != null)
+      // UserPin - only show if location is available
+      if (screenPoint != null && currentPosition != null)
         Positioned(
           left: screenPoint!.x / pixelRatio - 27,
           top: screenPoint!.y / pixelRatio - 67,
@@ -520,14 +559,12 @@ class MapState extends State<MapBody> {
                 widget.closeMemory();
                 updateMapHold(true);
                 
-                
-                final targetPosition = nearbyMemoryPosition ?? currentPosition;
+                final targetPosition = nearbyMemoryPosition ?? currentPosition!;
                 
                 await mapController.animateCamera(
                     CameraUpdate.newLatLng(targetPosition),
                     duration: Duration(milliseconds: 1000));
                 
-                // Show memories if at a memory location
                 if (nearbyMemoryPosition != null) {
                   showMemories(groupedMemories[nearbyMemoryPosition]!);
                 }
@@ -547,7 +584,7 @@ class MapState extends State<MapBody> {
               )),
         ),
 
-      // Render active memories previews with hexagonal arrangement
+      // Render active memories previews
       if (activeMemories != null && activeMemories!.isNotEmpty)
         FutureBuilder<Point>(
           future: mapController.toScreenLocation(activeMemories!.first.position),
@@ -561,11 +598,9 @@ class MapState extends State<MapBody> {
             final scaledWidth = previewWidth * scaleFactor;
             final scaledHeight = previewHeight * scaleFactor;
             
-            // TODO : preview centering here
             final pinCenterX = screenPoint.x / pixelRatio - 14;
             final pinCenterY = screenPoint.y / pixelRatio - 40;
             
-            // Take only first 6 memories
             final displayMemories = activeMemories!.take(6).toList();
             
             return Stack(
@@ -573,7 +608,6 @@ class MapState extends State<MapBody> {
                 final index = entry.key;
                 final memory = entry.value;
                 
-                // Hexagonal arrangement positions
                 final radius = 100.0;
                 double dx = 0;
                 double dy = 0;
@@ -620,7 +654,6 @@ class MapState extends State<MapBody> {
                   dy = radius * sin(angle);
                 }
                 
-                // Calculate final position, centering preview on its point
                 final finalX = pinCenterX + dx - (scaledWidth / 2);
                 final finalY = pinCenterY + dy - (scaledHeight / 2);
                 
@@ -651,7 +684,6 @@ class MapState extends State<MapBody> {
                               onClose: closePreview,
                               memoryIndex: index,
                             ),
-                            // Mood indicator dot
                             Positioned(
                               top: -4,
                               left: -4,
@@ -691,28 +723,30 @@ class MapState extends State<MapBody> {
 }
 
 Future<Position?> getUserLocation() async {
-  bool serviceEnabled;
-  LocationPermission permission;
-
-  serviceEnabled = await Geolocator.isLocationServiceEnabled();
-  if (!serviceEnabled) {
-    return Future.error('Location services are disabled.');
-  }
-
-  permission = await Geolocator.checkPermission();
-  if (permission == LocationPermission.denied) {
-    permission = await Geolocator.requestPermission();
-    if (permission == LocationPermission.denied) {
-      return Future.error('Location permissions are denied.');
+  try {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return null;
     }
-  }
 
-  if (permission == LocationPermission.deniedForever) {
-    return Future.error('Location permissions are permanently denied.');
-  }
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return null;
+      }
+    }
 
-  return await Geolocator.getCurrentPosition(
-      locationSettings: AndroidSettings(accuracy: LocationAccuracy.high));
+    if (permission == LocationPermission.deniedForever) {
+      return null;
+    }
+
+    return await Geolocator.getCurrentPosition(
+        locationSettings: AndroidSettings(accuracy: LocationAccuracy.high));
+  } catch (e) {
+    debugPrint('getUserLocation error: $e');
+    return null;
+  }
 }
 
 Map<LatLng, List<MemoryData>> groupMemoriesByPosition(List<MemoryData> memories) {
@@ -730,7 +764,7 @@ Map<LatLng, List<MemoryData>> groupMemoriesByPosition(List<MemoryData> memories)
 }
 
 double distanceBetween(LatLng a, LatLng b) {
-  const double earthRadius = 6371000; // in meters
+  const double earthRadius = 6371000;
 
   final double lat1 = a.latitude * pi / 180;
   final double lon1 = a.longitude * pi / 180;
@@ -749,35 +783,28 @@ double distanceBetween(LatLng a, LatLng b) {
 } 
 
 double metersPerPixelAtZoom(double latitude, double zoom) {
-  const double earthCircumference = 40075017; // meters at equator
+  const double earthCircumference = 40075017;
   final double latitudeRadians = latitude * pi / 180;
   
-  // Meters per pixel = (Earth circumference * cos(latitude)) / (256 * 2^zoom)
   return (earthCircumference * cos(latitudeRadians)) / (256 * pow(2, zoom));
 }
 
-/// Convert pixel distance to meters at current zoom and latitude
 double pixelsToMeters(double pixels, double latitude, double zoom) {
   return pixels * metersPerPixelAtZoom(latitude, zoom);
 }
 
-/// Convert meter distance to pixels at current zoom and latitude
 double metersToPixels(double meters, double latitude, double zoom) {
   return meters / metersPerPixelAtZoom(latitude, zoom);
 }
 
-/// Check if two positions are within pixel threshold at current zoom
 bool isWithinPixelThreshold({
   required LatLng pos1,
   required LatLng pos2,
   required double pixelThreshold,
   required double currentZoom,
 }) {
-  // Calculate real-world distance in meters
   final metersDistance = distanceBetween(pos1, pos2);
   
-  // Convert pixel threshold to meters at this zoom level
-  // Use average latitude for the calculation
   final avgLatitude = (pos1.latitude + pos2.latitude) / 2;
   final metersThreshold = pixelsToMeters(pixelThreshold, avgLatitude, currentZoom);
   

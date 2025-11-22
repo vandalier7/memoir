@@ -61,7 +61,7 @@ List<MemoryData> memories = [];
 List<MemoryData> unfilteredMemories = [];
 
 late MapLibreMapController mapController;
-LatLng currentPosition = LatLng(14.5995, 120.9842);
+LatLng? currentPosition;
 LatLng? nearestMemoryPosition;
 
 final StorageService storageService = StorageService(); 
@@ -96,3 +96,4 @@ Future<void> refreshMemories() async {
 }
 
 Future<String> Function(String imageUrl) imageUrlToPath = getCachedImagePath;
+bool hasLocationError = false;

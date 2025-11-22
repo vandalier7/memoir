@@ -18,6 +18,7 @@ class MyScaffold extends StatefulWidget {
 }
 
 class MyState extends State<MyScaffold> {
+  final GlobalKey<MapState> _mapKey = GlobalKey<MapState>();
   List<MemoryData>? activeMemories;
   MemoryData? selectedMemory;
   bool isClosing = false;
@@ -35,6 +36,10 @@ class MyState extends State<MyScaffold> {
       isClosing = false;
       activeMemoryIndex = index;
     });
+  }
+
+  void retryLocation() {
+    _mapKey.currentState?.getLocation();
   }
 
   void closeMemory() {
@@ -93,6 +98,7 @@ class MyState extends State<MyScaffold> {
         body: Stack(
           children: [
             MapBody(
+              key: _mapKey,
               propagateMemory: showMemory,
               closeMemory: closeMemory,
             ),
@@ -116,7 +122,7 @@ class MyState extends State<MyScaffold> {
             //   key: _searchBarKey, // Add the key here
             //   focusNode: _textFocusNode,
             // ),
-            const MapButtons(),
+            // const MapButtons(),
 
             // 🌫 Gradient overlay
             IgnorePointer(
@@ -139,7 +145,11 @@ class MyState extends State<MyScaffold> {
             // ✅ Single, clean search bar
             SearchBarWidget(focusNode: _textFocusNode, key: _searchBarKey,),
 
-            const MapButtons(),
+            MapButtons(
+              onRetryLocation: retryLocation,
+              onPanToLocation: () => _mapKey.currentState?.panToCurrentPosition(),
+              showLocationError: _mapKey.currentState?.showLocationError ?? false,
+              ),
 
             // 🧠 Memory card overlay
             if (activeMemories != null)

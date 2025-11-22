@@ -145,7 +145,7 @@ void _switchCamera() async {
  
       // Update global currentPosition
       currentPosition = LatLng(position.latitude, position.longitude);
-      print('✅ Location updated: ${currentPosition.latitude}, ${currentPosition.longitude}');
+      print('✅ Location updated: ${currentPosition!.latitude}, ${currentPosition!.longitude}');
     } catch (e) {
       print('⚠️ Background location error: $e');
     }
