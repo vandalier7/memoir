@@ -7,8 +7,9 @@ import 'package:presentation/objects/globals.dart';
 
 class FollowersFollowingScreen extends StatefulWidget {
   final String uid;
+  final int startingTab;
 
-  const FollowersFollowingScreen({super.key, required this.uid});
+  const FollowersFollowingScreen({super.key, required this.uid, this.startingTab = 0});
 
   @override
   _FollowersFollowingScreenState createState() => _FollowersFollowingScreenState();
@@ -25,7 +26,7 @@ class _FollowersFollowingScreenState extends State<FollowersFollowingScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 2, vsync: this, initialIndex: widget.startingTab);
     loadFollowers();
     loadFollowing();
   }

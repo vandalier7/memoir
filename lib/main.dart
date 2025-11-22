@@ -159,8 +159,8 @@ class RootState extends State<Root> {
         },
         '/editProfile': (context) => const EditProfileScreen(),
         '/followers-following': (context) {
-            final args = ModalRoute.of(context)!.settings.arguments;
-            return FollowersFollowingScreen(uid: args.toString());
+            final args = ModalRoute.of(context)!.settings.arguments as List<dynamic>;
+            return FollowersFollowingScreen(uid: args[0].toString(), startingTab: args[1],);
           },
       }
     );

@@ -275,7 +275,7 @@ class _AccountScreenState extends State<AccountScreen> {
                         Navigator.pushNamed(
                           context,
                           '/followers-following',
-                          arguments: _userId, // Pass the profile's userId
+                          arguments: [_userId, 0], // Pass the profile's userId
                         );
                       },
                       child: _statItem("Followers", _followerCount.toString()),
@@ -287,7 +287,7 @@ class _AccountScreenState extends State<AccountScreen> {
                         Navigator.pushNamed(
                           context,
                           '/followers-following',
-                          arguments: _userId,
+                          arguments: [_userId, 1],
                         );
                       },
                       child: _statItem("Following", _followingCount.toString()),
