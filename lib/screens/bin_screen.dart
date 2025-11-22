@@ -149,7 +149,7 @@ class _BinScreenState extends State<BinScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 239, 220, 224),
+      backgroundColor: const Color.fromARGB(255, 170, 158, 165),
       body: Container( // Kept from alpha-version
         child: SafeArea(
           child: Column(
@@ -228,10 +228,10 @@ class _BinScreenState extends State<BinScreen> {
               ? TextButton.icon(
                   onPressed: _deselectAll,
                   icon: const Icon(Icons.close,
-                      color: Color.fromARGB(255, 250, 132, 154), size: 15),
+                      color: Color.fromARGB(255, 255, 71, 71), size: 25),
                   label: const Text('Deselect All',
                       style: TextStyle(
-                          color: Color.fromARGB(255, 250, 132, 154))),
+                          color: Color.fromARGB(255, 255, 71, 71))),
                 )
               : IconButton(
                   icon: _shadowedIcon(Icons.close,
@@ -256,10 +256,10 @@ class _BinScreenState extends State<BinScreen> {
                 }
               });
             },
-            icon: !_isMultiSelectMode ? null : Icon(Icons.delete_forever, size: 18),
+            icon: !_isMultiSelectMode ? null : Icon(Icons.delete_forever, size: 25),
             label: _isMultiSelectMode ? 
             Text('${_selectedIds.length}') :
-            Icon(Icons.delete, size: 18),
+            Icon(Icons.delete, size: 25),
 
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.transparent,
@@ -281,13 +281,28 @@ class _BinScreenState extends State<BinScreen> {
       color: Colors.transparent,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text('Recents',
-              style: TextStyle(
-                  color: Color.fromARGB(255, 37, 6, 6),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18)),
+          Column(
+            children: [
+              Text('Bin',
+                textAlign: TextAlign.center,
+                    style: TextStyle(
+                        color: Color.fromARGB(255, 37, 6, 6),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18
+                      )
+              ),
+              Text('Binned memories expire after 6 hours.',
+                textAlign: TextAlign.center,
+                    style: TextStyle(
+                        color: Color.fromARGB(255, 37, 6, 6).withValues(alpha: 0.5),
+                        fontWeight: FontWeight.normal,
+                        fontSize: 14
+                      )
+              ),
+            ],
+          )
           
         ],
       ),
@@ -333,81 +348,99 @@ class _BinGridTile extends StatelessWidget {
           });
         }
       },
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-
-              
-            CachedNetworkImage(
-              imageUrl: item.imageUrl,
-              fit: BoxFit.cover,
-              placeholder: (context, url) =>
-                  Container(color: Colors.black.withAlpha(100)),
-              errorWidget: (context, url, error) => const Icon(Icons.error),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha(50),
+                  blurRadius: 4,
+                  spreadRadius: 1
+                )
+              ]
             ),
-
-
-            // Gradient for text visibility
-            Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.transparent, Colors.black54],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+          ),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                
+                  
+                CachedNetworkImage(
+                  imageUrl: item.imageUrl,
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) =>
+                      Container(color: Colors.black.withAlpha(100)),
+                  errorWidget: (context, url, error) => const Icon(Icons.error),
                 ),
-              ),
-            ),
 
-            // Selection overlay
-            Container(
-              color: isSelected
-                  ? _kPrimarySelectionColor.withOpacity(0.4)
-                  : Colors.transparent,
-            ),
 
-            // Checkbox (only in multi-select mode)
-            if (isMultiSelectMode)
-              Positioned(
-                top: 5,
-                right: 5,
-                child: Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(4),
+                // Gradient for text visibility
+                Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.transparent, Colors.black54],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
                   ),
-                  child: isSelected
-                      ? const Icon(Icons.check_box, size: 18, color: Colors.blue)
-                      : const Icon(Icons.check_box_outline_blank,
-                          size: 18, color: Colors.grey),
                 ),
-              ),
 
-            // Remaining time
-            Positioned(
-              bottom: 5,
-              left: 5,
-              right: 5,
-              child: Row(
-                children: [
-                  Icon(Icons.access_time_sharp, color: Colors.white, size: 16),
-                  SizedBox(width: 5),
-                  Text(
-                    isSelected ? '' : remainingTime,
-                    style: const TextStyle(
+                // Selection overlay
+                Container(
+                  color: isSelected
+                      ? _kPrimarySelectionColor.withOpacity(0.4)
+                      : Colors.transparent,
+                ),
+
+                // Checkbox (only in multi-select mode)
+                if (isMultiSelectMode)
+                  Positioned(
+                    top: 5,
+                    right: 5,
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
                         color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        shadows: [Shadow(blurRadius: 2.0, color: Colors.black)]),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: isSelected
+                          ? const Icon(Icons.check_box, size: 18, color: Colors.blue)
+                          : const Icon(Icons.check_box_outline_blank,
+                              size: 18, color: Colors.grey),
+                    ),
                   ),
-                ],
-              )
+
+                // Remaining time
+                Positioned(
+                  bottom: 5,
+                  left: 5,
+                  right: 5,
+                  child: Row(
+                    children: [
+                      Icon(Icons.access_time_sharp, color: Colors.white, size: 16),
+                      SizedBox(width: 5),
+                      Text(
+                        isSelected ? '' : remainingTime,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            shadows: [Shadow(blurRadius: 2.0, color: Colors.black)]),
+                      ),
+                    ],
+                  )
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        ],
+      )
     );
   }
 }
