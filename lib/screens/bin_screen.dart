@@ -228,10 +228,10 @@ class _BinScreenState extends State<BinScreen> {
               ? TextButton.icon(
                   onPressed: _deselectAll,
                   icon: const Icon(Icons.close,
-                      color: Color.fromARGB(255, 255, 71, 71), size: 25),
+                      color: Color.fromARGB(255, 207, 54, 43), size: 25),
                   label: const Text('Deselect All',
                       style: TextStyle(
-                          color: Color.fromARGB(255, 255, 71, 71))),
+                          color: Color.fromARGB(255, 207, 54, 43))),
                 )
               : IconButton(
                   icon: _shadowedIcon(Icons.close,
@@ -263,7 +263,7 @@ class _BinScreenState extends State<BinScreen> {
 
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.transparent,
-              foregroundColor: Colors.red,
+              foregroundColor: const Color.fromARGB(255, 207, 54, 43),
               shadowColor: Colors.transparent,
               alignment: _isMultiSelectMode ? Alignment.centerLeft : Alignment.center,
               padding:
