@@ -175,7 +175,7 @@ class _BinScreenState extends State<BinScreen> {
                     if (images.isEmpty) {
                       return const Center(
                           child: Text('No images in bin.',
-                              style: TextStyle(color: Colors.grey)));
+                              style: TextStyle(color: Color.fromARGB(255, 65, 65, 65))));
                     }
 
                     return GridView.builder(

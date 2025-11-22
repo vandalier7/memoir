@@ -78,10 +78,19 @@ void toggleLoading(bool value) {
 List<String> followedUsers = [];
 List<String> friends = [];
 
-Future<void> refreshFriendsAndFollowers() async {
+Future<void> refreshFriendsAndFollowers({bool alsoRefreshMemories = true}) async {
   friends = await databaseService.getFriends(storageService.currentUserId!);
   followedUsers = await databaseService.getFollowingUsers(storageService.currentUserId!);
   
+  final init = await databaseService.fetchFilteredMemoryIds();
+  await storageService.fetchOthersMemories(init);
+
+  if (alsoRefreshMemories) {
+    await refreshMemories();
+  }
+}
+
+Future<void> refreshMemories() async {
   final init = await databaseService.fetchFilteredMemoryIds();
   await storageService.fetchOthersMemories(init);
 }

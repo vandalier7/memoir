@@ -300,7 +300,7 @@ class DatabaseService {
     }
   }
 
-  Future<void> toggleFollow(String userID) async {
+  Future<bool> toggleFollow(String userID) async {
     final String table = 'following';
     
 
@@ -320,6 +320,7 @@ class DatabaseService {
           'followingID': userID,
         });
         print('Now following $userID');
+        return true;
       } else {
         // Already following → delete
         await _supabase
@@ -328,6 +329,7 @@ class DatabaseService {
             .eq('followerID', storageService.currentUserId!)
             .eq('followingID', userID);
         print('Unfollowed $userID');
+        return false;
       }
     } catch (e) {
       print('Error toggling follow: $e');

@@ -231,10 +231,8 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
                             // If URL exists, use it. If not, show default icon.
                             backgroundImage: avatarUrl != null 
                                 ?  CachedNetworkImageProvider("$avatarUrl")
-                                : null,
-                            child: avatarUrl == null 
-                                ? Icon(Icons.account_circle, color: memoirTheme.primary, size: 28)
-                                : null
+                                : const AssetImage('assets/temp.png'),
+
                           ),
                         );
                       },

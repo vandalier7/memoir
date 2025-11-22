@@ -36,6 +36,8 @@ class _AccountScreenState extends State<AccountScreen> {
   int _followingCount = 0;
   int _memoryCount = 0;
   String? _errorMessage;
+  bool _isFollowing = false;
+  bool _isFollowLoading = false;
 
   @override
   void initState() {
@@ -43,6 +45,7 @@ class _AccountScreenState extends State<AccountScreen> {
     final currentUser = FirebaseAuth.instance.currentUser;
     _userId = widget.uid ?? currentUser?.uid ?? '';
     _loadProfileData();
+    _isFollowing = followedUsers.contains(widget.uid);
   }
 
   Future<void> _uploadFromGallery() async {
@@ -278,24 +281,51 @@ try {
                 if (!isOwnProfile)
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: memoirTheme.primary,
+                      backgroundColor: memoirTheme.tertiary,
                       padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    onPressed: () async {
-                      await databaseService.toggleFollow(_userId);
+                    onPressed:() async {
+                      if (_isFollowLoading) {return;}
+
+                      _isFollowLoading = true;
+                      bool value = await databaseService.toggleFollow(_userId);
                       setState(() {
                         _loadProfileData();
+                        _isFollowing = value;
+                      });
+                      await Future.delayed(Duration(milliseconds: 500));
+                      _isFollowLoading = false;
+
+                      setState(() {
+                        
                       });
 
-                      await refreshFriendsAndFollowers();
+                      refreshFriendsAndFollowers();
+                      
+                      
                     },
-                    child: const Text(
-                      "Follow",
-                      style: TextStyle(color: Colors.white, fontSize: 16),
-                    ),
+                    child: SizedBox(
+                      height: 24,
+                      width: 80,
+                      child: _isFollowLoading ?
+                      Center(
+                        child: SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.0,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ) : 
+                      Center(child: Text(
+                        _isFollowing ? "Unfollow" : "Follow",
+                        style: TextStyle(color: Colors.white, fontSize: 16),
+                      )),
+                    )
                   ),
 
                 const SizedBox(height: 30),
