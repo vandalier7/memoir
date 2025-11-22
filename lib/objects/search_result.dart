@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:presentation/objects/globals.dart';
 import '../app_theme.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 enum SearchResultType { user, place }
 
@@ -7,7 +9,6 @@ class SearchResultElement extends StatelessWidget {
   final SearchResultType type;
   final String title;
   final String? subtitle;
-  final String? imageUrl;
   final String id; // ID for navigation (userId or placeId)
   final VoidCallback? onTapCallback; // Optional additional callback
 
@@ -17,7 +18,6 @@ class SearchResultElement extends StatelessWidget {
     required this.title,
     required this.id,
     this.subtitle,
-    this.imageUrl,
     this.onTapCallback,
   });
 
@@ -34,7 +34,6 @@ class SearchResultElement extends StatelessWidget {
       id: userId,
       title: username,
       subtitle: bio,
-      imageUrl: avatarUrl,
       onTapCallback: onTapCallback,
     );
   }
@@ -51,7 +50,6 @@ class SearchResultElement extends StatelessWidget {
       id: placeId,
       title: placeName,
       subtitle: address,
-      imageUrl: photoUrl,
       onTapCallback: onTapCallback,
     );
   }
@@ -81,24 +79,43 @@ class SearchResultElement extends StatelessWidget {
   }
 
   Widget _buildLeading() {
-    if (imageUrl != null && imageUrl!.isNotEmpty) {
-      return CircleAvatar(
-        radius: 20,
-        backgroundColor: _iconColor.withOpacity(0.2),
-        backgroundImage: NetworkImage(imageUrl!),
-        onBackgroundImageError: (_, __) {},
-        child: const SizedBox(), // Shows background color if image fails
-      );
-    }
+    return StreamBuilder<Map<String, dynamic>>(
+      stream: databaseService.getUserStream(id),
+      builder: (context, snapshot) {
+        String? avatarUrl;
+        if (snapshot.hasData) {
+          avatarUrl = snapshot.data!['profile_pic_url'];
+        }
 
-    return CircleAvatar(
-      radius: 20,
-      backgroundColor: _iconColor.withOpacity(0.2),
-      child: Icon(
-        _leadingIcon,
-        size: 22,
-        color: _iconColor,
-      ),
+        return Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            // boxShadow: [
+            //   BoxShadow(
+            //     color: memoirTheme.outline,
+            //     blurRadius: 0,
+            //     spreadRadius: 3
+            //   ),
+            //   BoxShadow(
+            //     color: const Color.fromARGB(255, 255, 255, 255).withValues(alpha: 1),
+            //     blurRadius: 0,
+            //     spreadRadius: 1
+            //   ),
+            // ]
+          ),
+          child: CircleAvatar(
+            radius: 20,
+            backgroundColor: memoirTheme.primary.withValues(alpha: 0.2), // Lighter bg behind image
+            // If URL exists, use it. If not, show default icon.
+            backgroundImage: avatarUrl != null 
+                ?  CachedNetworkImageProvider("$avatarUrl")
+                : null,
+            child: avatarUrl == null 
+                ? Icon(Icons.account_circle, color: memoirTheme.primary, size: 28)
+                : null
+          ),
+        );
+      },
     );
   }
 

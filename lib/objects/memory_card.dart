@@ -1,5 +1,6 @@
 //memory_card.dart
 import 'package:presentation/objects/globals.dart';
+import 'package:presentation/app_theme.dart';
 import 'package:presentation/processes/comment_service.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -733,18 +734,55 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
                   // Owner name and timestamp
                   Row(
                     children: [
-                      CircleAvatar(
-                        radius: 14,
-                        backgroundColor: Colors.grey.shade300,
-                        child: Text(
-                          memory.userName != null
-                              ? memory.userName![0].toUpperCase()
-                              : 'U',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey.shade700,
-                            fontSize: 12,
-                          ),
+                      GestureDetector(
+                        onTap: () => Navigator.pushNamed(context, "/account", arguments: memory.userId),
+                        child: StreamBuilder<Map<String, dynamic>>(
+                          stream: databaseService.getUserStream(memory.userId!),
+                          builder: (context, snapshot) {
+                            String? avatarUrl;
+                            if (snapshot.hasData) {
+                              avatarUrl = snapshot.data!['profile_pic_url'];
+                            }
+
+                            return Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                // boxShadow: [
+                                //   BoxShadow(
+                                //     color: memoirTheme.outline,
+                                //     blurRadius: 0,
+                                //     spreadRadius: 3
+                                //   ),
+                                //   BoxShadow(
+                                //     color: const Color.fromARGB(255, 255, 255, 255).withValues(alpha: 1),
+                                //     blurRadius: 0,
+                                //     spreadRadius: 1
+                                //   ),
+                                // ]
+                              ),
+                              child: avatarUrl != null ?
+                              CircleAvatar(
+                                radius: 14,
+                                backgroundColor: memoirTheme.primary.withValues(alpha: 0.2), // Lighter bg behind image
+                                // If URL exists, use it. If not, show default icon.
+                                backgroundImage: CachedNetworkImageProvider("$avatarUrl")
+                              ) :
+                              CircleAvatar(
+                                radius: 14,
+                                backgroundColor: Colors.grey.shade300,
+                                child: Text(
+                                  memory.userName != null
+                                      ? memory.userName![0].toUpperCase()
+                                      : 'U',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey.shade700,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -752,12 +790,15 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              memory.userName ?? 'Unknown User',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
+                            GestureDetector(
+                              onTap: () => Navigator.pushNamed(context, "/account", arguments: memory.userId),
+                              child: Text(
+                                memory.userName ?? 'Unknown User',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
                             if (memory.timestamp != null)
