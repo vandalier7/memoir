@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../processes/storage_service.dart';
 import '../processes/database_service.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class AccountScreen extends StatefulWidget {
   final String? uid; // UID passed through navigation
@@ -51,7 +52,6 @@ class _AccountScreenState extends State<AccountScreen> {
     if (image != null) {
       File imageFile = File(image.path);
       
-      // Optional: Show loading indicator while uploading
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Uploading image...")),
       );
@@ -64,8 +64,13 @@ class _AccountScreenState extends State<AccountScreen> {
         
         if (mounted) {
           setState(() {
-            _profilepictureUrl = "$imageUrl?v=${DateTime.now().millisecondsSinceEpoch}";
+            // Only add timestamp when actually uploading a new image
+            // Store the base URL without timestamp
+            _profilepictureUrl = imageUrl;
           });
+          
+          // Clear the image cache for this URL to force reload of the new image
+          NetworkImage(imageUrl).evict();
           
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text("Profile picture updated successfully.")),
@@ -220,7 +225,7 @@ try {
                         // Logic: If URL exists, use NetworkImage, else use Asset
                         backgroundImage: _profilepictureUrl != null
                             ? NetworkImage(_profilepictureUrl!) as ImageProvider
-                            : const AssetImage('assets/profile_placeholder.png'),
+                            : const AssetImage('assets/temp.png'),
                       ),
                       // Optional: Add a small camera icon overlay for better UX
                       if (isOwnProfile)

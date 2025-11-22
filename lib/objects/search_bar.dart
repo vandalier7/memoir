@@ -4,9 +4,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'; // ✅ Added
 import '../processes/database_service.dart'; // ✅ Added
 import '../app_theme.dart';
-import '../screens/account_screen.dart';
 import 'search_result.dart';
 import 'globals.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class SearchBarWidget extends StatefulWidget {
   final FocusNode? focusNode;
@@ -142,10 +142,10 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
         children: [
           // 🔍 SEARCH BAR
           Container(
-            height: 48,
+            height: 56,
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.95), // Updated from withOpacity
-              borderRadius: BorderRadius.circular(100),
+              borderRadius: BorderRadius.circular(200),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.1),
@@ -198,7 +198,8 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
                     });
                   },
                   child: Padding(
-                    padding: const EdgeInsets.only(right: 7),
+                    padding: const EdgeInsets.only(right: 9),
+
                     // ✅ STREAM BUILDER HERE
                     child: StreamBuilder<Map<String, dynamic>>(
                       stream: DatabaseService().getUserStream(_currentUserId),
@@ -208,16 +209,33 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
                           avatarUrl = snapshot.data!['profile_pic_url'];
                         }
 
-                        return CircleAvatar(
-                          radius: 18,
-                          backgroundColor: memoirTheme.primary.withValues(alpha: 0.2), // Lighter bg behind image
-                          // If URL exists, use it. If not, show default icon.
-                          backgroundImage: avatarUrl != null 
-                              ? NetworkImage("$avatarUrl?v=${DateTime.now().millisecondsSinceEpoch}") 
-                              : null,
-                          child: avatarUrl == null 
-                              ? Icon(Icons.account_circle, color: memoirTheme.primary, size: 28)
-                              : null, // Hide child icon if image exists
+                        return Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: memoirTheme.outline,
+                                blurRadius: 0,
+                                spreadRadius: 3
+                              ),
+                              BoxShadow(
+                                color: const Color.fromARGB(255, 255, 255, 255).withValues(alpha: 1),
+                                blurRadius: 0,
+                                spreadRadius: 1
+                              ),
+                            ]
+                          ),
+                          child: CircleAvatar(
+                            radius: 20,
+                            backgroundColor: memoirTheme.primary.withValues(alpha: 0.2), // Lighter bg behind image
+                            // If URL exists, use it. If not, show default icon.
+                            backgroundImage: avatarUrl != null 
+                                ?  CachedNetworkImageProvider("$avatarUrl")
+                                : null,
+                            child: avatarUrl == null 
+                                ? Icon(Icons.account_circle, color: memoirTheme.primary, size: 28)
+                                : null
+                          ),
                         );
                       },
                     ),

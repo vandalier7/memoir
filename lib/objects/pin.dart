@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:presentation/objects/globals.dart';
 import 'memory.dart';
+import 'package:presentation/app_theme.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class UserPin extends StatelessWidget {
   final List<MemoryData> memories;
@@ -62,18 +65,34 @@ class UserPin extends StatelessWidget {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFFF75270).withOpacity(0.4),
-                        blurRadius: 16,
-                        spreadRadius: 1,
+                        color: const Color.fromARGB(255, 0, 0, 0).withOpacity(0.2),
+                        blurRadius: 8,
+                        spreadRadius: 2,
                         offset: const Offset(0, 4),
                       ),
                     ],
                   ),
-                  child: const Icon(
-                    Icons.person,
-                    color: Colors.white,
-                    size: 28,
-                  ),
+                  child: StreamBuilder<Map<String, dynamic>>(
+                      stream: databaseService.getUserStream(storageService.currentUserId!),
+                      builder: (context, snapshot) {
+                        String? avatarUrl;
+                        if (snapshot.hasData) {
+                          avatarUrl = snapshot.data!['profile_pic_url'];
+                        }
+
+                        return CircleAvatar(
+                          radius: 18,
+                          backgroundColor: memoirTheme.primary.withValues(alpha: 0.2), // Lighter bg behind image
+                          // If URL exists, use it. If not, show default icon.
+                          backgroundImage: avatarUrl != null 
+                              ?  CachedNetworkImageProvider("$avatarUrl")
+                              : null,
+                          child: avatarUrl == null 
+                              ? Icon(Icons.account_circle, color: memoirTheme.primary, size: 28)
+                              : null
+                        );
+                      },
+                    )
                 ),
               ),
             ),
@@ -81,8 +100,8 @@ class UserPin extends StatelessWidget {
             // Memory count badge
             if (memories.isNotEmpty)
               Positioned(
-                top: -2,
-                right: -2,
+                top: -6,
+                right: -6,
                 child: Container(
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
