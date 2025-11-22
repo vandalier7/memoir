@@ -6,6 +6,7 @@ import 'package:presentation/processes/storage_service.dart';
 import 'package:presentation/processes/database_service.dart';
 import 'package:flutter/material.dart';
 import '../main.dart';
+import 'package:presentation/models/user_model.dart';
 import '../processes/image_service.dart';
 
 late final num pixelRatio;
@@ -76,11 +77,14 @@ void toggleLoading(bool value) {
 }
 
 List<String> followedUsers = [];
+List<String> followers = [];
 List<String> friends = [];
 
 Future<void> refreshFriendsAndFollowers({bool alsoRefreshMemories = true}) async {
-  friends = await databaseService.getFriends(storageService.currentUserId!);
+  
   followedUsers = await databaseService.getFollowingUsers(storageService.currentUserId!);
+  followers = await databaseService.getFollowers(storageService.currentUserId!);
+  friends = followedUsers.toSet().intersection(followers.toSet()).toList();
   
   final init = await databaseService.fetchFilteredMemoryIds();
   await storageService.fetchOthersMemories(init);
