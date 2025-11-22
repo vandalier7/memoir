@@ -53,6 +53,8 @@ dependencies:
   path_provider: ^2.1.5
   image_picker: ^1.2.1
 
+  flutter_launcher_icons: "^0.12.0"
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -78,6 +80,7 @@ flutter:
     - assets/styles/
     - assets/sprites/
     - assets/geojson/
+    - assets/
 
   # To add assets to your application, add an assets section, like this:
   # assets:
@@ -117,3 +120,8 @@ flutter_native_splash:
   android_12:
     image: assets/logo.png
     icon_background_color: "#ffffff"
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/logo.png"

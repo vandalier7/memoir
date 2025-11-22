@@ -11,9 +11,15 @@ import '../processes/auth.dart';
 // the ui design
 class SignInCard extends StatelessWidget {
   const SignInCard({super.key});
+  
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    final double logoSize = 75;
+
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
     const double baseLift = 100.0; // existing idle lift you had
 
@@ -26,8 +32,37 @@ class SignInCard extends StatelessWidget {
         color: Theme.of(context).colorScheme.surface,
         child: Stack(
           children: [
-            // other background/content can go here (will NOT be moved)
-            // e.g. Center(child: BackgroundDecorations()),
+            Positioned(
+              left: (screenWidth * 0.5) - (logoSize * 0.5),
+              top: screenHeight * 0.1,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: SizedBox(
+                      height: logoSize,
+                      width: logoSize,
+                      child: Image.asset("assets/logo.png"),
+                    )
+                  ),
+                ],
+              )
+            ),
+            Positioned.fill(
+              child: Align(
+                alignment: Alignment(0, -0.6),
+                child: Material(
+                    color: Colors.transparent,
+                    child: Text("Memoir", textAlign: TextAlign.center, style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  )
+                ),
+              ),
+            ),
 
             // The centered card that we WILL move
             Center(
