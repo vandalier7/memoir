@@ -43,6 +43,10 @@ class MapState extends State<MapBody> {
 
   double pinAlpha = 1;
 
+  // Cache for cluster positions to prevent rebuild storms
+  final Map<LatLng, Future<Point>> _clusterPositionCache = {};
+  Future<Point>? _activeMemorablyPositionCache;
+
   @override
   void initState() {
     super.initState();
@@ -116,6 +120,14 @@ class MapState extends State<MapBody> {
         }
       }
       
+      // Clear cache for removed clusters
+      final removedKeys = _clusterPositionCache.keys
+          .where((key) => !clusters.containsKey(key))
+          .toList();
+      for (final key in removedKeys) {
+        _clusterPositionCache.remove(key);
+      }
+
       if (mounted) {
         setState(() {
           screenSpaceClusters = clusters;
@@ -173,12 +185,14 @@ class MapState extends State<MapBody> {
       widget.closeMemory();
       activeMemories = memoriesToShow;
       isAnimatingToMemory = true;
+      _activeMemorablyPositionCache = null; // Clear cache when memories change
     });
   }
 
   void closePreview() {
     setState(() {
       activeMemories = null;
+      _activeMemorablyPositionCache = null; // Clear cache
     });
   }
 
@@ -274,13 +288,14 @@ class MapState extends State<MapBody> {
     // Skip if value hasn't changed
     if (isHoldingMap == value) return;
 
-    setState(() {
-      isHoldingMap = value;
-    });
+    // Skip setState - only update the bool without triggering rebuild
+    isHoldingMap = value;
 
     // Only rebuild memory list when releasing the map (value = false)
     if (!value) {
-      _rebuildVisibleMemories();
+      setState(() {
+        _rebuildVisibleMemories();
+      });
     }
   }
 
@@ -479,6 +494,7 @@ class MapState extends State<MapBody> {
           onMapCreated: (controller) async {
             mapController = controller;
             await updateLocation();
+            toggleLoading(false);
           },
           onCameraIdle: () async {
             var pos = await mapController.queryCameraPosition();
@@ -497,7 +513,11 @@ class MapState extends State<MapBody> {
           },
           onCameraTrackingChanged: (mode) => updateMapHold(true),
           onCameraMove: (pos) {
-            updateMapHold(true);
+            // Don't call updateMapHold here - it triggers constant rebuilds
+            // Only updateZoom without setState
+            if (isHoldingMap == false) {
+              isHoldingMap = true;
+            }
           },
           onMapLongClick: (point, latLng) {
           },
@@ -533,11 +553,14 @@ class MapState extends State<MapBody> {
             },
           ),
 
-      // Render cluster pins
+      // Render cluster pins with cached futures
       for (final entry in screenSpaceClusters.entries)
         if (entry.value.length > 1)
           FutureBuilder<Point>(
-            future: mapController.toScreenLocation(entry.key),
+            future: _clusterPositionCache.putIfAbsent(
+              entry.key,
+              () => mapController.toScreenLocation(entry.key),
+            ),
             builder: (context, snapshot) {
               if (!snapshot.hasData) return SizedBox.shrink();
               
@@ -552,8 +575,8 @@ class MapState extends State<MapBody> {
               }
               
               return Positioned(
-                left: screenPoint.x / pixelRatio! - 30,
-                top: screenPoint.y / pixelRatio! - 40,
+                left: screenPoint.x / pixelRatio - 30,
+                top: screenPoint.y / pixelRatio - 40,
                 child: ClusterPin(
                   count: positionCount,
                   position: entry.key,
@@ -603,10 +626,10 @@ class MapState extends State<MapBody> {
               )),
         ),
 
-      // Render active memories previews
+      // Render active memories previews with cached future
       if (activeMemories != null && activeMemories!.isNotEmpty)
         FutureBuilder<Point>(
-          future: mapController.toScreenLocation(activeMemories!.first.position),
+          future: _activeMemorablyPositionCache ??= mapController.toScreenLocation(activeMemories!.first.position),
           builder: (context, snapshot) {
             if (!snapshot.hasData) return const SizedBox.shrink();
 
