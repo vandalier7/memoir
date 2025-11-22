@@ -485,9 +485,11 @@ class MapState extends State<MapBody> {
               
               final screenPoint = snapshot.data!;
               final allMemoriesInCluster = <MemoryData>[];
+              int positionCount = 0;
               for (final pos in entry.value) {
                 if (groupedMemories.containsKey(pos)) {
                   allMemoriesInCluster.addAll(groupedMemories[pos]!);
+                  positionCount += 1;
                 }
               }
               
@@ -495,7 +497,7 @@ class MapState extends State<MapBody> {
                 left: screenPoint.x / pixelRatio! - 30,
                 top: screenPoint.y / pixelRatio! - 40,
                 child: ClusterPin(
-                  count: allMemoriesInCluster.length,
+                  count: positionCount,
                   position: entry.key,
                   mapController: mapController,
                   isHoldingMap: isHoldingMap,
