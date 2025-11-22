@@ -8,6 +8,7 @@ import '../app_theme.dart';
 import 'search_result.dart';
 import 'globals.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:presentation/my_scaffold.dart';
 
 class SearchBarWidget extends StatefulWidget {
   final FocusNode? focusNode;
@@ -373,8 +374,25 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
                 final unreadCount = snapshot.data ?? 0;
         
               return GestureDetector(
-                onTap: () {
-                  Navigator.pushNamed(context, '/notifications');
+                onTap: () async {
+                  // ✅ Wait for result from notifications screen
+                  final result = await Navigator.pushNamed(context, '/notifications');
+                  
+                  // ✅ Handle the result
+                  if (result != null && result is Map) {
+                    final memoryId = result['memoryId'] as int?;
+                    final commentId = result['commentId'] as int?;
+          
+                  if (memoryId != null) {
+                    // Find MyState and navigate
+                    final scaffoldState = context.findAncestorStateOfType<MyState>();
+                    if (scaffoldState != null) {
+                      scaffoldState.navigateToMemory(memoryId, commentId: commentId);
+                    } else {
+                      print('❌ Could not find MyState');;
+                    }
+                  }
+                }
               },
               child: Stack(
                 clipBehavior: Clip.none,

@@ -4,7 +4,12 @@ import '../processes/notifications_service.dart';
 import '../app_theme.dart';
 
 class NotificationsScreen extends StatefulWidget {
-  const NotificationsScreen({super.key});
+  final Function(int supabaseMemoryId, {int? commentId})? onMemoryTap;
+
+  const NotificationsScreen({
+    super.key,
+    this.onMemoryTap,
+  });
 
   @override
   State<NotificationsScreen> createState() => _NotificationsScreenState();
@@ -14,10 +19,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   void initState() {
     super.initState();
-    // Mark all as read when screen opens (optional - remove if you don't want this)
-    Future.delayed(const Duration(seconds: 1), () {
-      notificationService.markAllAsRead();
-    });
   }
 
   @override
@@ -149,177 +150,220 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Widget _buildNotificationItem(NotificationData notification) {
-    return Dismissible(
-      key: Key(notification.id),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        color: Colors.red,
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20),
-        child: const Icon(Icons.delete, color: Colors.white),
-      ),
-      onDismissed: (direction) {
-        notificationService.deleteNotification(notification.id);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Notification deleted'),
-            duration: Duration(seconds: 1),
-          ),
-        );
+  return Dismissible(
+    key: Key(notification.id),
+    direction: DismissDirection.endToStart,
+    background: Container(
+      color: Colors.red,
+      alignment: Alignment.centerRight,
+      padding: const EdgeInsets.only(right: 20),
+      child: const Icon(Icons.delete, color: Colors.white),
+    ),
+    onDismissed: (direction) {
+      notificationService.deleteNotification(notification.id);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Notification deleted'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+    },
+    child: InkWell(
+      onTap: () {
+        // Mark as read
+        if (!notification.isRead) {
+          notificationService.markAsRead(notification.id);
+        }
+
+        // Navigate based on notification type
+        _handleNotificationTap(notification);
       },
-      child: InkWell(
-        onTap: () {
-          // Mark as read
-          if (!notification.isRead) {
-            notificationService.markAsRead(notification.id);
-          }
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        color: notification.isRead
+          ? Colors.white 
+          : memoirTheme.tertiary.withOpacity(0.1),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Avatar
+            CircleAvatar(
+              radius: 24,
+              backgroundColor: memoirTheme.primary.withOpacity(0.2),
+              backgroundImage: notification.actorAvatar != null
+                  ? CachedNetworkImageProvider(notification.actorAvatar!) as ImageProvider
+                  : const AssetImage('assets/temp.png'),
+            ),
+            const SizedBox(width: 12),
 
-          // Navigate based on notification type
-          _handleNotificationTap(notification);
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          color: notification.isRead ? Colors.white : Colors.blue.shade50,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Avatar
-              CircleAvatar(
-                radius: 24,
-                backgroundColor: memoirTheme.primary.withOpacity(0.2),
-                backgroundImage: notification.actorAvatar != null
-                    ? CachedNetworkImageProvider(notification.actorAvatar!)
-                    : null,
-                child: notification.actorAvatar == null
-                    ? Icon(Icons.person, color: memoirTheme.primary)
-                    : null,
-              ),
-              const SizedBox(width: 12),
-
-              // Content
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    RichText(
-                      text: TextSpan(
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey.shade800,
-                          height: 1.4,
-                        ),
-                        children: [
-                          TextSpan(
-                            text: notification.actorName,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          TextSpan(
-                            text: ' ${notification.getMessage()}',
-                          ),
-                        ],
+            // Content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  RichText(
+                    text: TextSpan(
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade800,
+                        height: 1.4,
                       ),
+                      children: [
+                        TextSpan(
+                          text: notification.actorName,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        TextSpan(
+                          text: ' ${notification.getMessage()}',
+                        ),
+                      ],
                     ),
-                    
-                    // Show comment preview if available
-                    if (notification.commentText != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        '"${notification.commentText}"',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey.shade600,
-                          fontStyle: FontStyle.italic,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-
+                  ),
+                  
+                  // Show comment preview if available
+                  if (notification.commentText != null) ...[
                     const SizedBox(height: 4),
                     Text(
-                      notification.getRelativeTime(),
+                      '"${notification.commentText}"',
                       style: TextStyle(
-                        fontSize: 12,
-                        color: memoirTheme.primary,
-                        fontWeight: FontWeight.w500,
+                        fontSize: 13,
+                        color: Colors.grey.shade600,
+                        fontStyle: FontStyle.italic,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
+
+                  const SizedBox(height: 4),
+                  Text(
+                    notification.getRelativeTime(),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: notification.isRead
+                        ? memoirTheme.primary 
+                        : memoirTheme.tertiary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Memory thumbnail (if available)
+            if (notification.memoryImageUrl != null || notification.memoryLocation != null) ...[
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  // Memory image
+                  if (notification.memoryImageUrl != null)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: CachedNetworkImage(
+                        imageUrl: notification.memoryImageUrl!,
+                        width: 50,
+                        height: 50,
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => Container(
+                          width: 50,
+                          height: 50,
+                          color: Colors.grey.shade200,
+                        ),
+                        errorWidget: (context, url, error) => Container(
+                          width: 50,
+                          height: 50,
+                          color: Colors.grey.shade300,
+                          child: Icon(Icons.image, color: Colors.grey.shade500),
+                        ),
+                      ),
+                    ),
+      
+                  // Location text - no width constraint
+                  if (notification.memoryLocation != null) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.location_on,
+                          size: 10,
+                          color: Colors.grey.shade500,
+                        ),
+                        const SizedBox(width: 2),
+                        Flexible(
+                          child: Text(
+                            notification.memoryLocation!
+                              .split(',')
+                              .take(2)
+                              .join(',')
+                              .trim(),
+                            style: TextStyle(
+                              fontSize: 9,
+                              color: Colors.grey.shade600,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.right,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ],
+
+            // Unread indicator dot
+            if (!notification.isRead) ...[
+              const SizedBox(width: 8),
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: memoirTheme.tertiary,
+                  shape: BoxShape.circle,
                 ),
               ),
-
-              // Memory thumbnail (if available)
-              if (notification.memoryImageUrl != null) ...[
-                const SizedBox(width: 12),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: CachedNetworkImage(
-                    imageUrl: notification.memoryImageUrl!,
-                    width: 50,
-                    height: 50,
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) => Container(
-                      width: 50,
-                      height: 50,
-                      color: Colors.grey.shade200,
-                    ),
-                    errorWidget: (context, url, error) => Container(
-                      width: 50,
-                      height: 50,
-                      color: Colors.grey.shade300,
-                      child: Icon(Icons.image, color: Colors.grey.shade500),
-                    ),
-                  ),
-                ),
-              ],
-
-              // Unread indicator dot
-              if (!notification.isRead) ...[
-                const SizedBox(width: 8),
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: memoirTheme.primary,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ],
             ],
-          ),
+          ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   void _handleNotificationTap(NotificationData notification) {
+    if (!notification.isRead) {
+      notificationService.markAsRead(notification.id);
+    }
+
+    if (notification.type == 'follow') {
+      Navigator.pushNamed(context, '/account', arguments: notification.actorId);
+      return;
+    }
+  
+    // Return data to the caller
     switch (notification.type) {
       case 'memory_like':
-      case 'memory_comment':
-        // TODO: Navigate to memory detail screen
-        // Navigator.pushNamed(context, '/memory', arguments: notification.memoryId);
-        print('Navigate to memory: ${notification.memoryId}');
+        if (notification.memoryId != null) {
+          Navigator.pop(context, {
+            'memoryId': notification.memoryId!,
+          });
+        }
         break;
-      
+
+      case 'memory_comment':
       case 'comment_like':
       case 'comment_reply':
-        // TODO: Navigate to memory detail with comment focused
-        // Navigator.pushNamed(context, '/memory', arguments: {
-        //   'memoryId': notification.memoryId,
-        //   'commentId': notification.commentId,
-        // });
-        print('Navigate to comment: ${notification.commentId}');
-        break;
-      
-      case 'follow':
-        // Navigate to user profile
-        Navigator.pushNamed(
-          context,
-          '/account',
-          arguments: notification.actorId,
-        );
+        if (notification.memoryId != null && notification.commentId != null) {
+          Navigator.pop(context, {
+            'memoryId': notification.memoryId!,
+            'commentId': notification.commentId,
+            });
+          }
         break;
     }
   }

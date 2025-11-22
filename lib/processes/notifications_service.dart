@@ -30,6 +30,7 @@ class NotificationService {
     String? actorAvatar,
     int? memoryId,
     String? memoryImageUrl,
+    String? memoryLocation,
     int? commentId,
     String? commentText,
   }) async {
@@ -52,6 +53,9 @@ class NotificationService {
       }
       if (memoryImageUrl != null) {
         notificationData['memoryImageUrl'] = memoryImageUrl;
+      }
+      if (memoryLocation != null) {
+        notificationData['memoryLocation'] = memoryLocation;
       }
       if (commentId != null) {
         notificationData['commentId'] = commentId;
@@ -103,6 +107,7 @@ class NotificationService {
           createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
           memoryId: data['memoryId'] as int?,
           memoryImageUrl: data['memoryImageUrl'] as String?,
+          memoryLocation: data['memoryLocation'] as String?,
           commentId: data['commentId'] as int?,
           commentText: data['commentText'] as String?,
         );
@@ -224,6 +229,7 @@ class NotificationData {
   final DateTime createdAt;
   final int? memoryId;
   final String? memoryImageUrl;
+  final String? memoryLocation;
   final int? commentId;
   final String? commentText;
 
@@ -237,6 +243,7 @@ class NotificationData {
     required this.createdAt,
     this.memoryId,
     this.memoryImageUrl,
+    this.memoryLocation,
     this.commentId,
     this.commentText,
   });

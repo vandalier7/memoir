@@ -15,6 +15,7 @@ class MemoryCard extends StatefulWidget {
   final VoidCallback? onClose;
   final bool isClosing;
   final int? initialIndex;
+  final int? targetCommentId;
 
   const MemoryCard({
     super.key,
@@ -22,7 +23,8 @@ class MemoryCard extends StatefulWidget {
     required this.selectedMemory,
     this.onClose,
     this.isClosing = false,
-    this.initialIndex
+    this.initialIndex,
+    this.targetCommentId,
   });
 
   @override
@@ -38,6 +40,9 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
   late AnimationController _controller;
   late Animation<Offset> _slideAnimation;
   late PageController _pageController;
+
+  final ScrollController _commentsScrollController = ScrollController();
+  int? _targetCommentId; // Comment to scroll to
   
   int _currentIndex = 0;
   bool _showComments = false;
@@ -49,6 +54,7 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
   String? _replyingToUserName;
   bool _isWishlisted = false;
   bool _isDescriptionExpanded = false;
+  int? _highlightedCommentId;
   
   int _likesCount = 0;
   int _commentsCount = 0;
@@ -133,7 +139,19 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
       _commentController.addListener(() {
       setState(() {});
       });
-    
+
+      // ✅ Handle target comment - open comments and scroll
+      if (widget.targetCommentId != null) {
+        _targetCommentId = widget.targetCommentId;
+        // Wait for animation to complete before opening comments
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Future.delayed(const Duration(milliseconds: 700), () {
+          if (mounted) {
+            _toggleComments();
+          }
+        });
+      });
+    }
   }
 
   @override
@@ -141,7 +159,43 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
     _controller.dispose();
     _pageController.dispose();
     _commentController.dispose();
+    _commentsScrollController.dispose();
     super.dispose();
+  }
+  
+  @override
+  void didUpdateWidget(MemoryCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+  
+    // ✅ Check if targetCommentId changed
+    if (widget.targetCommentId != null && 
+        widget.targetCommentId != oldWidget.targetCommentId) {
+      print('🔥 MemoryCard updated with new targetCommentId: ${widget.targetCommentId}');
+    
+      _targetCommentId = widget.targetCommentId;
+    
+      // If comments aren't open, open them
+      if (!_showComments) {
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (mounted) {
+            _toggleComments();
+          }
+        });
+      } else {
+        // Comments already open, just scroll to the new target
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted && _targetCommentId != null) {
+            final isTopLevel = _comments.any((c) => c.id == _targetCommentId);
+          
+            if (isTopLevel) {
+              _scrollToComment(_targetCommentId!);
+            } else {
+              _findAndExpandParentComment(_targetCommentId!);
+            }
+          }
+        });
+      }
+    }
   }
 
   Future<void> _animateOut() async {
@@ -214,11 +268,11 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
 
   Future<void> _loadComments() async {
     setState(() => _isLoadingComments = true);
-    
+  
     try {
       final currentMemory = widget.memories[_currentIndex];
       final supabaseMemoryId = currentMemory.supabaseMemoryId;
-      
+    
       if (supabaseMemoryId == null) {
         setState(() {
           _comments = [];
@@ -237,10 +291,176 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
         _comments = loadedComments;
         _isLoadingComments = false;
       });
+
+      // ✅ Handle target comment after comments are loaded
+      if (_targetCommentId != null) {
+        await Future.delayed(const Duration(milliseconds: 500));
+      
+        // Check if target is a top-level comment
+        final isTopLevel = _comments.any((c) => c.id == _targetCommentId);
+      
+        if (isTopLevel) {
+          // It's a top-level comment, just scroll
+          if (mounted) {
+            _scrollToComment(_targetCommentId!);
+          }
+        } else {
+          // It's a reply - find parent and expand
+          await _findAndExpandParentComment(_targetCommentId!);
+        }
+      }
     } catch (e) {
       print('❌ Error loading comments: $e');
       setState(() => _isLoadingComments = false);
     }
+  }
+
+  // Find and expand parent comment
+  Future<void> _findAndExpandParentComment(int replyId) async {
+    try {
+      // Get the reply to find its parent
+      final response = await commentsService.getCommentById(replyId);
+    
+      if (response == null) {
+        print('⚠️ Reply comment not found');
+        _targetCommentId = null;
+        return;
+      }
+    
+      final parentCommentId = response['repliedCommentID'] as int?;
+    
+      if (parentCommentId == null) {
+        print('⚠️ Reply has no parent');
+        _targetCommentId = null;
+        return;
+      }
+    
+      // Find parent comment index
+      final parentIndex = _comments.indexWhere((c) => c.id == parentCommentId);
+    
+      if (parentIndex == -1) {
+        print('⚠️ Parent comment not found in list');
+        _targetCommentId = null;
+        return;
+      }
+    
+      print('✅ Found parent comment at index $parentIndex, expanding...');
+    
+      // Load replies for parent
+      await _loadReplies(parentCommentId);
+    
+      // Small delay for replies to render
+      await Future.delayed(const Duration(milliseconds: 300));
+    
+      // Scroll to the reply
+      if (mounted) {
+        _scrollToReply(replyId, parentCommentId);
+      }
+    } catch (e) {
+      print('❌ Error finding parent comment: $e');
+      _targetCommentId = null;
+    }
+  }
+
+  // ✅ Scroll to a reply
+  void _scrollToReply(int replyId, int parentCommentId) {
+    if (!mounted || !_commentsScrollController.hasClients) {
+      print('⚠️ ScrollController not ready for reply');
+      return;
+    }
+  
+    // Find parent comment index
+    final parentIndex = _comments.indexWhere((c) => c.id == parentCommentId);
+  
+    if (parentIndex == -1) {
+      print('⚠️ Parent comment not found');
+      _targetCommentId = null;
+      return;
+    }
+  
+    // Find reply index within replies
+    final replies = _repliesCache[parentCommentId] ?? [];
+    final replyIndex = replies.indexWhere((r) => r.id == replyId);
+  
+    if (replyIndex == -1) {
+      print('⚠️ Reply not found in cache');
+      _targetCommentId = null;
+      return;
+    }
+  
+    print('✅ Scrolling to reply at parent index $parentIndex, reply index $replyIndex');
+  
+    // Highlight the reply
+    setState(() {
+      _highlightedCommentId = replyId;
+    });
+  
+    // Calculate position (parent comment + replies before target)
+    // Adjust these values based on your actual heights
+    final parentHeight = 120.0;
+    final replyHeight = 100.0;
+    final position = (parentIndex * parentHeight) + 
+                    parentHeight + 
+                    (replyIndex * replyHeight);
+  
+    _commentsScrollController.animateTo(
+      position.clamp(0.0, _commentsScrollController.position.maxScrollExtent),
+      duration: const Duration(milliseconds: 600),
+      curve: Curves.easeOutCubic,
+    );
+  
+    // Remove highlight after 2 seconds
+    Future.delayed(const Duration(milliseconds: 2000), () {
+      if (mounted) {
+        setState(() {
+          _highlightedCommentId = null;
+          _targetCommentId = null;
+        });
+      }
+    });
+  }
+  
+  void _scrollToComment(int commentId) {
+    if (!mounted || !_commentsScrollController.hasClients) {
+      print('⚠️ ScrollController not ready');
+      return;
+    }
+
+    final commentIndex = _comments.indexWhere((c) => c.id == commentId);
+
+    if (commentIndex == -1) {
+      print('⚠️ Comment $commentId not found in list');
+      _targetCommentId = null;
+      return;
+    }
+
+    print('✅ Scrolling to comment at index $commentIndex');
+
+    // ✅ Highlight the comment
+    setState(() {
+      _highlightedCommentId = commentId;
+    });
+
+    final position = (commentIndex * 120.0).clamp(
+      0.0, 
+      _commentsScrollController.position.maxScrollExtent
+    );
+
+    _commentsScrollController.animateTo(
+      position,
+      duration: const Duration(milliseconds: 600),
+      curve: Curves.easeOutCubic,
+    );
+
+    // Remove highlight after 2 seconds
+    Future.delayed(const Duration(milliseconds: 2000), () {
+      if (mounted) {
+        setState(() {
+          _highlightedCommentId = null;
+          _targetCommentId = null;
+        });
+      }
+    });
   }
 
   void _resetCommentState() {
@@ -254,6 +474,7 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
       _replyingToUserName = null;
       _commentController.clear();
       _isDescriptionExpanded = false;
+      _targetCommentId = null;
     });
   }
 
@@ -269,6 +490,7 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
         _replyingToCommentId = null;
         _replyingToUserName = null;
         _commentController.clear();
+        _targetCommentId = null;
       });
     } else {
       // When opening comments, load them
@@ -1041,6 +1263,7 @@ Widget _buildActionButton({
                               ),
                             )
                           : ListView.builder(
+                              controller: _commentsScrollController,
                               padding: EdgeInsets.only(
                                 top: 8,
                                 bottom: 80,
@@ -1162,73 +1385,82 @@ Widget _buildActionButton({
     final isExpanded = _expandedReplies[comment.id] ?? false;
     final isLoadingReplies = _loadingReplies[comment.id] ?? false;
     final replies = _repliesCache[comment.id] ?? [];
+    final isHighlighted = _highlightedCommentId == comment.id;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              CircleAvatar(
-                radius: 16,
-                backgroundColor: Colors.grey.shade300,
-                child: Text(
-                  comment.userName[0].toUpperCase(),
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey.shade700,
-                    fontSize: 14,
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          decoration: BoxDecoration(
+            color: isHighlighted 
+                ? memoirTheme.tertiary.withOpacity(0.2) 
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CircleAvatar(
+                  radius: 16,
+                  backgroundColor: Colors.grey.shade300,
+                  child: Text(
+                    comment.userName[0].toUpperCase(),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey.shade700,
+                      fontSize: 14,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          comment.userName,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                            color: Colors.black,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          comment.getRelativeTime(),
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                        if (comment.isAuthor) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            comment.userName,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                              color: Colors.black,
                             ),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade800,
-                              borderRadius: BorderRadius.circular(4),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            comment.getRelativeTime(),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
                             ),
-                            child: Text(
-                              'Author',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.grey.shade400,
-                                fontWeight: FontWeight.w600,
+                          ),
+                          if (comment.isAuthor) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade800,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                'Author',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.grey.shade400,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
-                          ),
+                          ],
                         ],
-                      ],
-                    ),
+                      ),
                     const SizedBox(height: 4),
                     Text(
                       comment.text,
@@ -1352,7 +1584,7 @@ Widget _buildActionButton({
             ],
           ),
         ),
-      
+        ),
         // Expanded replies section
         if (isExpanded && !isLoadingReplies)
           ...replies.map((reply) => _buildReplyItem(reply, comment.id)),
@@ -1377,140 +1609,109 @@ Widget _buildActionButton({
   Widget _buildReplyItem(CommentData reply, int parentCommentId) {
     final currentUser = FirebaseAuth.instance.currentUser;
     final isOwnReply = currentUser?.uid == reply.userId;
+    final isHighlighted = _highlightedCommentId == reply.id;
 
-    return Padding(
-      padding: const EdgeInsets.only(left: 44, right: 16, top: 8, bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 2,
-            height: 32,
-            color: Colors.grey.shade300,
-            margin: const EdgeInsets.only(right: 12, top: 4),
-          ),
-          CircleAvatar(
-            radius: 14,
-            backgroundColor: Colors.grey.shade300,
-            child: Text(
-              reply.userName[0].toUpperCase(),
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.grey.shade700,
-                fontSize: 12,
+    return AnimatedContainer(
+       duration: const Duration(milliseconds: 300),
+      decoration: BoxDecoration(
+        color: isHighlighted 
+            ? memoirTheme.tertiary.withOpacity(0.2) 
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.only(left: 44, right: 16, top: 8, bottom: 8),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 2,
+              height: 32,
+              color: Colors.grey.shade300,
+              margin: const EdgeInsets.only(right: 12, top: 4),
+            ),
+            CircleAvatar(
+              radius: 14,
+              backgroundColor: Colors.grey.shade300,
+              child: Text(
+                reply.userName[0].toUpperCase(),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey.shade700,
+                  fontSize: 12,
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      reply.userName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12,
-                        color: Colors.black,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      reply.getRelativeTime(),
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                    if (reply.isAuthor) ...[
-                      const SizedBox(width: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 4,
-                          vertical: 1,
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        reply.userName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                          color: Colors.black,
                         ),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade800,
-                          borderRadius: BorderRadius.circular(3),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        reply.getRelativeTime(),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey.shade600,
                         ),
-                        child: Text(
-                          'Author',
-                          style: TextStyle(
-                            fontSize: 9,
-                            color: Colors.grey.shade400,
-                            fontWeight: FontWeight.w600,
+                      ),
+                      if (reply.isAuthor) ...[
+                        const SizedBox(width: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 1,
                           ),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade800,
+                            borderRadius: BorderRadius.circular(3),
+                          ),
+                          child: Text(
+                            'Author',
+                            style: TextStyle(
+                              fontSize: 9,
+                              color: Colors.grey.shade400,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),  
                         ),
-                      ),
+                      ],
                     ],
-                  ],
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  reply.text,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.black,
                   ),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () async {
-                        try {
-                          await commentsService.toggleCommentLike(reply.id);
-                          _loadReplies(parentCommentId);
-                        } catch (e) {
-                          print('Error liking reply: $e');
-                        }
-                      },
-                      child: Text(
-                        reply.likesCount > 0 
-                            ? '${reply.getFormattedLikesCount()} likes'
-                            : 'Like',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey.shade600,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                  const SizedBox(height: 3),
+                  Text(
+                    reply.text,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.black,
                     ),
-                    const SizedBox(width: 12),
-                    GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _replyingToCommentId = parentCommentId;
-                          _replyingToUserName = reply.userName;
-                          _commentController.text = '@${reply.userName} ';
-                        });
-                      },
-                      child: Text(
-                        'Reply',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey.shade600,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    if (isOwnReply) ...[
-                      const SizedBox(width: 12),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
                       GestureDetector(
                         onTap: () async {
                           try {
-                            await commentsService.deleteComment(reply.id);
-                            setState(() => _commentsCount--);
-                            await _loadReplies(parentCommentId);
-                            await _loadComments();
+                            await commentsService.toggleCommentLike(reply.id);
+                            _loadReplies(parentCommentId);
                           } catch (e) {
-                            print('Error deleting reply: $e');
+                            print('Error liking reply: $e');
                           }
                         },
                         child: Text(
-                          'Delete',
+                          reply.likesCount > 0 
+                              ? '${reply.getFormattedLikesCount()} likes'
+                              : 'Like',
                           style: TextStyle(
                             fontSize: 11,
                             color: Colors.grey.shade600,
@@ -1518,19 +1719,60 @@ Widget _buildActionButton({
                           ),
                         ),
                       ),
+                      const SizedBox(width: 12),
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _replyingToCommentId = parentCommentId;
+                            _replyingToUserName = reply.userName;
+                            _commentController.text = '@${reply.userName} ';
+                          });
+                        },
+                        child: Text(
+                          'Reply',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey.shade600,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      if (isOwnReply) ...[
+                        const SizedBox(width: 12),
+                        GestureDetector(
+                          onTap: () async {
+                            try {
+                              await commentsService.deleteComment(reply.id);
+                              setState(() => _commentsCount--);
+                              await _loadReplies(parentCommentId);
+                              await _loadComments();
+                            } catch (e) {
+                              print('Error deleting reply: $e');
+                            }
+                          },
+                          child: Text(
+                            'Delete',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey.shade600,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
-          ),
-          if (reply.isLikedByMe)
-            const Icon(
-              Icons.favorite,
-              size: 10,
-              color: Colors.red,
-            ),
-        ],
+            if (reply.isLikedByMe)
+              const Icon(
+                Icons.favorite,
+                size: 10,
+                color: Colors.red,
+              ),
+          ],
+        ),
       ),
     );
   }

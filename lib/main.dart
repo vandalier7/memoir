@@ -24,7 +24,6 @@ import 'package:firebase_auth/firebase_auth.dart' as fbauth;
 
 import 'objects/globals.dart';
 import 'screens/edit_profile.dart';
-import 'screens/bin_screen.dart';
 import 'camera_ui/camera_screen.dart';
 import 'camera_ui/journal_screen.dart';
 import 'screens/followers_following_screen.dart';
@@ -160,11 +159,11 @@ class RootState extends State<Root> {
           return PreviewScreen(imagePath: args.toString());
         },
         '/editProfile': (context) => const EditProfileScreen(),
-        '/notifications': (context) => const NotificationsScreen(), 
+        '/notifications': (context) => const NotificationsScreen(),
         '/followers-following': (context) {
             final args = ModalRoute.of(context)!.settings.arguments as List<dynamic>;
             return FollowersFollowingScreen(uid: args[0].toString(), startingTab: args[1],);
-          },
+        },
       }
     );
   }
