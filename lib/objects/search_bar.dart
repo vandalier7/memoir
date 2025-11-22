@@ -361,39 +361,73 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
               ),
             ),
 
-          // ✨ FILTERS BUTTON
-          GestureDetector(
-            onTap: () {
-              debugPrint("Filters button tapped");
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: memoirTheme.surface,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
-                    blurRadius: 6,
-                    offset: const Offset(0, 3),
+          // Notification and Filter buttons row
+          Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            // 🔔 NOTIFICATION BUTTON
+            GestureDetector(
+              onTap: () {
+                Navigator.pushNamed(context, '/notifications');
+              },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: memoirTheme.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 6,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.layers, size: 15, color: memoirTheme.onSurface),
-                  const SizedBox(width: 6),
-                  Text(
-                    "Filters",
-                    style: TextStyle(
-                        color: memoirTheme.onSurface,
-                        fontWeight: FontWeight.w400,
-                        fontSize: 13),
+                  child: Icon(
+                    Icons.notifications_outlined,
+                    size: 18,
+                    color: memoirTheme.onSurface,
                   ),
-                ],
+                ),
               ),
-            ),
+    
+              const SizedBox(width: 8),
+    
+              // ✨ FILTERS BUTTON
+              GestureDetector(
+                onTap: () {
+                  debugPrint("Filters button tapped");
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: memoirTheme.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 6,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.layers, size: 15, color: memoirTheme.onSurface),
+                      const SizedBox(width: 6),
+                      Text(
+                        "Filters",
+                        style: TextStyle(
+                          color: memoirTheme.onSurface,
+                          fontWeight: FontWeight.w400,
+                          fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
