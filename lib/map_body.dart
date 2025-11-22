@@ -205,7 +205,7 @@ class MapState extends State<MapBody> {
         return;
       }
 
-      if (!hasLocationError) return;
+      // if (!hasLocationError) return;
 
       Position pos = await Geolocator.getCurrentPosition(
           locationSettings: AndroidSettings(accuracy: LocationAccuracy.high));
