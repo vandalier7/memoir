@@ -13,8 +13,9 @@ import 'package:presentation/my_scaffold.dart';
 
 class SearchBarWidget extends StatefulWidget {
   final FocusNode? focusNode;
+  final bool hasActiveMemory;
 
-  const SearchBarWidget({super.key, this.focusNode});
+  const SearchBarWidget({super.key, this.focusNode, required this.hasActiveMemory});
 
   @override
   State<SearchBarWidget> createState() => _SearchBarWidgetState();
@@ -176,7 +177,7 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
                 
                 // 👤 ACCOUNT BUTTON (Updated to show Profile Picture)
                 GestureDetector(
-                  onTap: () {
+                  onTap: () async {
                     FocusScope.of(context).unfocus();
                     _internalFocusNode.unfocus();
                     
@@ -184,6 +185,10 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
                       _shouldPreventFocus = true;
                       _isFocused = false;
                     });
+
+                    if (widget.hasActiveMemory) {
+                      await Future.delayed(Duration(milliseconds: 450));
+                    }
                     
                     Navigator.pushNamed(
                       context,
@@ -370,7 +375,7 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // 🔔 NOTIFICATION BUTTON WITH BADGE
-            NotificationButton(),
+            NotificationButton(hasActiveMemory: widget.hasActiveMemory),
     
     // const SizedBox(width: 8),
 

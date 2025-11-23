@@ -67,7 +67,7 @@ void main() async {
     activeUsername = userName ?? 'Unknown User'; // Provide fallback if null
     await refreshFriendsAndFollowers();
   }
-  
+  await feedbackService.initialize();
 
   MapLibreMap.useHybridComposition = true;
   
@@ -163,7 +163,10 @@ class RootState extends State<Root> {
             final args = ModalRoute.of(context)!.settings.arguments as List<dynamic>;
             return FollowersFollowingScreen(uid: args[0].toString(), startingTab: args[1],);
           },
-        '/notifications': (context) => const NotificationsScreen(), 
+        '/notifications': (context) {
+          
+          return const NotificationsScreen();
+        }, 
       }
     );
   }
