@@ -292,7 +292,7 @@ class StorageService {
     .listen(
       (snapshot) {
         
-        unfilteredMemories.clear();
+        myMemories.clear();
 
         
         int count = 0;
@@ -329,7 +329,7 @@ class StorageService {
 
 
           if (filter == null || filter(memory)) {
-            unfilteredMemories.add(memory);
+            myMemories.add(memory);
           }
           
           count++;

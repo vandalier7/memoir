@@ -53,15 +53,16 @@ class _JournalScreenState extends State<JournalScreen>
   bool isLoading = false;
 
   // Moods with emojis
-  final List<Map<String, dynamic>> moods = [
-    {'emoji': '😊', 'label': 'Happy', 'value': 1},
-    {'emoji': '😢', 'label': 'Sad', 'value': 2},
-    {'emoji': '😡', 'label': 'Angry', 'value': 3},
-    {'emoji': '🤢', 'label': 'Disgusted', 'value': 4},
-    {'emoji': '😱', 'label': 'Scared', 'value': 5},
-    {'emoji': '😌', 'label': 'Chill', 'value': 6},
-    {'emoji': '😰', 'label': 'Stressed', 'value': 7},
-  ];
+  // Update the moods list at the top of _JournalScreenState class:
+final List<Map<String, dynamic>> moods = [
+  {'image': getMoodIcon(Mood.happy), 'label': 'Happy', 'value': 1, 'mood': Mood.happy},
+  {'image': getMoodIcon(Mood.sad), 'label': 'Sad', 'value': 2, 'mood': Mood.sad},
+  {'image': getMoodIcon(Mood.angry), 'label': 'Angry', 'value': 3, 'mood': Mood.angry},
+  {'image': getMoodIcon(Mood.disgusted), 'label': 'Disgusted', 'value': 4, 'mood': Mood.disgusted},
+  {'image': getMoodIcon(Mood.afraid), 'label': 'Scared', 'value': 5, 'mood': Mood.afraid},
+  {'image': getMoodIcon(Mood.calm), 'label': 'Chill', 'value': 6, 'mood': Mood.calm},
+  {'image': getMoodIcon(Mood.worried), 'label': 'Stressed', 'value': 7, 'mood': Mood.worried},
+];
 
   // Available emojis for overlay
   final List<String> availableEmojis = [
@@ -623,7 +624,7 @@ class _JournalScreenState extends State<JournalScreen>
                     bottom: 10 + bottomSafe,
                     child: Row(
                       children: [
-                        // Mood side button
+                        // Mood side button - now circular and separate
                         GestureDetector(
                           onTap: () {
                             if (isLoading) return;
@@ -633,29 +634,53 @@ class _JournalScreenState extends State<JournalScreen>
                             height: 54,
                             width: 54,
                             decoration: BoxDecoration(
-                              color: palette[0].withOpacity(0.9),
-                              borderRadius: const BorderRadius.only(
-                                topLeft: Radius.circular(14),
-                                bottomLeft: Radius.circular(14),
-                              ),
+                              color: selectedMood.isEmpty 
+                                  ? palette[0].withOpacity(0.9)
+                                  : Color.alphaBlend( Colors.black.withAlpha(30), getMoodColor(moods.firstWhere(
+                                      (m) => m['label'] == selectedMood,
+                                      orElse: () => moods[0],
+                                    )['mood'] as Mood)),
+                              shape: BoxShape.circle,
                               border: Border.all(
-                                color: Colors.white.withOpacity(0.2),
-                                width: 1,
+                                color: Colors.white.withOpacity(0.3),
+                                width: 2,
                               ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.2),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
                             ),
                             child: Center(
-                              child: selectedMood.isEmpty ? 
-                              Icon(Icons.keyboard_arrow_up_rounded) :
-                              Text(
-                                    moods.firstWhere(
-                                        (m) => m['label'] == selectedMood,
-                                        orElse: () => {'emoji': '😊'},
-                                      )['emoji'] as String,
-                                style: const TextStyle(fontSize: 24),
-                              ),
+                              child: selectedMood.isEmpty 
+                                  ? const Icon(
+                                      Icons.keyboard_arrow_up_rounded,
+                                      color: Colors.white,
+                                      size: 35,
+                                    )
+                                  : Padding(
+                                      padding: const EdgeInsets.all(0),
+                                      child: ColorFiltered(
+                                        colorFilter: const ColorFilter.mode(
+                                          Colors.white,
+                                          BlendMode.srcIn,
+                                        ),
+                                        child: Image(
+                                          image: moods.firstWhere(
+                                            (m) => m['label'] == selectedMood,
+                                            orElse: () => moods[0],
+                                          )['image'] as AssetImage,
+                                          fit: BoxFit.contain,
+                                        ),
+                                      ),
+                                    ),
                             ),
                           ),
                         ),
+                        
+                        const SizedBox(width: 12), // Space between buttons
                         
                         // Main Share Memory button
                         Expanded(
@@ -675,14 +700,17 @@ class _JournalScreenState extends State<JournalScreen>
                                 toggleLoad(true);
                                 await saveToSupabase();
                                 toggleLoad(false);
+                                
                               },
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: palette[0].withOpacity(0.9),
-                                shape: const RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.only(
-                                    topRight: Radius.circular(14),
-                                    bottomRight: Radius.circular(14),
-                                  ),
+                                backgroundColor: selectedMood.isEmpty 
+                                  ? palette[0].withOpacity(0.9)
+                                  : Color.alphaBlend( Colors.black.withAlpha(30), getMoodColor(moods.firstWhere(
+                                      (m) => m['label'] == selectedMood,
+                                      orElse: () => moods[0],
+                                    )['mood'] as Mood)),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
                                 ),
                                 elevation: 0,
                               ),
@@ -714,21 +742,8 @@ class _JournalScreenState extends State<JournalScreen>
               ],
             ),
           ),
-          
-          // Loading overlay
-          if (isLoading)
-            Positioned.fill(
-              child: Container(
-                color: Colors.black.withOpacity(0.5),
-                child: const Center(
-                  child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                ),
-              ),
-            ),
         ],
-      ),
+      )
     );
   }
 
@@ -795,77 +810,89 @@ class _JournalScreenState extends State<JournalScreen>
   }
 
   Widget _buildMoodDrawer() {
-    final bottomSafe = MediaQuery.of(context).padding.bottom;
-    return Positioned(
-      left: 20,
-      right: 20,
-      bottom: 70 + bottomSafe,
-      child: SizeTransition(
-        sizeFactor: _moodDrawerController,
-        axisAlignment: -1.0,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(14),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.blueGrey.withOpacity(0.18),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: Colors.white10),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      
-                      ...moods.map((m) {
-                        final isSelected = selectedMood == m['label'];
-                        return ListTile(
-                          dense: true,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                          leading: Text(m['emoji']!,
-                              style: const TextStyle(fontSize: 20)),
-                          title: Text(
-                            m['label']!,
-                            style: TextStyle(
-                              color: isSelected ? palette[1] : Colors.white,
-                              fontWeight:
-                                  isSelected ? FontWeight.w700 : FontWeight.w500,
-                              fontSize: 14,
-                            ),
+  final bottomSafe = MediaQuery.of(context).padding.bottom;
+  return Positioned(
+    left: 20,
+    right: 20,
+    bottom: 70 + bottomSafe,
+    child: SizeTransition(
+      sizeFactor: _moodDrawerController,
+      axisAlignment: -1.0,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blueGrey.withOpacity(0.18),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.white10),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ...moods.map((m) {
+                      final isSelected = selectedMood == m['label'];
+                      return ListTile(
+                        dense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                        leading: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: Colors.black.withAlpha(150),
+                            shape: BoxShape.circle,
                           ),
-                          onTap: () {
-                            setState(() {
-                              selectedMood = m['label'] as String;
-                              selectedMoodValue = m['value'] as int;
-                            });
-                            _toggleMood();
-                          },
-                        );
-                      }).toList(),
-                    ],
-                  ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(1),
+                            child: Image(
+                                image: m['image'] as AssetImage,
+                                fit: BoxFit.contain,
+                              ),
+                          ),
+                        ),
+                        title: Text(
+                          m['label']!,
+                          style: TextStyle(
+                            color: isSelected ? palette[1] : Colors.white,
+                            fontWeight:
+                                isSelected ? FontWeight.w700 : FontWeight.w500,
+                            fontSize: 14,
+                          ),
+                        ),
+                        onTap: () {
+                          setState(() {
+                            selectedMood = m['label'] as String;
+                            selectedMoodValue = m['value'] as int;
+                          });
+                          _toggleMood();
+                        },
+                      );
+                    }).toList(),
+                  ],
                 ),
               ),
             ),
-            Container(
-              width: 2,
-              height: 8,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(1),
-              ),
+          ),
+          Container(
+            width: 2,
+            height: 8,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(1),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildBottomJournalDrawer() {
   final bottomSafe = MediaQuery.of(context).padding.bottom;

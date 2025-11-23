@@ -57,7 +57,7 @@ AssetImage getMoodIcon (Mood mood) {
 Color getMoodColor(Mood mood) {
     switch (mood) {
       case Mood.happy:
-        return const Color.fromARGB(255, 243, 219, 0);
+        return const Color.fromARGB(255, 226, 185, 0);
       case Mood.sad:
         return const Color.fromARGB(255, 33, 65, 243);
       case Mood.angry:
@@ -79,6 +79,7 @@ const double clearanceRadius = 30; // pixels in screenSpace
 
 List<CameraDescription> cameras = [];
 List<MemoryData> memories = [];
+List<MemoryData> myMemories = [];
 List<MemoryData> unfilteredMemories = [];
 
 late MapLibreMapController mapController;
@@ -151,4 +152,63 @@ List<MemoryData>? getMemoriesAtSameLocation(int supabaseMemoryId) {
 // Helper to get the index of a specific memory in a list
 int getMemoryIndex(List<MemoryData> memories, int supabaseMemoryId) {
   return memories.indexWhere((m) => m.supabaseMemoryId == supabaseMemoryId);
+}
+
+/// Creates a circular mood icon widget with customizable size and darkening
+/// 
+/// [mood] - The mood to display (if null, shows arrow up icon)
+/// [size] - Diameter of the circle (default: 54)
+/// [darkeningAlpha] - Alpha value for darkening overlay (0-255, default: 30)
+Widget buildMoodCircle({
+  Mood? mood,
+  double size = 54,
+  int darkeningAlpha = 30,
+}) {
+  final moodColor = mood != null 
+      ? Color.alphaBlend(
+          Colors.black.withAlpha(darkeningAlpha),
+          getMoodColor(mood),
+        )
+      : const Color(0xFFF75270).withOpacity(0.9); // Default palette[0]
+
+  return Container(
+    height: size,
+    width: size,
+    decoration: BoxDecoration(
+      color: moodColor,
+      shape: BoxShape.circle,
+      border: Border.all(
+        color: Colors.white.withOpacity(0.3),
+        width: 2,
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.2),
+          blurRadius: 8,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    ),
+    child: Center(
+      child: mood == null
+          ? Icon(
+              Icons.keyboard_arrow_up_rounded,
+              color: Colors.white,
+              size: size * 0.65, // Scale icon with circle size
+            )
+          : Padding(
+              padding: EdgeInsets.all(0), // Proportional padding
+              child: ColorFiltered(
+                colorFilter: const ColorFilter.mode(
+                  Colors.white,
+                  BlendMode.srcIn,
+                ),
+                child: Image(
+                  image: getMoodIcon(mood),
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+    ),
+  );
 }

@@ -1035,7 +1035,8 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
                         ),
                       ),
                       // Add padding on right to avoid buttons
-                      const SizedBox(width: 60),
+                      // const SizedBox(width: 50),
+                      buildMoodCircle(mood: memory.mood, size: 35, darkeningAlpha: 0)
                     ],
                   ),
 

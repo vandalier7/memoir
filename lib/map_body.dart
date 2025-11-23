@@ -271,7 +271,7 @@ class MapState extends State<MapBody> {
       isHoldingMap = value;
       if (!value) {
         memories.clear();
-        for (MemoryData memory in unfilteredMemories) {
+        for (MemoryData memory in [...myMemories, ...unfilteredMemories]) {
           if (positionToUse == null) {
             // No location - show based on decay only
             if (memory.decay <= mapZoom) {
