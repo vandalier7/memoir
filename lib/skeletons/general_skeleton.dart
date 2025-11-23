@@ -1,6 +1,73 @@
 import 'package:flutter/material.dart';
 import '../app_theme.dart';
 
+// Reusable Shimmer Widget that can be used anywhere
+class ShimmerLoading extends StatefulWidget {
+  final Widget child;
+  
+  const ShimmerLoading({super.key, required this.child});
+
+  @override
+  State<ShimmerLoading> createState() => _ShimmerLoadingState();
+}
+
+class _ShimmerLoadingState extends State<ShimmerLoading>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    )..repeat();
+    
+    _animation = Tween<double>(begin: -1.0, end: 2.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return _ShimmerScope(
+          shimmerPosition: _animation.value,
+          child: widget.child,
+        );
+      },
+    );
+  }
+}
+
+class _ShimmerScope extends InheritedWidget {
+  final double shimmerPosition;
+
+  const _ShimmerScope({
+    required this.shimmerPosition,
+    required super.child,
+  });
+
+  static double of(BuildContext context) {
+    final scope = context.dependOnInheritedWidgetOfExactType<_ShimmerScope>();
+    return scope?.shimmerPosition ?? 0.0;
+  }
+
+  @override
+  bool updateShouldNotify(_ShimmerScope oldWidget) {
+    return oldWidget.shimmerPosition != shimmerPosition;
+  }
+}
+
 class ProfileSkeleton extends StatefulWidget {
   const ProfileSkeleton({super.key});
 
@@ -48,21 +115,20 @@ class _ProfileSkeletonState extends State<ProfileSkeleton>
               const SizedBox(height: 20),
               
               // Profile Picture Skeleton
-              _SkeletonBox(
+              SkeletonBox(
                 width: 100,
                 height: 100,
                 borderRadius: 50,
-                shimmerPosition: _animation.value,
+                shape: BoxShape.circle,
               ),
               
               const SizedBox(height: 10),
               
               // Username Skeleton
-              _SkeletonBox(
+              SkeletonBox(
                 width: 150,
                 height: 24,
                 borderRadius: 12,
-                shimmerPosition: _animation.value,
               ),
               
               const SizedBox(height: 12),
@@ -71,38 +137,36 @@ class _ProfileSkeletonState extends State<ProfileSkeleton>
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _StatSkeleton(shimmerPosition: _animation.value),
+                  _StatSkeleton(),
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 12),
                     child: Text("•", style: TextStyle(color: Colors.grey, fontSize: 20)),
                   ),
-                  _StatSkeleton(shimmerPosition: _animation.value),
+                  _StatSkeleton(),
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 12),
                     child: Text("•", style: TextStyle(color: Colors.grey, fontSize: 20)),
                   ),
-                  _StatSkeleton(shimmerPosition: _animation.value),
+                  _StatSkeleton(),
                 ],
               ),
               
               const SizedBox(height: 30),
               
               // Activity Preview Skeleton
-              _SkeletonBox(
+              SkeletonBox(
                 width: double.infinity,
                 height: 160,
                 borderRadius: 16,
-                shimmerPosition: _animation.value,
               ),
               
               const SizedBox(height: 40),
               
               // Additional Content Skeleton
-              _SkeletonBox(
+              SkeletonBox(
                 width: double.infinity,
                 height: 300,
                 borderRadius: 16,
-                shimmerPosition: _animation.value,
               ),
               
               const SizedBox(height: 60),
@@ -116,47 +180,64 @@ class _ProfileSkeletonState extends State<ProfileSkeleton>
 }
 
 class _StatSkeleton extends StatelessWidget {
-  final double shimmerPosition;
-  
-  const _StatSkeleton({required this.shimmerPosition});
+  const _StatSkeleton();
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        _SkeletonBox(
+        SkeletonBox(
           width: 40,
           height: 20,
           borderRadius: 10,
-          shimmerPosition: shimmerPosition,
         ),
         const SizedBox(height: 4),
-        _SkeletonBox(
+        SkeletonBox(
           width: 60,
           height: 14,
           borderRadius: 7,
-          shimmerPosition: shimmerPosition,
         ),
       ],
     );
   }
 }
 
-class _SkeletonBox extends StatelessWidget {
+class SkeletonBox extends StatelessWidget {
   final double? width;
   final double height;
   final double borderRadius;
-  final double shimmerPosition;
+  final BoxShape shape;
 
-  const _SkeletonBox({
+  const SkeletonBox({
+    super.key,
     this.width,
     required this.height,
-    required this.borderRadius,
-    required this.shimmerPosition,
+    this.borderRadius = 4,
+    this.shape = BoxShape.rectangle,
   });
 
   @override
   Widget build(BuildContext context) {
+    final shimmerPosition = _ShimmerScope.of(context);
+    
+    if (shape == BoxShape.circle) {
+      return ClipOval(
+        child: Container(
+          width: width ?? height,
+          height: height,
+          color: Colors.grey[300],
+          child: CustomPaint(
+            painter: _ShimmerPainter(
+              shimmerPosition: shimmerPosition,
+              baseColor: Colors.grey[300]!,
+              highlightColor: Colors.grey[100]!,
+            ),
+            child: Container(),
+          ),
+        ),
+      );
+    }
+    
     return ClipRRect(
       borderRadius: BorderRadius.circular(borderRadius),
       child: Container(
@@ -166,8 +247,8 @@ class _SkeletonBox extends StatelessWidget {
         child: CustomPaint(
           painter: _ShimmerPainter(
             shimmerPosition: shimmerPosition,
-            baseColor: Colors.pink[200]!.withAlpha(80),
-            highlightColor: Colors.pink[100]!.withAlpha(80),
+            baseColor: Colors.grey[300]!,
+            highlightColor: Colors.grey[100]!,
           ),
           child: Container(),
         ),

@@ -9,7 +9,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'memory.dart';
 import 'dart:async';
-import '../skeletons/profile_skeleton.dart';
+import '../skeletons/general_skeleton.dart';
 
 class MemoryCard extends StatefulWidget {
   final List<MemoryData> memories;

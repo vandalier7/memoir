@@ -158,6 +158,8 @@ class _AccountScreenState extends State<AccountScreen> {
       debugPrint("Could not load profile image: $imgError");
     }
 
+    await Future.delayed(Duration(milliseconds: 200));
+
     if (mounted) {
       setState(() {
         _username = username ?? "Unknown User";

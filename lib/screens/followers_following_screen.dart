@@ -3,7 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../processes/database_service.dart';
 import '../models/user_model.dart';
 import '../app_theme.dart';
-import 'package:presentation/objects/globals.dart';
+import '../skeletons/follow_list_skeleton.dart';
 
 class FollowersFollowingScreen extends StatefulWidget {
   final String uid;
@@ -33,11 +33,13 @@ class _FollowersFollowingScreenState extends State<FollowersFollowingScreen>
 
   Future<void> loadFollowers() async {
     followers = await DatabaseService().getFollowersDetailed(widget.uid);
+    if (!mounted) return;
     setState(() => loadingFollowers = false);
   }
 
   Future<void> loadFollowing() async {
     following = await DatabaseService().getFollowingDetailed(widget.uid);
+    if (!mounted) return;
     setState(() => loadingFollowing = false);
   }
 
@@ -134,14 +136,10 @@ class _FollowersFollowingScreenState extends State<FollowersFollowingScreen>
         controller: _tabController,
         children: [
           loadingFollowers
-              ? Center(
-                  child: CircularProgressIndicator(color: memoirTheme.tertiary),
-                )
+              ? FollowersFollowingSkeleton()
               : buildUserList(followers),
           loadingFollowing
-              ? Center(
-                  child: CircularProgressIndicator(color: memoirTheme.tertiary),
-                )
+              ? FollowersFollowingSkeleton()
               : buildUserList(following),
         ],
       ),
