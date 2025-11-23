@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import '../main.dart';
 import 'package:presentation/models/user_model.dart';
 import '../processes/image_service.dart';
+import '../processes/feedback_service.dart';
 
 late final num pixelRatio;
 
@@ -212,3 +213,5 @@ Widget buildMoodCircle({
     ),
   );
 }
+
+final feedbackService = FeedbackService();

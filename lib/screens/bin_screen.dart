@@ -5,8 +5,8 @@ import '../processes/storage_service.dart';
 import '../models/bin_item.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'posted_screen.dart';
-import '../my_scaffold.dart'; // Kept from alpha-version
-import '../objects/globals.dart'; // Kept from alpha-version
+import '../my_scaffold.dart';
+import '../objects/globals.dart';
 
 const Color _kPrimarySelectionColor = Color.fromARGB(255, 33, 150, 243);
 
@@ -25,7 +25,6 @@ class _BinScreenState extends State<BinScreen> {
   @override
   void initState() {
     super.initState();
-    // Use global storageService from alpha-version
     _binImagesFuture = storageService.fetchBinImages();
   }
 
@@ -45,7 +44,6 @@ class _BinScreenState extends State<BinScreen> {
         _selectedIds.add(docId);
       }
 
-      // If user deselects all, exit multi-select mode
       if (_isMultiSelectMode && _selectedIds.isEmpty) {
         _isMultiSelectMode = false;
       }
@@ -79,9 +77,8 @@ class _BinScreenState extends State<BinScreen> {
               child: const Text('Cancel')),
           TextButton(
             onPressed: () async {
-              Navigator.pop(dialogContext); // Close confirm dialog
+              Navigator.pop(dialogContext);
               
-              // Show loading indicator
               showDialog(
                 context: context,
                 barrierDismissible: false,
@@ -94,10 +91,10 @@ class _BinScreenState extends State<BinScreen> {
               }
 
               if (context.mounted) {
-                Navigator.pop(context); // Close loading indicator
+                Navigator.pop(context);
               }
               
-              _refreshImages(); // Refreshes list and clears selection
+              _refreshImages();
 
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -112,7 +109,6 @@ class _BinScreenState extends State<BinScreen> {
     );
   }
 
-  // Helper function from your new code
   String _formatDuration(Duration duration) {
     if (duration.inDays > 1) {
       return '${duration.inDays}d';
@@ -129,7 +125,6 @@ class _BinScreenState extends State<BinScreen> {
     }
   }
 
-  // Kept from alpha-version
   Widget _shadowedIcon(IconData iconData,
       {required Color color, required double size}) {
     return Text(
@@ -154,75 +149,102 @@ class _BinScreenState extends State<BinScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Container( // Kept from alpha-version
-        child: SafeArea(
-          top: false,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildHeader(context),
-              _buildRecentsBar(context),
-              Expanded(
-                child: FutureBuilder<List<BinItem>>(
-                  future: _binImagesFuture,
-                  builder: (context, snapshot) {
-                    final images = snapshot.data ?? [];
+      body: SafeArea(
+        top: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildHeader(context),
+            Expanded(
+              child: FutureBuilder<List<BinItem>>(
+                future: _binImagesFuture,
+                builder: (context, snapshot) {
+                  final images = snapshot.data ?? [];
 
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                          child: CircularProgressIndicator(color: Colors.white));
-                    }
-                    if (snapshot.hasError) {
-                      return Center(
-                          child: Text('Error: ${snapshot.error.toString()}',
-                              style: const TextStyle(color: Colors.white70)));
-                    }
-                    if (images.isEmpty) {
-                      return const Center(
-                          child: Text('No images in bin.',
-                              style: TextStyle(color: Color.fromARGB(255, 65, 65, 65))));
-                    }
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                        child: CircularProgressIndicator(color: Colors.white));
+                  }
+                  if (snapshot.hasError) {
+                    return Center(
+                        child: Text('Error: ${snapshot.error.toString()}',
+                            style: const TextStyle(color: Colors.white70)));
+                  }
+                  if (images.isEmpty) {
+                    return const Center(
+                        child: Text('No images in bin.',
+                            style: TextStyle(color: Color.fromARGB(255, 65, 65, 65))));
+                  }
 
-                    return GridView.builder(
-                      padding:
-                          const EdgeInsets.only(top: 5, right: 2, left: 2, bottom: 5),
-                      itemCount: images.length,
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
-                        crossAxisSpacing: 2.0,
-                        mainAxisSpacing: 2.0,
-                        childAspectRatio: 0.7,
+                  return CustomScrollView(
+                    slivers: [
+                      // Hint text as a sliver
+                      SliverToBoxAdapter(
+                        child: Container(
+                          color: Colors.transparent,
+                          padding: const EdgeInsets.only(top: 16, left: 15, right: 15, bottom: 10),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Column(
+                                children: [
+                                  Text(
+                                    'Binned memories expire after 6 hours.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: const Color.fromARGB(255, 37, 6, 6).withOpacity(0.5),
+                                      fontWeight: FontWeight.normal,
+                                      fontSize: 14
+                                    )
+                                  ),
+                                ],
+                              )
+                            ],
+                          ),
+                        ),
                       ),
-                      itemBuilder: (context, index) {
-                        final item = images[index];
-                        
-                        // Calculate remaining time
-                        final remainingTime =
-                            item.expireAt.toDate().difference(DateTime.now());
+                      
+                      // Grid of images
+                      SliverPadding(
+                        padding: const EdgeInsets.only(top: 5, right: 2, left: 2, bottom: 5),
+                        sliver: SliverGrid(
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3,
+                            crossAxisSpacing: 2.0,
+                            mainAxisSpacing: 2.0,
+                            childAspectRatio: 0.7,
+                          ),
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              final item = images[index];
+                              final remainingTime =
+                                  item.expireAt.toDate().difference(DateTime.now());
 
-                        return _BinGridTile(
-                          item: item,
-                          isSelected: _selectedIds.contains(item.id),
-                          isMultiSelectMode: _isMultiSelectMode,
-                          onToggleSelect: _toggleSelection,
-                          remainingTime: _formatDuration(remainingTime),
-                          timeObject: remainingTime,
-                          onRefresh: _refreshImages,
-                        );
-                      },
-                    );
-                  },
-                ),
+                              return _BinGridTile(
+                                item: item,
+                                isSelected: _selectedIds.contains(item.id),
+                                isMultiSelectMode: _isMultiSelectMode,
+                                onToggleSelect: _toggleSelection,
+                                remainingTime: _formatDuration(remainingTime),
+                                timeObject: remainingTime,
+                                onRefresh: _refreshImages,
+                              );
+                            },
+                            childCount: images.length,
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  // This header is updated with your new logic
   Widget _buildHeader(BuildContext context) {
     return Container(
       padding: const EdgeInsets.only(
@@ -242,120 +264,92 @@ class _BinScreenState extends State<BinScreen> {
           ),
         ],
       ),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // LEFT BUTTON
-              Align(
-                alignment: Alignment.centerLeft,
-                child: _isMultiSelectMode
-                    ? TextButton.icon(
-                        onPressed: _deselectAll,
-                        icon: const Icon(Icons.close, color: Color.fromARGB(255, 250, 132, 154)),
-                        label: const Text('Deselect All',
-                            style: TextStyle(color: Color.fromARGB(255, 250, 132, 154))),
-                      )
-                    : GestureDetector(
-                        onTap: () => Navigator.pop(context),
-                        child: Container(
-                          color: Colors.transparent,
-                          height: 40,
-                          
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.arrow_back_ios,
-                                color: Color.fromARGB(255, 250, 132, 154),
-                                size: 20,
-                              ),
-                              const SizedBox(width: 4),
-                              const Text(
-                                "Back",
-                                style: TextStyle(
-                                  color: Color.fromARGB(255, 250, 132, 154),
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                      ),
-              ),
-
-              // CENTER TITLE
-              const Text(
-                "Bin",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black,
-                ),
-              ),
-
-              // RIGHT BUTTON
-              Align(
-                alignment: Alignment.centerRight,
-                child: ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      if (!_isMultiSelectMode) {
-                        _isMultiSelectMode = true;
-                        _selectedIds.clear();
-                      } else if (_selectedIds.isNotEmpty) {
-                        _handleDeleteBulk();
-                      } else {
-                        _isMultiSelectMode = false;
-                      }
-                    });
-                  },
-                  style: ElevatedButton.styleFrom(
-                    elevation: 0,
-                    backgroundColor: Colors.transparent,
-                    shadowColor: Colors.transparent,
-                    padding: EdgeInsets.zero,
-                  ),
-                  child: _isMultiSelectMode
-                      ? Text(
-                          '${_selectedIds.length}',
-                          style: const TextStyle(color: Color.fromARGB(255, 250, 132, 154)),
-                        )
-                      : const Icon(Icons.delete, color: Color.fromARGB(255, 250, 132, 154)),
-                ),
-              ),
-            ],
-          ),
-        );
-  }
-
-  // Kept from alpha-version, unchanged
-  Widget _buildRecentsBar(BuildContext context) {
-    return Container(
-      color: Colors.transparent,
-      padding: const EdgeInsets.only(top: 16, left: 15, right: 15, bottom: 10),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Stack(
+        alignment: Alignment.center,
         children: [
-          Column(
-            children: [
-              Text('Binned memories expire after 6 hours.',
-                textAlign: TextAlign.center,
-                    style: TextStyle(
-                        color: Color.fromARGB(255, 37, 6, 6).withValues(alpha: 0.5),
-                        fontWeight: FontWeight.normal,
-                        fontSize: 14
-                      )
+          // LEFT BUTTON
+          Align(
+            alignment: Alignment.centerLeft,
+            child: _isMultiSelectMode
+                ? TextButton.icon(
+                    onPressed: _deselectAll,
+                    icon: const Icon(Icons.close, color: Color.fromARGB(255, 250, 132, 154)),
+                    label: const Text('Deselect All',
+                        style: TextStyle(color: Color.fromARGB(255, 250, 132, 154))),
+                  )
+                : GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      color: Colors.transparent,
+                      height: 40,
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.arrow_back_ios,
+                            color: Color.fromARGB(255, 250, 132, 154),
+                            size: 20,
+                          ),
+                          SizedBox(width: 4),
+                          Text(
+                            "Back",
+                            style: TextStyle(
+                              color: Color.fromARGB(255, 250, 132, 154),
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  ),
+          ),
+
+          // CENTER TITLE
+          const Text(
+            "Bin",
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.black,
+            ),
+          ),
+
+          // RIGHT BUTTON
+          Align(
+            alignment: Alignment.centerRight,
+            child: ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  if (!_isMultiSelectMode) {
+                    _isMultiSelectMode = true;
+                    _selectedIds.clear();
+                  } else if (_selectedIds.isNotEmpty) {
+                    _handleDeleteBulk();
+                  } else {
+                    _isMultiSelectMode = false;
+                  }
+                });
+              },
+              style: ElevatedButton.styleFrom(
+                elevation: 0,
+                backgroundColor: Colors.transparent,
+                shadowColor: Colors.transparent,
+                padding: EdgeInsets.zero,
               ),
-            ],
-          )
-          
+              child: _isMultiSelectMode
+                  ? Text(
+                      '${_selectedIds.length}',
+                      style: const TextStyle(color: Color.fromARGB(255, 250, 132, 154)),
+                    )
+                  : const Icon(Icons.delete, color: Color.fromARGB(255, 250, 132, 154)),
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-// This is your new _BinGridTile class
 class _BinGridTile extends StatelessWidget {
   final BinItem item;
   final bool isSelected;
@@ -382,13 +376,11 @@ class _BinGridTile extends StatelessWidget {
         if (isMultiSelectMode) {
           onToggleSelect(item.id);
         } else {
-          // Navigate to preview screen
           Navigator.pushNamed(
             context,
             "/journal",
             arguments: <dynamic> [item.imageUrl, item]
           ).then((didPost) {
-            // Check if the preview screen popped with 'true' (meaning post was successful)
             if (didPost == true) {
               onRefresh();
             }
@@ -412,12 +404,9 @@ class _BinGridTile extends StatelessWidget {
           ),
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
-            
             child: Stack(
               fit: StackFit.expand,
               children: [
-                
-                  
                 CachedNetworkImage(
                   imageUrl: item.imageUrl,
                   fit: BoxFit.cover,
@@ -425,7 +414,6 @@ class _BinGridTile extends StatelessWidget {
                       Container(color: Colors.black.withAlpha(100)),
                   errorWidget: (context, url, error) => const Icon(Icons.error),
                 ),
-
 
                 // Gradient for text visibility
                 Container(
@@ -471,14 +459,14 @@ class _BinGridTile extends StatelessWidget {
                   child: Row(
                     children: [
                       Icon(Icons.access_time_sharp, color: timeObject.inMinutes >= 60 ? Colors.white : const Color.fromARGB(255, 236, 105, 96), size: 16),
-                      SizedBox(width: 5),
+                      const SizedBox(width: 5),
                       Text(
                         isSelected ? '' : remainingTime,
                         style: TextStyle(
-                            color:timeObject.inMinutes >= 60 ? Colors.white : const Color.fromARGB(255, 236, 105, 96),
+                            color: timeObject.inMinutes >= 60 ? Colors.white : const Color.fromARGB(255, 236, 105, 96),
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
-                            shadows: [Shadow(blurRadius: 2.0, color: Colors.black)]),
+                            shadows: const [Shadow(blurRadius: 2.0, color: Colors.black)]),
                       ),
                     ],
                   )

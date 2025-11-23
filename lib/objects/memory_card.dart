@@ -695,6 +695,8 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
   Future<void> _handleLike() async {
     if (_isLoadingLike) return;
     
+    feedbackService.playSound("tap", volumeScale: 0.3);
+
     final currentMemory = widget.memories[_currentIndex];
     final supabaseMemoryId = currentMemory.supabaseMemoryId;
     
@@ -2044,7 +2046,7 @@ Widget _buildCommentSkeleton() {
                           );
                         }
                       });
-                      
+                      feedbackService.playSound("tap", volumeScale: 0.3);
                       try {
                         await commentsService.toggleCommentLike(comment.id);
                       } catch (e) {
@@ -2227,6 +2229,7 @@ Widget _buildCommentSkeleton() {
                                 );
                               }
                             });
+                            feedbackService.playSound("tap", volumeScale: 0.3);
                             
                             try {
                               await commentsService.toggleCommentLike(reply.id);

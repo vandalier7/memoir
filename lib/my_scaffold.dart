@@ -26,6 +26,7 @@ class MyState extends State<MyScaffold> {
   int activeMemoryIndex = 0;
   int? targetCommentId;
   int _memoryCardKey = 0;
+  bool hasActiveMemory = false;
 
   final _textFocusNode = FocusNode();
   final _searchBarKey = GlobalKey(); // Add this key
@@ -35,6 +36,7 @@ class MyState extends State<MyScaffold> {
   void showMemory(List<MemoryData> memories, MemoryData selected, int index) {
     setState(() {
       activeMemories = memories;
+      hasActiveMemory = true;
       selectedMemory = selected;
       isClosing = false;
       activeMemoryIndex = index;
@@ -45,10 +47,11 @@ class MyState extends State<MyScaffold> {
     _mapKey.currentState?.getLocation();
   }
 
-  void closeMemory() {
+  void closeMemory() async {
     setState(() {
       isClosing = true;
     });
+    
   }
 
   void navigateToMemory(int supabaseMemoryId, {int? commentId}) async {
@@ -133,11 +136,15 @@ class MyState extends State<MyScaffold> {
     }
   }
 
-  void setMemoryInactive() {
+  void setMemoryInactive() async {
     setState(() {
       activeMemories = null;
       selectedMemory = null;
       targetCommentId = null;
+    });
+    await Future.delayed(Duration(milliseconds: 50));
+    setState(() {
+      hasActiveMemory = false;
     });
   }
 
@@ -229,7 +236,7 @@ class MyState extends State<MyScaffold> {
             ),
 
             // ✅ Single, clean search bar
-            SearchBarWidget(focusNode: _textFocusNode, key: _searchBarKey,),
+            SearchBarWidget(focusNode: _textFocusNode, key: _searchBarKey, hasActiveMemory: hasActiveMemory),
 
             MapButtons(
               onRetryLocation: retryLocation,

@@ -54,6 +54,7 @@ dependencies:
   image_picker: ^1.2.1
 
   flutter_launcher_icons: "^0.12.0"
+  audioplayers: ^6.5.1
 
 dev_dependencies:
   flutter_test:
@@ -81,6 +82,7 @@ flutter:
     - assets/sprites/
     - assets/geojson/
     - assets/moods/
+    - assets/sounds/
     - assets/
 
   # To add assets to your application, add an assets section, like this:

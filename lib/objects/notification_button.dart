@@ -5,6 +5,7 @@ import 'dart:async';
 import '../app_theme.dart';
 
 import 'package:presentation/my_scaffold.dart';
+import 'package:presentation/objects/globals.dart';
 
 // 🐛 DEBUG FLAGS
 const bool _debugForceShowNotification = false; // Set to true to always show the floating notification
@@ -71,6 +72,8 @@ class _NotificationButtonState extends State<NotificationButton> with SingleTick
       return;
     }
 
+    feedbackService.playSound("notif-short");
+
     setState(() {
       _displayedNotification = notification;
       _currentNotificationId = notification.id;
@@ -117,11 +120,17 @@ class _NotificationButtonState extends State<NotificationButton> with SingleTick
 
         return GestureDetector(
           onTap: () async {
+            if (widget.hasActiveMemory) {
+              await Future.delayed(Duration(milliseconds: 450));
+            }
+
             final result = await Navigator.pushNamed(context, '/notifications');
+            
             if (result != null && result is Map) {
               final memoryId = result['memoryId'] as int?;
               final commentId = result['commentId'] as int?;
               if (memoryId != null) {
+
                 final scaffoldState = context.findAncestorStateOfType<MyState>();
                 if (scaffoldState != null) {
                   scaffoldState.navigateToMemory(memoryId, commentId: commentId);
@@ -278,7 +287,9 @@ class _NotificationButtonState extends State<NotificationButton> with SingleTick
 }
 
 class NotificationButton extends StatefulWidget {
-  const NotificationButton({super.key});
+  final bool hasActiveMemory;
+
+  const NotificationButton({super.key, required this.hasActiveMemory});
 
   @override
   State<NotificationButton> createState() => _NotificationButtonState();
