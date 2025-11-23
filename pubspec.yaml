@@ -80,6 +80,7 @@ flutter:
     - assets/styles/
     - assets/sprites/
     - assets/geojson/
+    - assets/moods/
     - assets/
 
   # To add assets to your application, add an assets section, like this:

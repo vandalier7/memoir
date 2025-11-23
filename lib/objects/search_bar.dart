@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart'; // ✅ Added
 import '../processes/database_service.dart'; // ✅ Added
 import '../app_theme.dart';
 import 'search_result.dart';
+import 'notification_button.dart';
 import 'globals.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:presentation/my_scaffold.dart';
@@ -365,97 +366,13 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
 
           // Notification and Filter buttons row
           Row(
-          mainAxisAlignment: MainAxisAlignment.end,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // 🔔 NOTIFICATION BUTTON WITH BADGE
-            StreamBuilder<int>(
-              stream: notificationService.getUnreadCount(),
-              builder: (context, snapshot) {
-                final unreadCount = snapshot.data ?? 0;
-        
-              return GestureDetector(
-                onTap: () async {
-                  // ✅ Wait for result from notifications screen
-                  final result = await Navigator.pushNamed(context, '/notifications');
-                  
-                  // ✅ Handle the result
-                  if (result != null && result is Map) {
-                    final memoryId = result['memoryId'] as int?;
-                    final commentId = result['commentId'] as int?;
-          
-                  if (memoryId != null) {
-                    // Find MyState and navigate
-                    final scaffoldState = context.findAncestorStateOfType<MyState>();
-                    if (scaffoldState != null) {
-                      scaffoldState.navigateToMemory(memoryId, commentId: commentId);
-                    } else {
-                      print('❌ Could not find MyState');;
-                    }
-                  }
-                }
-              },
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: memoirTheme.surface,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.08),
-                          blurRadius: 6,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    child: Icon(
-                      Icons.notifications_outlined,
-                      size: 18,
-                      color: memoirTheme.onSurface,
-                    ),
-                  ),
-              
-                  // Unread badge
-                  if (unreadCount > 0)
-                    Positioned(
-                      right: -4,
-                      top: -4,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: Colors.red,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.white,
-                            width: 2,
-                          ),
-                        ),
-                    constraints: const BoxConstraints(
-                      minWidth: 18,
-                      minHeight: 18,
-                    ),
-                    child: Center(
-                      child: Text(
-                        unreadCount > 99 ? '99+' : '$unreadCount',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          height: 1,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        );
-      },
-    ),
+            NotificationButton(),
     
-    const SizedBox(width: 8),
+    // const SizedBox(width: 8),
 
     // ✨ FILTERS BUTTON
     GestureDetector(

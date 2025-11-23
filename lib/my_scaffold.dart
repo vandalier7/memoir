@@ -102,7 +102,7 @@ class MyState extends State<MyScaffold> {
       await _mapKey.currentState?.animateCameraWithOffset(
         target: targetMemory.position,
         showPreviewAfter: false,
-        yOffsetPixels: 200,
+        // yOffsetPixels: 200, DEFAULTED
       );
 
       // Wait for camera animation

@@ -739,7 +739,7 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
       
         // The actual card
         Positioned(
-          top: screenHeight * 0.275,
+          top: screenHeight * 0.3,
           left: 0,
           right: 0,
           bottom: 0,
@@ -792,7 +792,7 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
 
                   ),
               ),
-              SizedBox(height: 20),
+              SizedBox(height: 0),
               Expanded(
                 child: GestureDetector(
                   onTap: () {}, // Prevents tap from propagating to background

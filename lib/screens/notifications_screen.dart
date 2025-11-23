@@ -187,12 +187,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Avatar
-            CircleAvatar(
-              radius: 24,
-              backgroundColor: memoirTheme.primary.withOpacity(0.2),
-              backgroundImage: notification.actorAvatar != null
-                  ? CachedNetworkImageProvider(notification.actorAvatar!) as ImageProvider
-                  : const AssetImage('assets/temp.png'),
+            GestureDetector(
+              onTap: () {
+                Navigator.pushNamed(context, "/account", arguments: notification.actorId);
+              },
+              child: CircleAvatar(
+                radius: 24,
+                backgroundColor: memoirTheme.primary.withOpacity(0.2),
+                backgroundImage: notification.actorAvatar != null
+                    ? CachedNetworkImageProvider(notification.actorAvatar!) as ImageProvider
+                    : const AssetImage('assets/temp.png'),
+              ),
             ),
             const SizedBox(width: 12),
 

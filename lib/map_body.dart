@@ -239,7 +239,7 @@ class MapState extends State<MapBody> {
   Future<void> animateCameraWithOffset({
     required LatLng target,
     double xOffsetPixels = 0,
-    double yOffsetPixels = 200,
+    double yOffsetPixels = 180,
     int durationMs = 700,
     bool showPreviewAfter = false
   }) async {

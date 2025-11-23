@@ -34,10 +34,30 @@ Mood moodFromValue(int value) {
     }
   }
 
+AssetImage getMoodIcon (Mood mood) {
+  switch (mood) {
+      case Mood.happy:
+        return AssetImage("assets/moods/Happy.png");
+      case Mood.sad:
+        return AssetImage("assets/moods/Sad.png");
+      case Mood.angry:
+        return AssetImage("assets/moods/Anger.png");
+      case Mood.disgusted:
+        return AssetImage("assets/moods/Disgust.png");
+      case Mood.calm:
+        return AssetImage("assets/moods/Chill.png");
+      case Mood.afraid:
+        return AssetImage("assets/moods/Scared.png");
+      case Mood.worried:
+        return AssetImage("assets/moods/Stressed.png");
+      // Add more moods as needed
+    }
+}
+
 Color getMoodColor(Mood mood) {
     switch (mood) {
       case Mood.happy:
-        return Colors.yellow;
+        return const Color.fromARGB(255, 243, 219, 0);
       case Mood.sad:
         return const Color.fromARGB(255, 33, 65, 243);
       case Mood.angry:

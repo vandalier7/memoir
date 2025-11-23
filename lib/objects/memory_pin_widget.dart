@@ -16,26 +16,6 @@ class MemoryPinWidget extends StatelessWidget {
     required this.onClosePreviews,
   });
 
-  IconData getSentiment(Mood mood) {
-    switch (mood) {
-      case Mood.happy:
-        return Icons.sentiment_very_satisfied_outlined;
-      case Mood.sad:
-        return Icons.sentiment_dissatisfied_rounded;
-      case Mood.angry:
-        return Icons.sentiment_dissatisfied_rounded;
-      case Mood.disgusted:
-        return Icons.sentiment_dissatisfied_rounded;
-      case Mood.calm:
-        return Icons.sentiment_satisfied_alt;
-      case Mood.afraid:
-        return Icons.sentiment_very_dissatisfied_outlined;
-      case Mood.worried:
-        return Icons.sentiment_very_dissatisfied_outlined;
-      // Add more moods as needed
-    }
-  }
-
   // Get the primary mood (most common or first)
   Mood _getPrimaryMood() {
     if (memories.isEmpty) return Mood.happy;
@@ -100,10 +80,17 @@ class MemoryPinWidget extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Icon(
-                getSentiment(primaryMood),
-                color: Colors.white,
-                size: 28,
+              child: ColorFiltered(
+                colorFilter: const ColorFilter.mode(
+                  Colors.white,
+                  BlendMode.srcIn,
+                ),
+                child: Image(
+                  image: getMoodIcon(primaryMood),
+                  width: 28,
+                  height: 28,
+                  fit: BoxFit.contain,
+                ),
               ),
             ),
             
@@ -221,8 +208,6 @@ class ClusterPin extends StatelessWidget {
           await Future.delayed(Duration(milliseconds: 250));
 
           holdingCallback.call(false);
-          
-
         },
         child: Container(
           width: 60,
