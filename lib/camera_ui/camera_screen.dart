@@ -396,16 +396,16 @@ void _switchCamera() async {
                   ),
                 ),
 
-                Positioned(
-                  bottom:
-                      bottomPadding + (captureHeight / 2 - historySize / 2),
-                  left: 25,
-                  child: _buildCircularButton(
-                    icon: Icons.history,
-                    onTap: () {},
-                    size: historySize,
-                  ),
-                ),
+                // Positioned(
+                //   bottom:
+                //       bottomPadding + (captureHeight / 2 - historySize / 2),
+                //   left: 25,
+                //   child: _buildCircularButton(
+                //     icon: Icons.history,
+                //     onTap: () {},
+                //     size: historySize,
+                //   ),
+                // ),
 
                 Positioned(
                   bottom: bottomPadding,
