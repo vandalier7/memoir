@@ -57,6 +57,8 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
   bool _isWishlisted = false;
   bool _isDescriptionExpanded = false;
   int? _highlightedCommentId;
+  bool _showOptionsMenu = false;
+  int _currentPrivacyLevel = 0;
   
   int _likesCount = 0;
   int _commentsCount = 0;
@@ -139,6 +141,7 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
       });
 
       _loadMemoryStats();
+      _loadPrivacyLevel();
       _prefetchAdjacentMemoryStats();
 
       _commentController.addListener(() {
@@ -291,6 +294,119 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
       });
     } catch (e) {
       print('Error loading memory stats: $e');
+    }
+  }
+
+  Future<void> _loadPrivacyLevel() async {
+    final currentMemory = widget.memories[_currentIndex];
+    final supabaseMemoryId = currentMemory.supabaseMemoryId;
+  
+    if (supabaseMemoryId == null) return;
+  
+    try {
+      final response = await Supabase.instance.client
+          .from('memory')
+          .select('privacyLevel')
+          .eq('memoryID', supabaseMemoryId)
+          .maybeSingle();
+    
+      if (response != null && mounted) {
+        setState(() {
+          _currentPrivacyLevel = response['privacyLevel'] as int? ?? 0;
+        });
+      }
+    } catch (e) {
+      print('Error loading privacy level: $e');
+    }
+  }
+
+  Future<void> _deleteMemory() async {
+    final currentMemory = widget.memories[_currentIndex];
+    final supabaseMemoryId = currentMemory.supabaseMemoryId;
+    final memoryId = currentMemory.memoryId;
+  
+    if (supabaseMemoryId == null || memoryId == null) return;
+  
+    try {
+      // Delete from Supabase
+      await Supabase.instance.client
+          .from('memory')
+          .delete()
+          .eq('memoryID', supabaseMemoryId);
+    
+      // Delete from Firebase
+      await FirebaseFirestore.instance
+          .collection('memories')
+          .doc(memoryId)
+          .delete();
+    
+      // Remove from local lists
+      unfilteredMemories.removeWhere((m) => m.supabaseMemoryId == supabaseMemoryId);
+      memories.removeWhere((m) => m.supabaseMemoryId == supabaseMemoryId);
+      myMemories.removeWhere((m) => m.supabaseMemoryId == supabaseMemoryId);
+    
+      // Close the memory card
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Memory deleted successfully')),
+        );
+        _animateOut();
+      }
+    } catch (e) {
+      print('Error deleting memory: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error deleting memory: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _updatePrivacyLevel(int newLevel) async {
+    final currentMemory = widget.memories[_currentIndex];
+    final supabaseMemoryId = currentMemory.supabaseMemoryId;
+  
+    if (supabaseMemoryId == null) return;
+  
+    try {
+      await Supabase.instance.client
+          .from('memory')
+          .update({'privacyLevel': newLevel})
+          .eq('memoryID', supabaseMemoryId);
+    
+      setState(() {
+        _currentPrivacyLevel = newLevel;
+        _showOptionsMenu = false;
+      });
+    
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Privacy updated to ${_getPrivacyLabel(newLevel)}')),
+      );
+    } catch (e) {
+      print('Error updating privacy: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error updating privacy: $e')),
+      );
+    }
+  }
+
+  String _getPrivacyLabel(int level) {
+    switch (level) {
+      case 0: return 'Public';
+      case 1: return 'Followers';
+      case 2: return 'Friends';
+      case 3: return 'Private';
+      default: return 'Public';
+    }
+  }
+
+  IconData _getPrivacyIcon(int level) {
+    switch (level) {
+      case 0: return Icons.public;
+      case 1: return Icons.people;
+      case 2: return Icons.group;
+      case 3: return Icons.lock;
+      default: return Icons.public;
     }
   }
 
@@ -1178,6 +1294,18 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
             bottom: 8,
             child: Column(
               children: [
+                if (memory.userId == storageService.currentUserId)
+                  _buildActionButton(
+                    icon: Icons.more_horiz,
+                    label: '',
+                    onTap: () {
+                      setState(() {
+                        _showOptionsMenu = !_showOptionsMenu;
+                      });
+                    },
+                  ),
+                if (memory.userId == storageService.currentUserId)
+                  const SizedBox(height: 12),
                 _buildActionButton(
                   icon: _isLiked ? Icons.favorite : Icons.favorite_border,
                   label: _formatCount(_likesCount),
