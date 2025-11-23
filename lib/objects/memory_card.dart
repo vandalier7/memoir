@@ -1287,23 +1287,30 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
           ),
         ),
 
-        // Action buttons (only on current page)
-        if (isCurrentPage || true)
+        // Action buttons
+        // Options button at top right
+        if (isCurrentPage && memory.userId == storageService.currentUserId)
+          Positioned(
+            right: 8,
+            top: 8,
+            child: _buildActionButton(
+              icon: Icons.more_horiz,
+              label: '',
+              onTap: () {
+                setState(() {
+                  _showOptionsMenu = !_showOptionsMenu;
+                });
+              },
+            ),
+          ),
+
+        // Other action buttons at bottom right
+        if (isCurrentPage)
           Positioned(
             right: 2,
             bottom: 8,
-            child: Column(
-              children: [
-                if (memory.userId == storageService.currentUserId)
-                  _buildActionButton(
-                    icon: Icons.more_horiz,
-                    label: '',
-                    onTap: () {
-                      setState(() {
-                        _showOptionsMenu = !_showOptionsMenu;
-                      });
-                    },
-                  ),
+              child: Column(
+                children: [
                 if (memory.userId == storageService.currentUserId)
                   const SizedBox(height: 12),
                 _buildActionButton(
@@ -1328,9 +1335,211 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
               ],
             ),
           ),
+          // Options menu overlay
+          if (_showOptionsMenu && memory.userId == storageService.currentUserId && isCurrentPage)
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: () {
+                  setState(() => _showOptionsMenu = false);
+                },
+                child: Container(
+                  color: Colors.transparent,
+                  child: Stack(
+                    children: [
+                      Positioned(
+                        right: 8,
+                        top: 60,
+                        child: GestureDetector(
+                          onTap: () {}, // Prevents tap from closing menu
+                            child: Material(
+                              elevation: 8,
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                width: 200,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    // Delete option
+                                    InkWell(
+                                      onTap: () async {
+                                        setState(() => _showOptionsMenu = false);
+                  
+                                        // Show confirmation dialog
+                                        final shouldDelete = await showDialog<bool>(
+                                          context: context,
+                                          builder: (context) => AlertDialog(
+                                            title: const Text('Delete Memory'),
+                                            content: const Text('Are you sure you want to delete this memory? This action cannot be undone.'),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(context, false),
+                                                child: const Text('Cancel'),
+                                              ),
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(context, true),
+                                                style: TextButton.styleFrom(
+                                                  foregroundColor: Colors.red,
+                                                ),
+                                                child: const Text('Delete'),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                  
+                                        if (shouldDelete == true) {
+                                          await _deleteMemory();
+                                        }
+                                      },
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(16),
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.delete, size: 20, color: Colors.red.shade700),
+                                            const SizedBox(width: 12),
+                                            Text(
+                                              'Delete',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.red.shade700,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    Divider(height: 1, color: Colors.grey.shade300),
+              
+                                    // Privacy option
+                                    InkWell(
+                                      onTap: () {
+                                        setState(() => _showOptionsMenu = false);
+                            
+                                        // Show privacy selection dialog
+                                        showDialog(
+                                          context: context,
+                                          barrierDismissible: true,
+                                          builder: (context) => AlertDialog(
+                                            backgroundColor: memoirTheme.primary,
+                                            title: Text(
+                                              'Privacy Setting',
+                                              style: TextStyle(color: Colors.grey.shade800),
+                                            ),
+                                            content: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                _buildPrivacyOption(0, 'Public', Icons.public),
+                                                _buildPrivacyOption(1, 'Followers', Icons.people),
+                                                _buildPrivacyOption(2, 'Friends', Icons.group),
+                                                _buildPrivacyOption(3, 'Private', Icons.lock),
+                                              ],
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(context),
+                                                child: Text(
+                                                  'Cancel',
+                                                  style: TextStyle(
+                                                    color: memoirTheme.tertiary,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      },
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(16),
+                                          child: Row(
+                                            children: [
+                                              Icon(_getPrivacyIcon(_currentPrivacyLevel), size: 20, color: Colors.grey.shade700),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      'Privacy',
+                                                      style: TextStyle(
+                                                        fontSize: 14,
+                                                        color: Colors.grey.shade800,
+                                                        fontWeight: FontWeight.w500,
+                                                      ),
+                                                    ),
+                                                    Text(
+                                                      _getPrivacyLabel(_currentPrivacyLevel),
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        color: Colors.grey.shade600,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              Icon(Icons.chevron_right, size: 20, color: Colors.grey.shade400),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
       ],
     );
   }
+
+Widget _buildPrivacyOption(int level, String label, IconData icon) {
+  final isSelected = _currentPrivacyLevel == level;
+  
+  return InkWell(
+    onTap: () {
+      Navigator.pop(context);
+      _updatePrivacyLevel(level);
+    },
+    child: Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      decoration: BoxDecoration(
+        color: isSelected ? memoirTheme.tertiary.withOpacity(0.2) : null,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: 20,
+            color: isSelected ? memoirTheme.tertiary : Colors.grey.shade900,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                color: isSelected ? memoirTheme.tertiary : Colors.grey.shade800,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+              ),
+            ),
+          ),
+          if (isSelected)
+            Icon(Icons.check, size: 20, color: memoirTheme.tertiary),
+        ],
+      ),
+    ),
+  );
+}
 
 Widget _buildActionButton({
   required IconData icon,
@@ -1352,8 +1561,8 @@ Widget _buildActionButton({
             color: isActive ? (icon == Icons.favorite ? Colors.red : Colors.white) : Colors.white,
             shadows: [
               Shadow(
-                color: Colors.black.withOpacity(0.5),
-                blurRadius: 4,
+                color: Colors.black.withOpacity(0.8),
+                blurRadius: 6,
               ),
             ],
           ),
@@ -1366,8 +1575,8 @@ Widget _buildActionButton({
               fontWeight: FontWeight.w600,
               shadows: [
                 Shadow(
-                  color: Colors.black.withOpacity(0.5),
-                  blurRadius: 4,
+                  color: Colors.black.withOpacity(0.8),
+                  blurRadius: 6,
                 ),
               ],
             ),
