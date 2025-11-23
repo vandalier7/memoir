@@ -8,6 +8,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'memory.dart';
+import 'dart:async';
 
 class MemoryCard extends StatefulWidget {
   final List<MemoryData> memories;
@@ -62,6 +63,9 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
   Map<int, Map<String, dynamic>> _statsCache = {}; // Cache for stats
   Map<int, bool> _likedCache = {}; // Cache for liked status
   Map<String, bool> _wishlistCache = {}; // Cache for wishlist status
+
+  final Map<String, Map<String, dynamic>> _userDataCache = {};
+  final Map<String, StreamSubscription> _userStreamSubscriptions = {};
 
   final TextEditingController _commentController = TextEditingController();
   
@@ -160,7 +164,30 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
     _pageController.dispose();
     _commentController.dispose();
     _commentsScrollController.dispose();
+    
+    // Cancel all user stream subscriptions
+    for (var subscription in _userStreamSubscriptions.values) {
+      subscription.cancel();
+    }
+    _userStreamSubscriptions.clear();
+    
     super.dispose();
+  }
+
+  Future<void> _cacheUserData(String userId) async {
+    if (_userDataCache.containsKey(userId)) return;
+    
+    if (!_userStreamSubscriptions.containsKey(userId)) {
+      _userStreamSubscriptions[userId] = databaseService
+          .getUserStream(userId)
+          .listen((userData) {
+        if (mounted) {
+          setState(() {
+            _userDataCache[userId] = userData;
+          });
+        }
+      });
+    }
   }
   
   @override
@@ -286,6 +313,10 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
         supabaseMemoryId,
         memoryOwnerId,
       );
+
+      for (var comment in loadedComments) {
+        await _cacheUserData(comment.userId);
+      }
 
       setState(() {
         _comments = loadedComments;
@@ -513,6 +544,10 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
         commentId,
         memoryOwnerId,
       );
+
+      for (var reply in replies) {
+        await _cacheUserData(reply.userId);
+      }
     
       setState(() {
         _repliesCache[commentId] = replies;
@@ -548,22 +583,30 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
     
     if (supabaseMemoryId == null) return;
 
-    setState(() => _isLoadingLike = true);
+    // Optimistic update
+    final previousLiked = _isLiked;
+    final previousCount = _likesCount;
+    
+    setState(() {
+      _isLiked = !_isLiked;
+      _likesCount += _isLiked ? 1 : -1;
+      // Update cache
+      _statsCache[supabaseMemoryId] = {'likes': _likesCount, 'comments': _commentsCount};
+      _likedCache[supabaseMemoryId] = _isLiked;
+    });
 
     try {
       await commentsService.toggleMemoryLike(supabaseMemoryId);
-      
+    } catch (e) {
+      print('Error handling like: $e');
+      // Rollback on error
       setState(() {
-        _isLiked = !_isLiked;
-        _likesCount += _isLiked ? 1 : -1;
-        // Update cache
+        _isLiked = previousLiked;
+        _likesCount = previousCount;
+        // Revert cache
         _statsCache[supabaseMemoryId] = {'likes': _likesCount, 'comments': _commentsCount};
         _likedCache[supabaseMemoryId] = _isLiked;
       });
-    } catch (e) {
-      print('Error handling like: $e');
-    } finally {
-      setState(() => _isLoadingLike = false);
     }
   }
 
@@ -857,6 +900,31 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildProfilePicture(String userId, {double radius = 16}) {
+    final userData = _userDataCache[userId];
+    final avatarUrl = userData?['profile_pic_url'];
+    final username = userData?['username'] ?? '';
+
+    return GestureDetector(
+      onTap: () => Navigator.pushNamed(context, "/account", arguments: userId),
+      child: CircleAvatar(
+        radius: radius,
+        backgroundColor: memoirTheme.primary.withValues(alpha: 0.2),
+        backgroundImage: avatarUrl != null ? CachedNetworkImageProvider(avatarUrl) : null,
+        child: avatarUrl == null
+            ? Text(
+                username.isNotEmpty ? username[0].toUpperCase() : '?',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey.shade700,
+                  fontSize: radius * 0.875,
+                ),
+              )
+            : null,
+      )
     );
   }
 
@@ -1181,6 +1249,85 @@ Widget _buildActionButton({
   );
 }
 
+Widget _buildCommentSkeleton() {
+  return Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Avatar skeleton
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: Colors.grey.shade300,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Username skeleton
+              Container(
+                width: 100,
+                height: 12,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(height: 8),
+              // Comment text skeleton (2 lines)
+              Container(
+                width: double.infinity,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Container(
+                width: 200,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(height: 8),
+              // Actions skeleton
+              Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Container(
+                    width: 40,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
   Widget _buildCommentsView() {
   return Padding(
     padding: const EdgeInsets.only(left: 0, right: 0, bottom: 0),
@@ -1233,7 +1380,7 @@ Widget _buildActionButton({
                 // Comments list with bottom padding for input
                 Expanded(
                   child: _isLoadingComments
-                      ? const Center(child: CircularProgressIndicator(color: Colors.black87))
+                      ? _buildCommentSkeleton()
                       : _comments.isEmpty
                           ? Center(
                               child: Column(
@@ -1404,18 +1551,7 @@ Widget _buildActionButton({
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CircleAvatar(
-                  radius: 16,
-                  backgroundColor: Colors.grey.shade300,
-                  child: Text(
-                    comment.userName[0].toUpperCase(),
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey.shade700,
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
+                _buildProfilePicture(comment.userId, radius: 16),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -1423,12 +1559,15 @@ Widget _buildActionButton({
                     children: [
                       Row(
                         children: [
-                          Text(
-                            comment.userName,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
-                              color: Colors.black,
+                          GestureDetector(
+                            onTap:() => Navigator.pushNamed(context, "/account", arguments: comment.userId),
+                            child: Text(
+                              comment.userName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                                color: Colors.black,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -1473,27 +1612,7 @@ Widget _buildActionButton({
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        GestureDetector(
-                          onTap: () async {
-                            try {
-                              await commentsService.toggleCommentLike(comment.id);
-                              await _loadComments();
-                            } catch (e) {
-                              print('Error liking comment: $e');
-                            }
-                          },
-                          child: Text(
-                            comment.likesCount > 0 
-                                ? '${comment.getFormattedLikesCount()} likes'
-                                : 'Like',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade600,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
+                        const SizedBox(width: 4),
                         GestureDetector(
                           onTap: () {
                             setState(() {
@@ -1519,7 +1638,7 @@ Widget _buildActionButton({
                                 await commentsService.deleteComment(comment.id);
                                 _repliesCache.remove(comment.id);
                                 _expandedReplies.remove(comment.id);
-                                await _loadComments();
+                                // await _loadComments();
                                 setState(() => _commentsCount--);
                               } catch (e) {
                                 print('Error deleting comment: $e');
@@ -1576,12 +1695,60 @@ Widget _buildActionButton({
                   ],
                 ),
               ),
-              if (comment.isLikedByMe)
-                const Icon(
-                  Icons.favorite,
-                  size: 12,
-                  color: Colors.red,
-                ),
+              Column(
+                children: [
+                  GestureDetector(
+                    onTap: () async {
+                      // Optimistic update
+                      setState(() {
+                        final commentIndex = _comments.indexWhere((c) => c.id == comment.id);
+                        if (commentIndex != -1) {
+                          final updatedComment = _comments[commentIndex];
+                          _comments[commentIndex] = CommentData(
+                            id: updatedComment.id,
+                            userName: updatedComment.userName,
+                            userId: updatedComment.userId,
+                            text: updatedComment.text,
+                            timestamp: updatedComment.timestamp,
+                            repliedCommentID: updatedComment.repliedCommentID,
+                            headcommentid: updatedComment.headcommentid,
+                            likesCount: updatedComment.isLikedByMe 
+                                ? updatedComment.likesCount - 1 
+                                : updatedComment.likesCount + 1,
+                            repliesCount: updatedComment.repliesCount,
+                            isLikedByMe: !updatedComment.isLikedByMe,
+                            isAuthor: updatedComment.isAuthor,
+                            latestReply: updatedComment.latestReply,
+                          );
+                        }
+                      });
+                      
+                      try {
+                        await commentsService.toggleCommentLike(comment.id);
+                      } catch (e) {
+                        print('Error liking comment: $e');
+                        await _loadComments();
+                      }
+                    },
+                    child: Icon(
+                      comment.isLikedByMe ? Icons.favorite : Icons.favorite_border,
+                      size: 16,
+                      color: comment.isLikedByMe ? Colors.red : Colors.grey.shade600,
+                    ),
+                  ),
+                  if (comment.likesCount > 0) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      comment.getFormattedLikesCount(),
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey.shade600,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ],
+              )
             ],
           ),
         ),
@@ -1631,18 +1798,7 @@ Widget _buildActionButton({
               color: Colors.grey.shade300,
               margin: const EdgeInsets.only(right: 12, top: 4),
             ),
-            CircleAvatar(
-              radius: 14,
-              backgroundColor: Colors.grey.shade300,
-              child: Text(
-                reply.userName[0].toUpperCase(),
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey.shade700,
-                  fontSize: 12,
-                ),
-              ),
-            ),
+            _buildProfilePicture(reply.userId, radius: 16),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
@@ -1650,12 +1806,15 @@ Widget _buildActionButton({
                 children: [
                   Row(
                     children: [
-                      Text(
-                        reply.userName,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12,
-                          color: Colors.black,
+                      GestureDetector(
+                        onTap:() => Navigator.pushNamed(context, "/account", arguments: reply.userId),
+                        child: Text(
+                          reply.userName,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                            color: Colors.black,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 6),
@@ -1700,27 +1859,8 @@ Widget _buildActionButton({
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      GestureDetector(
-                        onTap: () async {
-                          try {
-                            await commentsService.toggleCommentLike(reply.id);
-                            _loadReplies(parentCommentId);
-                          } catch (e) {
-                            print('Error liking reply: $e');
-                          }
-                        },
-                        child: Text(
-                          reply.likesCount > 0 
-                              ? '${reply.getFormattedLikesCount()} likes'
-                              : 'Like',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey.shade600,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
+                      
+                      const SizedBox(width: 4),
                       GestureDetector(
                         onTap: () {
                           setState(() {
@@ -1739,16 +1879,39 @@ Widget _buildActionButton({
                         ),
                       ),
                       if (isOwnReply) ...[
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 16),
                         GestureDetector(
                           onTap: () async {
+                            setState(() {
+                              final replies = _repliesCache[parentCommentId] ?? [];
+                              final replyIndex = replies.indexWhere((r) => r.id == reply.id);
+                              if (replyIndex != -1) {
+                                final updatedReply = replies[replyIndex];
+                                _repliesCache[parentCommentId]![replyIndex] = CommentData(
+                                  id: updatedReply.id,
+                                  userName: updatedReply.userName,
+                                  userId: updatedReply.userId,
+                                  text: updatedReply.text,
+                                  timestamp: updatedReply.timestamp,
+                                  repliedCommentID: updatedReply.repliedCommentID,
+                                  headcommentid: updatedReply.headcommentid,
+                                  likesCount: updatedReply.isLikedByMe 
+                                      ? updatedReply.likesCount - 1 
+                                      : updatedReply.likesCount + 1,
+                                  repliesCount: updatedReply.repliesCount,
+                                  isLikedByMe: !updatedReply.isLikedByMe,
+                                  isAuthor: updatedReply.isAuthor,
+                                  latestReply: updatedReply.latestReply,
+                                );
+                              }
+                            });
+                            
                             try {
-                              await commentsService.deleteComment(reply.id);
-                              setState(() => _commentsCount--);
-                              await _loadReplies(parentCommentId);
-                              await _loadComments();
+                              await commentsService.toggleCommentLike(reply.id);
                             } catch (e) {
-                              print('Error deleting reply: $e');
+                              print('Error liking reply: $e');
+                              // Revert on error
+                              await _loadReplies(parentCommentId);
                             }
                           },
                           child: Text(
@@ -1766,12 +1929,61 @@ Widget _buildActionButton({
                 ],
               ),
             ),
-            if (reply.isLikedByMe)
-              const Icon(
-                Icons.favorite,
-                size: 10,
-                color: Colors.red,
-              ),
+            Column(
+              children: [
+                GestureDetector(
+                  onTap: () async {
+                    // Optimistic update
+                    setState(() {
+                      final replies = _repliesCache[parentCommentId] ?? [];
+                      final replyIndex = replies.indexWhere((r) => r.id == reply.id);
+                      if (replyIndex != -1) {
+                        final updatedReply = replies[replyIndex];
+                        _repliesCache[parentCommentId]![replyIndex] = CommentData(
+                          id: updatedReply.id,
+                          userName: updatedReply.userName,
+                          userId: updatedReply.userId,
+                          text: updatedReply.text,
+                          timestamp: updatedReply.timestamp,
+                          repliedCommentID: updatedReply.repliedCommentID,
+                          headcommentid: updatedReply.headcommentid,
+                          likesCount: updatedReply.isLikedByMe 
+                              ? updatedReply.likesCount - 1 
+                              : updatedReply.likesCount + 1,
+                          repliesCount: updatedReply.repliesCount,
+                          isLikedByMe: !updatedReply.isLikedByMe,
+                          isAuthor: updatedReply.isAuthor,
+                          latestReply: updatedReply.latestReply,
+                        );
+                      }
+                    });
+                    
+                    try {
+                      await commentsService.toggleCommentLike(reply.id);
+                    } catch (e) {
+                      print('Error liking reply: $e');
+                      await _loadReplies(parentCommentId);
+                    }
+                  },
+                  child: Icon(
+                    reply.isLikedByMe ? Icons.favorite : Icons.favorite_border,
+                    size: 14,
+                    color: reply.isLikedByMe ? Colors.red : Colors.grey.shade600,
+                  ),
+                ),
+                if (reply.likesCount > 0) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    reply.getFormattedLikesCount(),
+                    style: TextStyle(
+                      fontSize: 9,
+                      color: Colors.grey.shade600,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ],
+            )
           ],
         ),
       ),
