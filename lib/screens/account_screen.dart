@@ -9,7 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../processes/storage_service.dart';
 import '../processes/database_service.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../skeletons/profile_skeleton.dart';
 
 class AccountScreen extends StatefulWidget {
   final String? uid; // UID passed through navigation
@@ -427,28 +427,7 @@ class _AccountScreenState extends State<AccountScreen> {
 
           // Loading overlay
           if (_isLoading)
-            Container(
-              color: memoirTheme.background.withOpacity(0.8),
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(
-                      color: memoirTheme.primary,
-                      strokeWidth: 3,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      "Loading profile...",
-                      style: TextStyle(
-                        color: memoirTheme.onBackground,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            ProfileSkeleton(),
 
           // Error overlay
           if (_errorMessage != null && !_isLoading)

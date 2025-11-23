@@ -9,6 +9,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'memory.dart';
 import 'dart:async';
+import '../skeletons/profile_skeleton.dart';
 
 class MemoryCard extends StatefulWidget {
   final List<MemoryData> memories;
@@ -1250,80 +1251,64 @@ Widget _buildActionButton({
 }
 
 Widget _buildCommentSkeleton() {
-  return Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Avatar skeleton
-        Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: Colors.grey.shade300,
+  return ShimmerLoading(
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Avatar skeleton
+          const SkeletonBox(
+            width: 32,
+            height: 32,
             shape: BoxShape.circle,
           ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Username skeleton
-              Container(
-                width: 100,
-                height: 12,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(4),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Username skeleton
+                const SkeletonBox(
+                  width: 100,
+                  height: 12,
+                  borderRadius: 4,
                 ),
-              ),
-              const SizedBox(height: 8),
-              // Comment text skeleton (2 lines)
-              Container(
-                width: double.infinity,
-                height: 10,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(4),
+                const SizedBox(height: 8),
+                // Comment text skeleton (2 lines)
+                const SkeletonBox(
+                  width: double.infinity,
+                  height: 10,
+                  borderRadius: 4,
                 ),
-              ),
-              const SizedBox(height: 6),
-              Container(
-                width: 200,
-                height: 10,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(4),
+                const SizedBox(height: 6),
+                const SkeletonBox(
+                  width: 200,
+                  height: 10,
+                  borderRadius: 4,
                 ),
-              ),
-              const SizedBox(height: 8),
-              // Actions skeleton
-              Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(4),
+                const SizedBox(height: 8),
+                // Actions skeleton
+                Row(
+                  children: const [
+                    SkeletonBox(
+                      width: 40,
+                      height: 10,
+                      borderRadius: 4,
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Container(
-                    width: 40,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(4),
+                    SizedBox(width: 16),
+                    SkeletonBox(
+                      width: 40,
+                      height: 10,
+                      borderRadius: 4,
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     ),
   );
 }
