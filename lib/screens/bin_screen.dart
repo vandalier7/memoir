@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../processes/storage_service.dart';
 import '../models/bin_item.dart';
@@ -116,8 +118,10 @@ class _BinScreenState extends State<BinScreen> {
       return '${duration.inDays}d';
     } else if (duration.inDays == 1) {
       return '1d';
-    } else if (duration.inHours > 1) {
+    } else if (duration.inHours >= 1 && duration.inMinutes % 60 != 0)  {
       return '${duration.inHours}h ${duration.inMinutes % 60}m';
+    } else if (duration.inHours >= 1)  {
+      return '${duration.inHours}h';
     } else if (duration.inMinutes > 1) {
       return '${duration.inMinutes}m';
     } else {
@@ -203,6 +207,7 @@ class _BinScreenState extends State<BinScreen> {
                           isMultiSelectMode: _isMultiSelectMode,
                           onToggleSelect: _toggleSelection,
                           remainingTime: _formatDuration(remainingTime),
+                          timeObject: remainingTime,
                           onRefresh: _refreshImages,
                         );
                       },
@@ -252,24 +257,29 @@ class _BinScreenState extends State<BinScreen> {
                       )
                     : GestureDetector(
                         onTap: () => Navigator.pop(context),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.arrow_back_ios,
-                              color: Color.fromARGB(255, 250, 132, 154),
-                              size: 20,
-                            ),
-                            const SizedBox(width: 4),
-                            const Text(
-                              "Back",
-                              style: TextStyle(
+                        child: Container(
+                          color: Colors.transparent,
+                          height: 40,
+                          
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.arrow_back_ios,
                                 color: Color.fromARGB(255, 250, 132, 154),
-                                fontSize: 16,
+                                size: 20,
                               ),
-                            ),
-                          ],
-                        ),
+                              const SizedBox(width: 4),
+                              const Text(
+                                "Back",
+                                style: TextStyle(
+                                  color: Color.fromARGB(255, 250, 132, 154),
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
                       ),
               ),
 
@@ -352,6 +362,7 @@ class _BinGridTile extends StatelessWidget {
   final Function(String) onToggleSelect;
   final bool isMultiSelectMode;
   final String remainingTime;
+  final Duration timeObject;
   final VoidCallback onRefresh;
 
   const _BinGridTile({
@@ -361,6 +372,7 @@ class _BinGridTile extends StatelessWidget {
     required this.isMultiSelectMode,
     required this.remainingTime,
     required this.onRefresh,
+    required this.timeObject
   });
 
   @override
@@ -458,12 +470,12 @@ class _BinGridTile extends StatelessWidget {
                   right: 5,
                   child: Row(
                     children: [
-                      Icon(Icons.access_time_sharp, color: Colors.white, size: 16),
+                      Icon(Icons.access_time_sharp, color: timeObject.inMinutes >= 60 ? Colors.white : const Color.fromARGB(255, 236, 105, 96), size: 16),
                       SizedBox(width: 5),
                       Text(
                         isSelected ? '' : remainingTime,
-                        style: const TextStyle(
-                            color: Colors.white,
+                        style: TextStyle(
+                            color:timeObject.inMinutes >= 60 ? Colors.white : const Color.fromARGB(255, 236, 105, 96),
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                             shadows: [Shadow(blurRadius: 2.0, color: Colors.black)]),
