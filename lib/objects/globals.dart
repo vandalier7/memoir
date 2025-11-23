@@ -101,3 +101,34 @@ Future<void> refreshMemories() async {
 
 Future<String> Function(String imageUrl) imageUrlToPath = getCachedImagePath;
 bool hasLocationError = false;
+
+// Helper to find all memories at the same position as a given supabaseMemoryId
+List<MemoryData>? getMemoriesAtSameLocation(int supabaseMemoryId) {
+  // Find the memory with this supabaseMemoryId
+  MemoryData? targetMemory;
+  
+  for (var memory in unfilteredMemories) {
+    if (memory.supabaseMemoryId == supabaseMemoryId) {
+      targetMemory = memory;
+      break;
+    }
+  }
+  
+  // If memory not found, return null
+  if (targetMemory == null) {
+    print('⚠️ Memory with ID $supabaseMemoryId not found');
+    return null;
+  }
+  
+  // Get all memories at the same position
+  final memoriesAtLocation = unfilteredMemories
+      .where((m) => m.position == targetMemory!.position)
+      .toList();
+  
+  return memoriesAtLocation;
+}
+
+// Helper to get the index of a specific memory in a list
+int getMemoryIndex(List<MemoryData> memories, int supabaseMemoryId) {
+  return memories.indexWhere((m) => m.supabaseMemoryId == supabaseMemoryId);
+}

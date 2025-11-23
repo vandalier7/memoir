@@ -1,6 +1,7 @@
 import 'package:presentation/processes/notifications_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:presentation/objects/memory_card.dart';
 
 class CommentsService {
@@ -66,6 +67,34 @@ class CommentsService {
     } catch (e) {
       print('❌ Error loading comments: $e');
       rethrow;
+    }
+  }
+  
+  //getmemorydetails from firestore
+  Future<Map<String, dynamic>?> _getMemoryDetailsFromFirestore(int supabaseMemoryId) async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('memories')
+          .where('supabaseMemoryId', isEqualTo: supabaseMemoryId)
+          .limit(1)
+          .get();
+
+      if (snapshot.docs.isEmpty) {
+        print('⚠️ No Firebase memory found for supabaseMemoryId: $supabaseMemoryId');
+        return null;
+      }
+
+      final doc = snapshot.docs.first;
+      final data = doc.data();
+    
+      return {
+        'imageUrl': data['imageUrl'] as String?,
+        'addressString': data['addressString'] as String?,
+        'userId': data['userId'] as String?,
+      };
+    } catch (e) {
+      print('Error fetching memory from Firestore: $e');
+      return null;
     }
   }
 
@@ -198,25 +227,44 @@ class CommentsService {
     }
   }
 
+  // Get a single comment by ID
+  Future<Map<String, dynamic>?> getCommentById(int commentId) async {
+    try {
+      final response = await _supabase
+          .from('comment')
+          .select('*')
+          .eq('id', commentId)
+          .maybeSingle();
+    
+      return response;
+    } catch (e) {
+      print('Error getting comment by ID: $e');
+      return null;
+    }
+  }
+
   // Post a new comment or reply
   Future<void> postComment({
     required int memoryId,
     required String text,
     int? replyToCommentId,
-    int? headcommentid, // For nested replies - always points to the top-level comment
+    int? headcommentid,
   }) async {
     if (currentUserId == null) throw Exception('Not authenticated');
 
     try {
-      await _supabase.from('comment').insert({
+      // ✅ Insert and get the new comment ID
+      final response = await _supabase.from('comment').insert({
         'memoryID': memoryId,
         'userID': currentUserId,
         'comment': text,
         'repliedCommentID': replyToCommentId,
-        'headcommentid': headcommentid ?? replyToCommentId, // If replying, set to head
+        'headcommentid': headcommentid ?? replyToCommentId,
         'created_at': DateTime.now().toUtc().toIso8601String(),
         'likes_count': 0,
-      });
+      }).select('id').single(); // ✅ Get the inserted comment's ID
+
+      final newCommentId = response['id'] as int;
 
       // 🔔 CREATE NOTIFICATION
       try {
@@ -224,7 +272,25 @@ class CommentsService {
           .from('user')
           .select('username, profile_pic_url')
           .eq('uid', currentUserId!)
-          .single();
+          .maybeSingle();
+      
+        if (currentUserData == null) {
+          print('⚠️ Could not fetch user data for notification');
+          return;
+        }
+
+        final memoryOwner = await _supabase
+            .from('memory')
+            .select('userID')
+            .eq('memoryID', memoryId)
+            .maybeSingle();
+
+        if (memoryOwner == null) {
+          print('⚠️ Could not fetch memory owner for notification');
+          return;
+        }
+
+        final memoryDetails = await _getMemoryDetailsFromFirestore(memoryId);
 
         if (replyToCommentId != null) {
           // Reply notification
@@ -232,42 +298,44 @@ class CommentsService {
             .from('comment')
             .select('userID')
             .eq('id', replyToCommentId)
-            .single();
-    
+            .maybeSingle();
+
+          if (originalComment == null) {
+            print('⚠️ Could not fetch original comment for notification');
+            return;
+          }
+
           await notificationService.createNotification(
             recipientId: originalComment['userID'] as String,
             type: 'comment_reply',
             actorId: currentUserId!,
             actorName: currentUserData['username'] ?? 'Someone',
             actorAvatar: currentUserData['profile_pic_url'],
-            commentId: replyToCommentId,
+            commentId: newCommentId,
             commentText: text,
             memoryId: memoryId,
+            memoryImageUrl: memoryDetails?['imageUrl'] as String?,
+            memoryLocation: memoryDetails?['addressString'] as String?,
           );
         } else {
           // New comment notification
-          final memory = await _supabase
-            .from('memory')
-            .select('userID')
-            .eq('memoryID', memoryId)
-            .single();
-    
           await notificationService.createNotification(
-            recipientId: memory['userID'] as String,
+            recipientId: memoryOwner['userID'] as String,
             type: 'memory_comment',
             actorId: currentUserId!,
             actorName: currentUserData['username'] ?? 'Someone',
             actorAvatar: currentUserData['profile_pic_url'],
+            commentId: newCommentId,
             commentText: text,
             memoryId: memoryId,
+            memoryImageUrl: memoryDetails?['imageUrl'] as String?,
+            memoryLocation: memoryDetails?['addressString'] as String?,
           );
         }
       } catch (e) {
         print('Error creating comment notification: $e');
       }
-
-      print('✅ Comment posted successfully');
-      
+    
       print('✅ Comment posted successfully');
     } catch (e) {
       print('❌ Error posting comment: $e');
@@ -318,15 +386,28 @@ class CommentsService {
         try {
           final comment = await _supabase
             .from('comment')
-            .select('userID, memoryID')
+            .select('userID, memoryID, comment')
             .eq('id', commentId)
-            .single();
+            .maybeSingle();
+
+          if (comment == null) {
+            print('⚠️ Could not fetch comment for notification');
+            return;
+          }
   
           final currentUserData = await _supabase
             .from('user')
             .select('username, profile_pic_url')
             .eq('uid', currentUserId!)
-            .single();
+            .maybeSingle();
+
+          if (currentUserData == null) {
+            print('⚠️ Could not fetch user data for notification');
+            return;
+          }
+
+          // Get memory details from Firestore
+          final memoryDetails = await _getMemoryDetailsFromFirestore(comment['memoryID'] as int);
 
           await notificationService.createNotification(
             recipientId: comment['userID'] as String,
@@ -335,7 +416,10 @@ class CommentsService {
             actorName: currentUserData['username'] ?? 'Someone',
             actorAvatar: currentUserData['profile_pic_url'],
             commentId: commentId,
+            commentText: comment['comment'] as String?,
             memoryId: comment['memoryID'] as int,
+            memoryImageUrl: memoryDetails?['imageUrl'] as String?,
+            memoryLocation: memoryDetails?['addressString'] as String?,
           );
         } catch (e) {
           print('Error creating comment like notification: $e');
@@ -456,19 +540,33 @@ class CommentsService {
         
         // 🔔 CREATE NOTIFICATION - Add this block
         try {
-          // Get memory owner ID
-          final memory = await _supabase
+          // Get memory owner from supa
+          final memoryOwner = await _supabase
             .from('memory')
             .select('userID')
             .eq('memoryID', memoryId)
-            .single();
-  
-          final memoryOwnerId = memory['userID'] as String;
+            .maybeSingle();
+
+          if (memoryOwner == null) {
+            print('⚠️ Could not fetch memory owner for notification');
+            return;
+          }
+
+          final memoryOwnerId = memoryOwner['userID'] as String;
+
           final currentUserData = await _supabase
             .from('user')
             .select('username, profile_pic_url')
             .eq('uid', currentUserId!)
-            .single();
+            .maybeSingle();
+
+          if (currentUserData == null) {
+            print('⚠️ Could not fetch user data for notification');
+            return;
+          }
+
+          // Get memory details from Firestore
+          final memoryDetails = await _getMemoryDetailsFromFirestore(memoryId);
 
           await notificationService.createNotification(
             recipientId: memoryOwnerId,
@@ -477,6 +575,8 @@ class CommentsService {
             actorName: currentUserData['username'] ?? 'Someone',
             actorAvatar: currentUserData['profile_pic_url'],
             memoryId: memoryId,
+            memoryImageUrl: memoryDetails?['imageUrl'] as String?,
+            memoryLocation: memoryDetails?['addressString'] as String?,
           );
         } catch (e) {
           print('Error creating like notification: $e');
