@@ -128,7 +128,7 @@ List<MemoryData>? getMemoriesAtSameLocation(int supabaseMemoryId) {
   // Find the memory with this supabaseMemoryId
   MemoryData? targetMemory;
   
-  for (var memory in unfilteredMemories) {
+  for (var memory in [...myMemories, ...unfilteredMemories]) {
     if (memory.supabaseMemoryId == supabaseMemoryId) {
       targetMemory = memory;
       break;
@@ -142,7 +142,7 @@ List<MemoryData>? getMemoriesAtSameLocation(int supabaseMemoryId) {
   }
   
   // Get all memories at the same position
-  final memoriesAtLocation = unfilteredMemories
+  final memoriesAtLocation = [...myMemories, ...unfilteredMemories]
       .where((m) => m.position == targetMemory!.position)
       .toList();
   
