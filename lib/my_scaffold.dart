@@ -106,7 +106,7 @@ class MyState extends State<MyScaffold> {
       );
 
       // Wait for camera animation
-      await Future.delayed(const Duration(milliseconds: 400));
+      // await Future.delayed(const Duration(milliseconds: 400));
 
       // Show the memory card with the target comment
       if (mounted) {
