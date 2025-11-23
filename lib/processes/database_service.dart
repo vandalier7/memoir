@@ -4,6 +4,8 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:presentation/objects/globals.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../objects/globals.dart';
+import '../models/user_model.dart';
+ 
 
 class DatabaseService {
   // Singleton instance
@@ -136,23 +138,27 @@ class DatabaseService {
     }
   }
 
-  Future<String> getUserName(String userID) async {
-    const table = "user";
-    try {
-      // Select only the 'name' column
-      final response = await _supabase
-          .from(table)
-          .select('username')
-          .eq('uid', userID)
-          .maybeSingle(); // returns single row or null
+  Future<String?> getUserName(String userID) async {
+      const table = "user";
+      try {
+        final response = await _supabase
+            .from(table)
+            .select('username')
+            .eq('uid', userID)
+            .maybeSingle(); // returns Map<String,dynamic>? or null
 
-      // response is Map<String, dynamic>
-      return response!['username'] as String;
-    } catch (e) {
-      print('Error querying $table: $e');
-      rethrow;
+        if (response == null) {
+          // User not found
+          return null;
+        }
+
+        return response['username'] as String?;
+      } catch (e) {
+        print('Error querying $table: $e');
+        rethrow;
+      }
     }
-  }
+
 
 
   Future<int> getFollowerCount(String userID) async {
@@ -430,6 +436,42 @@ class DatabaseService {
       return [];
     }
   }
+
+  // --- NEW: Return List<UserModel> for Followers ---
+Future<List<UserModel>> getFollowersDetailed(String userId) async {
+  List<String> followerIds = await getFollowers(userId);
+  List<UserModel> followers = [];
+  for (String id in followerIds) {
+    final userData = await _supabase.from('user').select().eq('uid', id).maybeSingle();
+    if (userData != null) {
+      followers.add(UserModel(
+        id: id,
+        username: userData['username'] ?? '',
+        fullName: userData['full_name'] ?? '',
+        profilePic: userData['profile_pic_url'] ?? '',
+      ));
+    }
+  }
+  return followers;
+}
+
+// --- NEW: Return List<UserModel> for Following ---
+Future<List<UserModel>> getFollowingDetailed(String userId) async {
+  List<String> followingIds = await getFollowingUsers(userId);
+  List<UserModel> following = [];
+  for (String id in followingIds) {
+    final userData = await _supabase.from('user').select().eq('uid', id).maybeSingle();
+    if (userData != null) {
+      following.add(UserModel(
+        id: id,
+        username: userData['username'] ?? '',
+        fullName: userData['full_name'] ?? '',
+        profilePic: userData['profile_pic_url'] ?? '',
+      ));
+    }
+  }
+  return following;
+}
 
 }
 
