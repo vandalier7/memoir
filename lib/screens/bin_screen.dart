@@ -149,9 +149,10 @@ class _BinScreenState extends State<BinScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 170, 158, 165),
+      backgroundColor: Colors.white,
       body: Container( // Kept from alpha-version
         child: SafeArea(
+          top: false,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -219,80 +220,114 @@ class _BinScreenState extends State<BinScreen> {
   // This header is updated with your new logic
   Widget _buildHeader(BuildContext context) {
     return Container(
-      color: Colors.transparent,
-      padding: const EdgeInsets.only(top: 5, bottom: 1, left: 16, right: 16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _isMultiSelectMode
-              ? TextButton.icon(
-                  onPressed: _deselectAll,
-                  icon: const Icon(Icons.close,
-                      color: Color.fromARGB(255, 255, 71, 71), size: 25),
-                  label: const Text('Deselect All',
-                      style: TextStyle(
-                          color: Color.fromARGB(255, 255, 71, 71))),
-                )
-              : IconButton(
-                  icon: _shadowedIcon(Icons.close,
-                      color: const Color.fromARGB(255, 37, 6, 6), size: 25),
-                  onPressed: () => Navigator.pop(context),
-                ),
-          
-          // "Delete" button with new multi-select toggle logic
-          ElevatedButton.icon(
-            onPressed: () {
-              setState(() {
-                if (!_isMultiSelectMode) {
-                  // Enter multi-select mode
-                  _isMultiSelectMode = true;
-                  _selectedIds.clear();
-                } else if (_selectedIds.isNotEmpty) {
-                  // Perform bulk delete
-                  _handleDeleteBulk();
-                } else {
-                  // Exit multi-select mode if no items are selected
-                  _isMultiSelectMode = false;
-                }
-              });
-            },
-            icon: !_isMultiSelectMode ? null : Icon(Icons.delete_forever, size: 25),
-            label: _isMultiSelectMode ? 
-            Text('${_selectedIds.length}') :
-            Icon(Icons.delete, size: 25),
-
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.transparent,
-              foregroundColor: Colors.red,
-              shadowColor: Colors.transparent,
-              alignment: _isMultiSelectMode ? Alignment.centerLeft : Alignment.center,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-            ),
+      padding: const EdgeInsets.only(
+        top: 35,      // <-- add your custom spacing here
+        left: 12,
+        right: 12,
+        bottom: 12,   // KEEP your original bottom spacing
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.10),
+            offset: const Offset(0, 4), // shadow ONLY downward
+            blurRadius: 10,
+            spreadRadius: 0,
           ),
         ],
       ),
-    );
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // LEFT BUTTON
+              Align(
+                alignment: Alignment.centerLeft,
+                child: _isMultiSelectMode
+                    ? TextButton.icon(
+                        onPressed: _deselectAll,
+                        icon: const Icon(Icons.close, color: Color.fromARGB(255, 250, 132, 154)),
+                        label: const Text('Deselect All',
+                            style: TextStyle(color: Color.fromARGB(255, 250, 132, 154))),
+                      )
+                    : GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.arrow_back_ios,
+                              color: Color.fromARGB(255, 250, 132, 154),
+                              size: 20,
+                            ),
+                            const SizedBox(width: 4),
+                            const Text(
+                              "Back",
+                              style: TextStyle(
+                                color: Color.fromARGB(255, 250, 132, 154),
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+              ),
+
+              // CENTER TITLE
+              const Text(
+                "Bin",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black,
+                ),
+              ),
+
+              // RIGHT BUTTON
+              Align(
+                alignment: Alignment.centerRight,
+                child: ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      if (!_isMultiSelectMode) {
+                        _isMultiSelectMode = true;
+                        _selectedIds.clear();
+                      } else if (_selectedIds.isNotEmpty) {
+                        _handleDeleteBulk();
+                      } else {
+                        _isMultiSelectMode = false;
+                      }
+                    });
+                  },
+                  style: ElevatedButton.styleFrom(
+                    elevation: 0,
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    padding: EdgeInsets.zero,
+                  ),
+                  child: _isMultiSelectMode
+                      ? Text(
+                          '${_selectedIds.length}',
+                          style: const TextStyle(color: Color.fromARGB(255, 250, 132, 154)),
+                        )
+                      : const Icon(Icons.delete, color: Color.fromARGB(255, 250, 132, 154)),
+                ),
+              ),
+            ],
+          ),
+        );
   }
 
   // Kept from alpha-version, unchanged
   Widget _buildRecentsBar(BuildContext context) {
     return Container(
       color: Colors.transparent,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.only(top: 16, left: 15, right: 15, bottom: 10),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Column(
             children: [
-              Text('Bin',
-                textAlign: TextAlign.center,
-                    style: TextStyle(
-                        color: Color.fromARGB(255, 37, 6, 6),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18
-                      )
-              ),
               Text('Binned memories expire after 6 hours.',
                 textAlign: TextAlign.center,
                     style: TextStyle(
