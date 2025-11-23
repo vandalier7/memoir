@@ -25,6 +25,7 @@ import 'screens/edit_profile.dart';
 import 'screens/bin_screen.dart';
 import 'camera_ui/camera_screen.dart';
 import 'camera_ui/journal_screen.dart';
+import 'screens/followers_following_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -61,7 +62,8 @@ void main() async {
 
   if (fbauth.FirebaseAuth.instance.currentUser != null) {
     storageService.listenUserMemories();
-    activeUsername = await databaseService.getUserName(fbauth.FirebaseAuth.instance.currentUser!.uid);
+    final userName = await databaseService.getUserName(fbauth.FirebaseAuth.instance.currentUser!.uid);
+    activeUsername = userName ?? 'Unknown User'; // Provide fallback if null
     await refreshFriendsAndFollowers();
   }
   
@@ -104,48 +106,43 @@ class RootState extends State<Root> {
       // Directly show the main map screen wrapper (MyScaffold)
       home:  fbauth.FirebaseAuth.instance.currentUser != null ? MyScaffold() : SignInCard(), 
       // 🔗 Routes for navigation
-      routes: {
+        routes: {
         '/sign-in': (context) => const SignInCard(),
         '/map': (context) => const MyScaffold(),
         '/journal': (context) {
           final args = ModalRoute.of(context)!.settings.arguments;
           if (args is String) {
-            // ✅ Pass the imagePath and cameras to JournalScreen
             return JournalScreen(imagePath: args, cameras: cameras);
-          }
-          else if (args is List<dynamic>) {
-            // ✅ Pass the imagePath and cameras to JournalScreen
-            
+          } else if (args is List<dynamic>) {
             return FutureBuilder(
-              future: imageUrlToPath(args.first as String), 
+              future: imageUrlToPath(args.first as String),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return Container(
                     height: 5000,
                     width: 5000,
                     color: Colors.black,
-                    child: Center(
+                    child: const Center(
                       child: CircularProgressIndicator(),
                     ),
-                  ); // Loading state
+                  );
                 }
-                
+
                 if (snapshot.hasError) {
-                  return Icon(Icons.error); // Error state
+                  return const Icon(Icons.error);
                 }
 
                 final filepath = snapshot.data!;
                 BinItem item = args.last as BinItem;
 
-                return JournalScreen(imagePath: filepath, cameras: cameras, item: item,);
-              }
+                return JournalScreen(
+                  imagePath: filepath,
+                  cameras: cameras,
+                  item: item,
+                );
+              },
             );
-            
-
-
-
           } else {
-            // 🛠 Fallback (in case no image was passed)
             return JournalScreen(imagePath: '', cameras: cameras);
           }
         },
@@ -153,17 +150,19 @@ class RootState extends State<Root> {
           final args = ModalRoute.of(context)!.settings.arguments;
           return AccountScreen(uid: args.toString());
         },
+
         '/bin': (context) => const BinScreen(),
-        '/camera': (context) => CameraScreen(cameras: cameras,),
+        '/camera': (context) => CameraScreen(cameras: cameras),
         '/preview': (context) {
           final args = ModalRoute.of(context)!.settings.arguments;
-          if (true) {
-            // ✅ Pass the imagePath and cameras to JournalScreen
-            return PreviewScreen(imagePath: args.toString());
-          }
+          return PreviewScreen(imagePath: args.toString());
         },
-        '/editProfile': (context) => const EditProfileScreen(), 
-      },
+        '/editProfile': (context) => const EditProfileScreen(),
+        '/followers-following': (context) {
+            final args = ModalRoute.of(context)!.settings.arguments as List<dynamic>;
+            return FollowersFollowingScreen(uid: args[0].toString(), startingTab: args[1],);
+          },
+      }
     );
   }
 }

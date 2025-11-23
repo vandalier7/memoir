@@ -221,17 +221,17 @@ class _BinScreenState extends State<BinScreen> {
   Widget _buildHeader(BuildContext context) {
     return Container(
       padding: const EdgeInsets.only(
-        top: 35,      // <-- add your custom spacing here
+        top: 35,     
         left: 12,
         right: 12,
-        bottom: 12,   // KEEP your original bottom spacing
+        bottom: 12,  
       ),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.10),
-            offset: const Offset(0, 4), // shadow ONLY downward
+            offset: const Offset(0, 4), 
             blurRadius: 10,
             spreadRadius: 0,
           ),

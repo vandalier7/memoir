@@ -55,15 +55,17 @@ Future<void> loginUser(String email, String password) async {
 
     debugPrint('User exists in Supabase: $hasUser');
     
-    String username = await databaseService.getUserName(FirebaseAuth.instance.currentUser!.uid);
-    if (!hasUser) {
-      await databaseService.recordUser(
-        FirebaseAuth.instance.currentUser!.uid, 
-        email,
-        username,
-      );
-      debugPrint('User recorded in Supabase');
-    }
+    String username = await databaseService.getUserName(FirebaseAuth.instance.currentUser!.uid) ?? "Unknown User";
+
+      if (!hasUser) {
+        await databaseService.recordUser(
+          FirebaseAuth.instance.currentUser!.uid, 
+          email,
+          username,
+        );
+        debugPrint('User recorded in Supabase');
+      }
+
 
     await setUpSession();
 
