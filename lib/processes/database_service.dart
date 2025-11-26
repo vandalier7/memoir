@@ -44,7 +44,7 @@ class DatabaseService {
           .insert(data);
 
     } catch (e) {
-      print('Error inserting into $table: $e');
+      //debugPrint('Error inserting into $table: $e');
       rethrow;
     }
   }
@@ -69,7 +69,7 @@ class DatabaseService {
         return supabaseMemoryResponse['memoryID'] as int;
 
     } catch (e) {
-      print('Error inserting into $table: $e');
+      //debugPrint('Error inserting into $table: $e');
       rethrow;
     }
   }
@@ -91,7 +91,7 @@ class DatabaseService {
       final response = await query;
       return List<Map<String, dynamic>>.from(response).isEmpty;
     } catch (e) {
-      print('Error querying $table: $e');
+      //debugPrint('Error querying $table: $e');
       rethrow;
     }
   }
@@ -133,7 +133,7 @@ class DatabaseService {
       final response = await query;
       return List<Map<String, dynamic>>.from(response).isNotEmpty;
     } catch (e) {
-      print('Error querying $table: $e');
+      //debugPrint('Error querying $table: $e');
       rethrow;
     }
   }
@@ -154,7 +154,7 @@ class DatabaseService {
 
         return response['username'] as String?;
       } catch (e) {
-        print('Error querying $table: $e');
+        //debugPrint('Error querying $table: $e');
         rethrow;
       }
     }
@@ -178,7 +178,7 @@ class DatabaseService {
       final response = await query;
       return List<Map<String, dynamic>>.from(response).length;
     } catch (e) {
-      print('Error querying $table: $e');
+      //debugPrint('Error querying $table: $e');
       rethrow;
     }
   }
@@ -214,7 +214,7 @@ class DatabaseService {
 
       return friends.toList();
     } catch (e) {
-      print("Error querying $table: $e");
+      //debugPrint("Error querying $table: $e");
       rethrow;
     }
   }
@@ -239,7 +239,7 @@ class DatabaseService {
       // extract the ID value
       return rows.map((row) => row["followingID"] as String).toList();
     } catch (e) {
-      print('Error querying $table: $e');
+      //debugPrint('Error querying $table: $e');
       rethrow;
     }
   }
@@ -263,7 +263,7 @@ class DatabaseService {
       // extract the ID value
       return rows.map((row) => row["followerID"] as String).toList();
     } catch (e) {
-      print('Error querying $table: $e');
+      //debugPrint('Error querying $table: $e');
       rethrow;
     }
   }
@@ -285,7 +285,7 @@ class DatabaseService {
       final response = await query;
       return List<Map<String, dynamic>>.from(response).length;
     } catch (e) {
-      print('Error querying $table: $e');
+      //debugPrint('Error querying $table: $e');
       rethrow;
     }
   }
@@ -307,7 +307,7 @@ class DatabaseService {
       final response = await query;
       return List<Map<String, dynamic>>.from(response).length;
     } catch (e) {
-      print('Error querying $table: $e');
+      //debugPrint('Error querying $table: $e');
       rethrow;
     }
   }
@@ -331,7 +331,7 @@ class DatabaseService {
           'followerID': storageService.currentUserId!,
           'followingID': userID,
         });
-        print('Now following $userID');
+        //debugPrint('Now following $userID');
 
         // 🔔 BATCH FOLLOW NOTIFICATION
         // Cancel existing timer if user is rapidly following
@@ -359,9 +359,9 @@ class DatabaseService {
                 actorAvatar: currentUserData['profile_pic_url'],
               );
             
-              print('✅ Follow notification sent to $userID');
+              //debugPrint('✅ Follow notification sent to $userID');
             } catch (e) {
-              print('Error creating follow notification: $e');
+              //debugPrint('Error creating follow notification: $e');
             }
           
             // Clean up
@@ -378,7 +378,7 @@ class DatabaseService {
             .delete()
             .eq('followerID', storageService.currentUserId!)
             .eq('followingID', userID);
-        print('Unfollowed $userID');
+        //debugPrint('Unfollowed $userID');
 
         // 🔔 Cancel pending notification if user unfollows before timer fires
         _followNotificationTimers[userID]?.cancel();
@@ -387,52 +387,57 @@ class DatabaseService {
         return false;
       }
     } catch (e) {
-      print('Error toggling follow: $e');
+      //debugPrint('Error toggling follow: $e');
       rethrow;
     }
   }
 
   Future<List<int>> fetchFilteredMemoryIds({
-    LatLngBounds? bounds, // Optional: filter by map viewport
-  }) async {
+  LatLngBounds? bounds, // Optional: filter by map viewport
+}) async {
     final currentUserId = storageService.currentUserId;
     if (currentUserId == null) return [];
 
     try {
-      // ✅ Get allowed user IDs (friends + followed users)
-      final allowedUserIds = <String>{
-        ...friends,
-        ...followedUsers,
-      };
+      // ✅ Get friends and followed users
+      final friendIds = friends.toSet();
+      final followedIds = followedUsers.toSet();
 
-      if (allowedUserIds.isEmpty) {
-        return []; // No friends/follows, return empty
-      }
-
-      // ✅ Query memory table
+      // ✅ Build query based on privacy levels
       var query = _supabase
         .from('memory')
-        .select('memoryID') // Supabase memory ID column
-        .inFilter('userID', allowedUserIds.toList())
-        .limit(500); // Filter by allowed users
+        .select('memoryID, userID, privacy_level') // Include privacy_level
+        .limit(500);
 
-      
-
-      // ✅ Limit results
-
-
+      // We'll filter client-side since Supabase OR conditions are complex
       final response = await query;
       
-      // ✅ Extract memoryID integers and convert to strings
+      // ✅ Filter based on privacy rules
       final memoryIds = (response as List)
+        .where((row) {
+          final memoryUserId = row['userID'] as String;
+          final privacyLevel = row['privacy_level'] as int;
+          
+          // Privacy level 0 (public) - visible to everyone
+          if (privacyLevel == 0) return true;
+          
+          // Privacy level 1 (followers) - visible if user follows them
+          if (privacyLevel == 1 && followedIds.contains(memoryUserId)) return true;
+          
+          // Privacy level 2 (friends) - visible if they're friends
+          if (privacyLevel == 2 && friendIds.contains(memoryUserId)) return true;
+          
+          // Privacy level 3 (private) - never visible to others
+          return false;
+        })
         .map((row) => (row['memoryID'] as int))
         .toList();
 
-      print('🔵 Fetched ${memoryIds.length} memory IDs from Supabase');
+      //debugPrint('🔵 Fetched ${memoryIds.length} memory IDs from Supabase (privacy filtered)');
       return memoryIds;
 
     } catch (e) {
-      print('❌ Error fetching memory IDs: $e');
+      //debugPrint('❌ Error fetching memory IDs: $e');
       return [];
     }
   }
