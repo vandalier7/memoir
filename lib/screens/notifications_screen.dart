@@ -201,12 +201,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             child: TextButton(
               onPressed: () {
                 notificationService.markAllAsRead();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('All notifications marked as read'),
-                    duration: Duration(seconds: 1),
-                  ),
-                );
+                // ScaffoldMessenger.of(context).showSnackBar(
+                //   const SnackBar(
+                //     content: Text('All notifications marked as read'),
+                //     duration: Duration(seconds: 1),
+                //   ),
+                // );
               },
               style: TextButton.styleFrom(
                 padding: EdgeInsets.zero,
@@ -366,34 +366,45 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         
                     // Location text
                     if (notification.memoryLocation != null) ...[
-                      const SizedBox(height: 4),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.location_on,
-                            size: 10,
-                            color: Colors.grey.shade500,
-                          ),
-                          const SizedBox(width: 2),
-                          Flexible(
-                            child: Text(
-                              notification.memoryLocation!
+                    const SizedBox(height: 4),
+                    Container(
+                      constraints: BoxConstraints(
+                        maxWidth: 100
+                      ),
+                      alignment: Alignment.centerRight,
+                      child: Text.rich(
+                        TextSpan(
+                          children: [
+                            WidgetSpan(
+                              alignment: PlaceholderAlignment.middle,
+                              child: Icon(
+                                Icons.location_on,
+                                size: 10,
+                                color: Colors.grey.shade500,
+                              ),
+                            ),
+                            WidgetSpan(
+                              child: SizedBox(width: 2),
+                            ),
+                            TextSpan(
+                              text: notification.memoryLocation!
                                 .split(',')
                                 .take(2)
                                 .join(',')
                                 .trim(),
                               style: TextStyle(
-                                fontSize: 9,
+                                fontSize: 8,
                                 color: Colors.grey.shade600,
                               ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.right,
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
+                        textAlign: TextAlign.right,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
                       ),
+                    ),
+
                     ],
                   ],
                 ),

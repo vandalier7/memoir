@@ -59,6 +59,7 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
   int? _highlightedCommentId;
   bool _showOptionsMenu = false;
   int _currentPrivacyLevel = 0;
+  bool _isPostingComment = false; 
   
   int _likesCount = 0;
   int _commentsCount = 0;
@@ -771,12 +772,14 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
 
   Future<void> _sendComment() async {
     final text = _commentController.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty || _isPostingComment) return;  // ADD _isPostingComment check
 
     final currentMemory = widget.memories[_currentIndex];
     final supabaseMemoryId = currentMemory.supabaseMemoryId;
 
     if (supabaseMemoryId == null) return;
+
+    setState(() => _isPostingComment = true);  // ADD THIS LINE
 
     try {
       final replyToCommentId = _replyingToCommentId;
@@ -788,6 +791,7 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
       );
 
       _commentController.clear();
+      FocusScope.of(context).unfocus();  // ADD THIS LINE
 
       // Always increment comment count
       setState(() {
@@ -796,6 +800,7 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
         _statsCache[supabaseMemoryId] = {'likes': _likesCount, 'comments': _commentsCount};
         _replyingToCommentId = null;
         _replyingToUserName = null;
+        _isPostingComment = false;  // ADD THIS LINE
       });
 
       // Reload comments first
@@ -811,6 +816,7 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
 
     } catch (e) {
       print('❌ Error sending comment: $e');
+      setState(() => _isPostingComment = false);  // ADD THIS LINE
     }
   }
 
@@ -1646,259 +1652,304 @@ Widget _buildActionButton({
 Widget _buildCommentSkeleton() {
   return ShimmerLoading(
     child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Avatar skeleton
-          const SkeletonBox(
-            width: 32,
-            height: 32,
-            shape: BoxShape.circle,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Username skeleton
-                const SkeletonBox(
-                  width: 100,
-                  height: 12,
-                  borderRadius: 4,
-                ),
-                const SizedBox(height: 8),
-                // Comment text skeleton (2 lines)
-                const SkeletonBox(
-                  width: double.infinity,
-                  height: 10,
-                  borderRadius: 4,
-                ),
-                const SizedBox(height: 6),
-                const SkeletonBox(
-                  width: 200,
-                  height: 10,
-                  borderRadius: 4,
-                ),
-                const SizedBox(height: 8),
-                // Actions skeleton
-                Row(
-                  children: const [
-                    SkeletonBox(
-                      width: 40,
-                      height: 10,
-                      borderRadius: 4,
-                    ),
-                    SizedBox(width: 16),
-                    SkeletonBox(
-                      width: 40,
-                      height: 10,
-                      borderRadius: 4,
-                    ),
-                  ],
-                ),
-              ],
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Avatar skeleton
+            const SkeletonBox(
+              width: 32,
+              height: 32,
+              shape: BoxShape.circle,
             ),
-          ),
-        ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Username skeleton
+                  const SkeletonBox(
+                    width: 100,
+                    height: 12,
+                    borderRadius: 4,
+                  ),
+                  const SizedBox(height: 8),
+                  // Comment text skeleton (2 lines)
+                  const SkeletonBox(
+                    width: double.infinity,
+                    height: 10,
+                    borderRadius: 4,
+                  ),
+                  const SizedBox(height: 6),
+                  const SkeletonBox(
+                    width: 200,
+                    height: 10,
+                    borderRadius: 4,
+                  ),
+                  const SizedBox(height: 8),
+                  // Actions skeleton
+                  Row(
+                    children: const [
+                      SkeletonBox(
+                        width: 40,
+                        height: 10,
+                        borderRadius: 4,
+                      ),
+                      SizedBox(width: 16),
+                      SkeletonBox(
+                        width: 40,
+                        height: 10,
+                        borderRadius: 4,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildCommentsView() {
-  return Padding(
-    padding: const EdgeInsets.only(left: 0, right: 0, bottom: 0),
-    child: ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: Scaffold(
-        backgroundColor: Colors.white,
-        resizeToAvoidBottomInset: false,
-        body: Stack(
-          children: [
-            Column(
-              children: [
-                // Header
-                Container(
+    final currentUser = FirebaseAuth.instance.currentUser;
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Padding(
+      padding: const EdgeInsets.only(left: 0, right: 0, bottom: 0),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Scaffold(
+          backgroundColor: Colors.white,
+          resizeToAvoidBottomInset: false,
+          body: Stack(
+            children: [
+              Column(
+                children: [
+                  // Header
+                  Container(
+                    padding: EdgeInsets.only(
+                      top: 8,
+                      left: 16,
+                      right: 16,
+                      bottom: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(12),
+                        topRight: Radius.circular(12),
+                      ),
+                      border: Border(
+                        bottom: BorderSide(color: Colors.grey.shade300, width: 1),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.arrow_back, color: Colors.black),
+                          onPressed: _toggleComments,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Comments',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              
+                  // Comments list with bottom padding for input
+                  Expanded(
+                    child: _isLoadingComments
+                        ? _buildCommentSkeleton()
+                        : _comments.isEmpty
+                            ? Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.chat_bubble_outline,
+                                      size: 60,
+                                      color: Colors.grey.shade400,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      'No comments yet',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: Colors.grey.shade400,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Be the first to comment!',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : ListView.builder(
+                                controller: _commentsScrollController,
+                                padding: EdgeInsets.only(
+                                  top: 8,
+                                  bottom: 80,
+                                ),
+                                itemCount: _comments.length,
+                                itemBuilder: (context, index) {
+                                  return _buildCommentItem(_comments[index]);
+                                },
+                              ),
+                  ),
+                ],
+              ),
+          
+              // Comment input positioned at bottom
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Container(
                   padding: EdgeInsets.only(
-                    top: 8,
                     left: 16,
                     right: 16,
-                    bottom: 8,
+                    top: 8,
+                    bottom: MediaQuery.of(context).viewInsets.bottom < 1 ? 8 : MediaQuery.of(context).viewInsets.bottom,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(12),
-                      topRight: Radius.circular(12),
-                    ),
-                    border: Border(
-                      bottom: BorderSide(color: Colors.grey.shade300, width: 1),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.black),
-                        onPressed: _toggleComments,
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 4,
+                        offset: const Offset(0, -2),
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Comments',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black,
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (_replyingToUserName != null)
+                        Container(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Row(
+                            children: [
+                              Text(
+                                'Replying to $_replyingToUserName',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                              const Spacer(),
+                              GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _replyingToCommentId = null;
+                                    _replyingToUserName = null;
+                                    _commentController.clear();
+                                  });
+                                },
+                                child: Icon(
+                                  Icons.close,
+                                  size: 16,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
+                      Row(
+                        children: [
+                          if (currentUser != null)
+                            StreamBuilder<Map<String, dynamic>>(
+                              stream: databaseService.getUserStream(currentUser.uid),
+                              builder: (context, snapshot) {
+                                String? avatarUrl;
+                                String username = '';
+                                
+                                if (snapshot.hasData) {
+                                  avatarUrl = snapshot.data!['profile_pic_url'];
+                                  username = snapshot.data!['username'] ?? '';
+                                }
+
+                                return CircleAvatar(
+                                  radius: 16,
+                                  backgroundColor: memoirTheme.primary.withValues(alpha: 0.2),
+                                  backgroundImage: avatarUrl != null 
+                                      ? CachedNetworkImageProvider(avatarUrl) 
+                                      : null,
+                                  child: avatarUrl == null
+                                      ? Text(
+                                          username.isNotEmpty ? username[0].toUpperCase() : '?',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.grey.shade700,
+                                            fontSize: 14,
+                                          ),
+                                        )
+                                      : null,
+                                );
+                              },
+                            )
+                          else
+                            CircleAvatar(
+                              radius: 16,
+                              backgroundColor: Colors.grey.shade300,
+                              child: Icon(Icons.person, size: 16, color: Colors.grey.shade600),
+                            ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextField(
+                              controller: _commentController,
+                              style: const TextStyle(color: Colors.black),
+                              decoration: InputDecoration(
+                                hintText: 'Add a comment...',
+                                hintStyle: TextStyle(color: Colors.grey.shade400),
+                                border: InputBorder.none,
+                              ),
+                              maxLines: null,
+                              textInputAction: TextInputAction.send,
+                              onSubmitted: (_) => _sendComment(),
+                              enabled: !_isPostingComment,
+                            ),
+                          ),
+                          if (_isPostingComment)
+                            SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Color(0xFFF75270),
+                              ),
+                            )
+                          else if (_commentController.text.isNotEmpty)
+                            IconButton(
+                              icon: Icon(
+                                  Icons.send_rounded,
+                                  color: Color(0xFFF75270),
+                                ),
+                              onPressed: _sendComment,
+                              
+                              
+                            ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-            
-                // Comments list with bottom padding for input
-                Expanded(
-                  child: _isLoadingComments
-                      ? _buildCommentSkeleton()
-                      : _comments.isEmpty
-                          ? Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.chat_bubble_outline,
-                                    size: 60,
-                                    color: Colors.grey.shade400,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    'No comments yet',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.grey.shade400,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    'Be the first to comment!',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )
-                          : ListView.builder(
-                              controller: _commentsScrollController,
-                              padding: EdgeInsets.only(
-                                top: 8,
-                                bottom: 80,
-                              ),
-                              itemCount: _comments.length,
-                              itemBuilder: (context, index) {
-                                return _buildCommentItem(_comments[index]);
-                              },
-                            ),
-                ),
-              ],
-            ),
-        
-            // Comment input positioned at bottom
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: Container(
-                padding: EdgeInsets.only(
-                  left: 16,
-                  right: 16,
-                  top: 8,
-                  bottom: MediaQuery.of(context).viewInsets.bottom < 1 ? 8 : MediaQuery.of(context).viewInsets.bottom,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 4,
-                      offset: const Offset(0, -2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (_replyingToUserName != null)
-                      Container(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Row(
-                          children: [
-                            Text(
-                              'Replying to $_replyingToUserName',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade600,
-                                fontStyle: FontStyle.italic,
-                              ),
-                            ),
-                            const Spacer(),
-                            GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _replyingToCommentId = null;
-                                  _replyingToUserName = null;
-                                  _commentController.clear();
-                                });
-                              },
-                              child: Icon(
-                                Icons.close,
-                                size: 16,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 16,
-                          backgroundColor: Colors.grey.shade300,
-                          child: Icon(Icons.person, size: 16, color: Colors.grey.shade600),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TextField(
-                            controller: _commentController,
-                            style: const TextStyle(color: Colors.black),
-                            decoration: InputDecoration(
-                              hintText: 'Add a comment...',
-                              hintStyle: TextStyle(color: Colors.grey.shade400),
-                              border: InputBorder.none,
-                            ),
-                            maxLines: null,
-                            textInputAction: TextInputAction.send,
-                            onSubmitted: (_) => _sendComment(),
-                          ),
-                        ),
-                        if (_commentController.text.isNotEmpty)
-                          TextButton(
-                            onPressed: _sendComment,
-                            child: const Text(
-                              'Post',
-                              style: TextStyle(
-                                color: Color(0xFFF75270),
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     ),
