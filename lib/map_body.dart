@@ -118,7 +118,7 @@ class MapState extends State<MapBody> {
     // Return null if no current position
     if (currentPosition == null) return null;
     
-    final groupedMemories = groupMemoriesByPosition(memories);
+    final groupedMemories = groupMemoriesByPosition([...unfilteredMemories, ...myMemories]);
     
     for (final position in groupedMemories.keys) {
       final distance = distanceBetween(currentPosition!, position);
@@ -278,7 +278,7 @@ class MapState extends State<MapBody> {
       if (!value) {
         memories.clear();
         for (MemoryData memory in [...myMemories, ...unfilteredMemories]) {
-          if (!isWithinPixelThreshold(pos1: screenCenter ?? memory.position, pos2: memory.position, pixelThreshold: 400, currentZoom: mapZoom)) {
+          if (!myMemories.contains(memory) && !isWithinPixelThreshold(pos1: screenCenter ?? memory.position, pos2: memory.position, pixelThreshold: 400, currentZoom: mapZoom)) {
             continue;
           }
 
