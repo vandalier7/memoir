@@ -38,6 +38,12 @@ void main() async {
 
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky); 
 
+  runApp(MaterialApp(
+    theme: ThemeData(colorScheme: memoirTheme),
+    debugShowCheckedModeBanner: false,
+    home: LoadingScreen(ignoring: false, showLoadingBar: false,)
+  ));
+
   try {
     // Initialize Firebase before the app runs
     await Firebase.initializeApp(

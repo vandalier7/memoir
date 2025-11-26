@@ -2,8 +2,13 @@ import 'package:flutter/material.dart';
 
 class LoadingScreen extends StatefulWidget {
   final bool ignoring;
+  final bool showLoadingBar; // Add this parameter
 
-  const LoadingScreen({super.key, required this.ignoring});
+  const LoadingScreen({
+    super.key, 
+    required this.ignoring,
+    this.showLoadingBar = true, // Default to true for backward compatibility
+  });
 
   @override
   State<LoadingScreen> createState() => _LoadingScreenState();
@@ -67,51 +72,67 @@ class _LoadingScreenState extends State<LoadingScreen>
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
-                const SizedBox(height: 48),
+
+                if (!widget.showLoadingBar) ...[
+                  const SizedBox(height: 48),
+
+                //   Text(
+                //   "Memoir",
+                //   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                //     fontWeight: FontWeight.bold,
+                //     color: Theme.of(context).colorScheme.onSurface,
+                //   ),
+                // ),
+                ],
                 
-                // Sliding Loading Bar
-                SizedBox(
-                  width: 200,
-                  height: 4,
-                  child: Stack(
-                    children: [
-                      // Background track
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(2),
+                // Conditionally show loading bar
+                if (widget.showLoadingBar) ...[
+                  const SizedBox(height: 48),
+                  
+                  // Sliding Loading Bar
+                  SizedBox(
+                    width: 200,
+                    height: 4,
+                    child: Stack(
+                      children: [
+                        // Background track
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
                         ),
-                      ),
-                      // Animated slider
-                      AnimatedBuilder(
-                        animation: _animation,
-                        builder: (context, child) {
-                          return Align(
-                            alignment: Alignment(_animation.value, 0),
-                            child: Container(
-                              width: 80,
-                              height: 4,
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.primary,
-                                borderRadius: BorderRadius.circular(2),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .primary
-                                        .withOpacity(0.5),
-                                    blurRadius: 8,
-                                    spreadRadius: 1,
-                                  ),
-                                ],
+                        // Animated slider
+                        AnimatedBuilder(
+                          animation: _animation,
+                          builder: (context, child) {
+                            return Align(
+                              alignment: Alignment(_animation.value, 0),
+                              child: Container(
+                                width: 80,
+                                height: 4,
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  borderRadius: BorderRadius.circular(2),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primary
+                                          .withOpacity(0.5),
+                                      blurRadius: 8,
+                                      spreadRadius: 1,
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
+                            );
+                          },
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
