@@ -406,7 +406,7 @@ class DatabaseService {
       // ✅ Build query based on privacy levels
       var query = _supabase
         .from('memory')
-        .select('memoryID, userID, privacy_level') // Include privacy_level
+        .select('memoryID, userID, privacyLevel') // Include privacy_level
         .limit(500);
 
       // We'll filter client-side since Supabase OR conditions are complex
@@ -416,7 +416,7 @@ class DatabaseService {
       final memoryIds = (response as List)
         .where((row) {
           final memoryUserId = row['userID'] as String;
-          final privacyLevel = row['privacy_level'] as int;
+          final privacyLevel = row['privacyLevel'] as int;
           
           // Privacy level 0 (public) - visible to everyone
           if (privacyLevel == 0) return true;

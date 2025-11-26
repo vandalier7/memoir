@@ -285,6 +285,7 @@ class MapState extends State<MapBody> {
           if (positionToUse == null) {
             // No location - show based on decay only
             if (memory.decay <= mapZoom) {
+              // memory.finalDecay = memory.decay - 10;
               memories.add(memory);
             } else if (memory.userId! == storageService.currentUserId) {
               memory.finalDecay = 0;
@@ -295,12 +296,15 @@ class MapState extends State<MapBody> {
             } else if (followedUsers.contains(memory.userId!) && memory.decay - 10 <= mapZoom) {
               memory.finalDecay = memory.decay - 10;
               memories.add(memory);
+            } else{
+              memories.add(memory);
             }
           } else {
             // Has location - use position-based filtering
             if (memory.decay <= mapZoom || memory.position == positionToUse) {
               if (memory.position != positionToUse){
                 if (!isWithinPixelThreshold(pos1: memory.position, pos2: positionToUse, pixelThreshold: clearanceRadius, currentZoom: mapZoom)) {
+                  // memory.finalDecay = 0;
                   memories.add(memory);
                 }
               } else {
@@ -321,15 +325,20 @@ class MapState extends State<MapBody> {
                 memory.finalDecay = memory.decay - 10;
                 memories.add(memory);
               }
+            } else {
+              if (!isWithinPixelThreshold(pos1: memory.position, pos2: positionToUse, pixelThreshold: clearanceRadius, currentZoom: mapZoom)) {
+                memory.finalDecay = memory.decay - 10;
+                memories.add(memory);
+              }
             }
           }
         }
       }
     });
     
-    // for (MemoryData memory in memories) {
-    //   debugPrint(memory.addressString);
-    // }
+    for (MemoryData memory in memories) {
+      debugPrint(memory.addressString);
+    }
     debugPrint(hasLocationError.toString());
   }
 
