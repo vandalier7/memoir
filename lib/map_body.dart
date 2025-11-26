@@ -260,18 +260,28 @@ class MapState extends State<MapBody> {
         CameraUpdate.newLatLng(offsetLatLng),
         duration: Duration(milliseconds: durationMs));
   }
-
-  void updateMapHold(bool value) {
+  LatLng? screenCenter;
+  void updateMapHold(bool value) async{
     // Skip position-based filtering if no current position
     final positionToUse = currentPosition != null 
         ? (nearestMemoryPosition ?? currentPosition!)
         : null;
+      if (!value) {
+        final pos = await mapController.queryCameraPosition();
+        screenCenter = pos!.target;
+      }
 
     setState(() {
       isHoldingMap = value;
+      
+
       if (!value) {
         memories.clear();
         for (MemoryData memory in [...myMemories, ...unfilteredMemories]) {
+          if (!isWithinPixelThreshold(pos1: screenCenter ?? memory.position, pos2: memory.position, pixelThreshold: 400, currentZoom: mapZoom)) {
+            continue;
+          }
+
           if (positionToUse == null) {
             // No location - show based on decay only
             if (memory.decay <= mapZoom) {
