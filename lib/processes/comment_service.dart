@@ -472,12 +472,11 @@ class CommentsService {
         .eq('memoryID', memoryId)
         .count();
 
-      // Get top-level comments count (not replies)
+
       final commentsResponse = await _supabase
         .from('comment')
         .select()
         .eq('memoryID', memoryId)
-        .isFilter('headcommentid', null)
         .count();
     
       return {
