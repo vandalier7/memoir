@@ -64,6 +64,9 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
   int _likesCount = 0;
   int _commentsCount = 0;
 
+  bool _showStats = true;
+  Timer? _statsVisibilityTimer;
+
   Map<int, Map<String, dynamic>> _statsCache = {}; // Cache for stats
   Map<int, bool> _likedCache = {}; // Cache for liked status
   Map<String, bool> _wishlistCache = {}; // Cache for wishlist status
@@ -169,6 +172,7 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
     _pageController.dispose();
     _commentController.dispose();
     _commentsScrollController.dispose();
+    _statsVisibilityTimer?.cancel();
     
     // Cancel all user stream subscriptions
     for (var subscription in _userStreamSubscriptions.values) {
@@ -241,6 +245,8 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
     final currentMemory = widget.memories[_currentIndex];
     final supabaseMemoryId = currentMemory.supabaseMemoryId;
     final memoryId = currentMemory.memoryId;
+
+    setState(() {_showStats = false;});
   
     if (supabaseMemoryId == null) {
       setState(() {
@@ -259,6 +265,7 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
         _commentsCount = _statsCache[supabaseMemoryId]!['comments'] ?? 0;
         _isLiked = _likedCache[supabaseMemoryId] ?? false;
         _isWishlisted = _wishlistCache[memoryId ?? ''] ?? false;
+        _showStats = true;
       });
       return;
     }
@@ -287,14 +294,18 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
         _wishlistCache[memoryId] = isWishlisted;
       }
 
-      setState(() {
-        _likesCount = stats['likes'] ?? 0;
-        _commentsCount = stats['comments'] ?? 0;
-        _isLiked = isLiked;
-        _isWishlisted = isWishlisted;
-      });
+      if (mounted) {
+        setState(() {
+          _likesCount = stats['likes'] ?? 0;
+          _commentsCount = stats['comments'] ?? 0;
+          _isLiked = isLiked;
+          _isWishlisted = isWishlisted;
+          _showStats = true;
+        });
+      }
     } catch (e) {
       print('Error loading memory stats: $e');
+      setState(() => _showStats = true);
     }
   }
 
@@ -989,28 +1000,45 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
                           ),
                           // The actual content - PageView of complete cards
                           Expanded(
-                            child: PageView.builder(
-                              controller: _pageController,
-                              onPageChanged: (index) {
-                                setState(() {
-                                  _currentIndex = index;
-                                  _isDescriptionExpanded = false;
-                                  _showComments = false;
-                                  _comments = [];
-                                  _expandedReplies = {};
-                                  _repliesCache = {};
-                                  _loadingReplies = {};
-                                  _replyingToCommentId = null;
-                                  _replyingToUserName = null;
-                                  _commentController.clear();
+                            child: Listener(
+                              onPointerDown: (_) {
+                                // User started touching - cancel any pending fade-ins
+                                _statsVisibilityTimer?.cancel();
+                                setState(() => _showStats = false);
+                              },
+                              onPointerUp: (_) {
+                                // User let go - schedule fade-in
+                                _statsVisibilityTimer?.cancel();
+                                _statsVisibilityTimer = Timer(const Duration(milliseconds: 300), () {
+                                  if (mounted) {
+                                    _loadMemoryStats();
+                                  }
                                 });
-                                _loadMemoryStats();
-                                _prefetchAdjacentMemoryStats();
                               },
-                              itemCount: widget.memories.length,
-                              itemBuilder: (context, index) {
-                                return _buildMemoryCard(index);
-                              },
+                              child: PageView.builder(
+                                controller: _pageController,
+                                onPageChanged: (index) {
+                                  setState(() {
+                                    _currentIndex = index;
+                                    _isDescriptionExpanded = false;
+                                    _showComments = false;
+                                    _comments = [];
+                                    _expandedReplies = {};
+                                    _repliesCache = {};
+                                    _loadingReplies = {};
+                                    _replyingToCommentId = null;
+                                    _replyingToUserName = null;
+                                    _commentController.clear();
+                                  });
+                                  
+                                  // Prefetch adjacent pages in background
+                                  _prefetchAdjacentMemoryStats();
+                                },
+                                itemCount: widget.memories.length,
+                                itemBuilder: (context, index) {
+                                  return _buildMemoryCard(index);
+                                },
+                              ),
                             ),
                           ),
                         ],
@@ -1323,7 +1351,7 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
             ),
 
         // Other action buttons at bottom right
-        if (isCurrentPage)
+        if (isCurrentPage || true)
           Positioned(
             right: 2,
             bottom: 8,
@@ -1331,25 +1359,28 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
                 children: [
                 if (memory.userId == storageService.currentUserId)
                   const SizedBox(height: 12),
-                _buildActionButton(
+                AnimatedOpacity(opacity: _showStats ? 1.0 : 0.0, duration: Duration(milliseconds: 300),
+                child: _buildActionButton(
                   icon: _isLiked ? Icons.favorite : Icons.favorite_border,
                   label: _formatCount(_likesCount),
                   onTap: _handleLike,
                   isActive: _isLiked,
-                ),
+                ),),
                 const SizedBox(height: 12),
-                _buildActionButton(
+                AnimatedOpacity(opacity: _showStats ? 1.0 : 0.0, duration: Duration(milliseconds: 300),
+                child: _buildActionButton(
                   icon: Icons.chat_bubble_outline,
                   label: _formatCount(_commentsCount),
                   onTap: _toggleComments,
-                ),
+                )),
                 const SizedBox(height: 12),
-                _buildActionButton(
+                AnimatedOpacity(opacity: _showStats ? 1.0 : 0.0, duration: Duration(milliseconds: 300),
+                child: _buildActionButton(
                   icon: _isWishlisted ? Icons.location_on : Icons.location_on_outlined,
                   label: 'Pin',
                   onTap: _handleWishlist,
                   isActive: _isWishlisted,
-                ),
+                )),
               ],
             ),
           ),
