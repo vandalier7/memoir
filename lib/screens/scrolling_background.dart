@@ -1,31 +1,44 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
+import 'dart:ui' as ui;
 import '../objects/globals.dart';
 
 class FloatingIcon {
   Offset position;
-  Offset velocity;
+  double velocity; // Speed multiplier
   double size;
-  AssetImage icon;
+  Mood mood;
   double opacity;
 
   FloatingIcon({
     required this.position,
     required this.velocity,
     required this.size,
-    required this.icon,
+    required this.mood,
     required this.opacity,
   });
 }
 
 class InfiniteScrollingBackground extends StatefulWidget {
-  final Widget child;
   final int iconCount;
+  final double minVelocity;
+  final double maxVelocity;
+  final double minSize;
+  final double maxSize;
+  final double minOpacity;
+  final double maxOpacity;
+  final double rotationSpeed; // How fast the angle changes
 
   const InfiniteScrollingBackground({
     Key? key,
-    required this.child,
-    this.iconCount = 15,
+    this.iconCount = 20,
+    this.minVelocity = 0.2,
+    this.maxVelocity = 0.8,
+    this.minSize = 40,
+    this.maxSize = 120,
+    this.minOpacity = 0.1,
+    this.maxOpacity = 0.3,
+    this.rotationSpeed = 0.001, // Default: full rotation in ~2 minutes
   }) : super(key: key);
 
   @override
@@ -40,10 +53,12 @@ class _InfiniteScrollingBackgroundState
   List<FloatingIcon> _icons = [];
   final Random _random = Random();
   Size? _screenSize;
+  double _currentAngle = 0;
 
   @override
   void initState() {
     super.initState();
+    
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(days: 1),
@@ -71,13 +86,10 @@ class _InfiniteScrollingBackgroundState
           _random.nextDouble() * _screenSize!.width,
           _random.nextDouble() * _screenSize!.height,
         ),
-        velocity: Offset(
-          (_random.nextDouble() - 0.5) * 0.5, // Slow random X velocity
-          (_random.nextDouble() - 0.5) * 0.5, // Slow random Y velocity
-        ),
-        size: 40 + _random.nextDouble() * 80, // Size between 40-120
-        icon: getMoodIcon(mood),
-        opacity: 0.1 + _random.nextDouble() * 0.2, // Opacity 0.1-0.3
+        velocity: widget.minVelocity + _random.nextDouble() * (widget.maxVelocity - widget.minVelocity),
+        size: widget.minSize + _random.nextDouble() * (widget.maxSize - widget.minSize),
+        mood: mood,
+        opacity: widget.minOpacity + _random.nextDouble() * (widget.maxOpacity - widget.minOpacity),
       );
     });
   }
@@ -86,9 +98,18 @@ class _InfiniteScrollingBackgroundState
     if (_screenSize == null) return;
 
     setState(() {
+      // Slowly rotate through 360 degrees
+      _currentAngle += widget.rotationSpeed;
+      if (_currentAngle > 2 * pi) {
+        _currentAngle -= 2 * pi;
+      }
+
+      // Calculate direction based on current angle
+      final direction = Offset(cos(_currentAngle), sin(_currentAngle));
+
       for (var icon in _icons) {
-        // Update position
-        icon.position += icon.velocity;
+        // Move in the slowly rotating direction with varying velocity
+        icon.position += direction * icon.velocity;
 
         // Wrap around screen edges for infinite scrolling
         if (icon.position.dx < -icon.size) {
@@ -114,17 +135,9 @@ class _InfiniteScrollingBackgroundState
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        // Background icons layer
-        Positioned.fill(
-          child: CustomPaint(
-            painter: _FloatingIconsPainter(_icons),
-          ),
-        ),
-        // Your actual content
-        widget.child,
-      ],
+    return CustomPaint(
+      painter: _FloatingIconsPainter(_icons),
+      child: Container(),
     );
   }
 }
@@ -137,6 +150,9 @@ class _FloatingIconsPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     for (var icon in icons) {
+      final image = preloadedMoodIcons[icon.mood];
+      if (image == null) continue;
+
       final paint = Paint()
         ..color = Colors.white.withOpacity(icon.opacity)
         ..filterQuality = FilterQuality.high;
@@ -154,7 +170,7 @@ class _FloatingIconsPainter extends CustomPainter {
       paintImage(
         canvas: canvas,
         rect: rect,
-        image: icon.icon as dynamic, // Note: This needs proper image loading
+        image: image,
         filterQuality: FilterQuality.high,
       );
       canvas.restore();
@@ -166,17 +182,22 @@ class _FloatingIconsPainter extends CustomPainter {
 }
 
 // Usage example:
-// Wrap your screen content with this widget
+// Use it as a child in your Stack
 /*
-class MyScreen extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: InfiniteScrollingBackground(
-        iconCount: 20, // Adjust number of icons
-        child: YourActualContent(),
-      ),
-    );
-  }
-}
+Stack(
+  children: [
+    InfiniteScrollingBackground(
+      iconCount: 20,
+      minVelocity: 0.2,    // Slowest icon speed
+      maxVelocity: 0.8,    // Fastest icon speed
+      minSize: 40,         // Smallest icon size
+      maxSize: 120,        // Largest icon size
+      minOpacity: 0.1,     // Most transparent
+      maxOpacity: 0.3,     // Most opaque
+      rotationSpeed: 0.001, // Speed of angle rotation (higher = faster)
+    ),
+    // Your other content here
+    YourActualContent(),
+  ],
+)
 */

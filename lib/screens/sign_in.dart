@@ -5,6 +5,7 @@ import 'dart:core';
 import 'package:presentation/objects/unfocus_on_tap.dart';
 import '../objects/globals.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'scrolling_background.dart';
 
 import '../processes/auth.dart';
 
@@ -29,9 +30,29 @@ class SignInCard extends StatelessWidget {
     return UnfocusOnTap(
       child: Container(
         // outer container stays fixed — background, full screen, etc.
-        color: Theme.of(context).colorScheme.surface,
+        color: const Color.fromARGB(255, 240, 224, 238),
         child: Stack(
           children: [
+            InfiniteScrollingBackground(
+              iconCount: 10,
+              minSize: 60,
+              maxSize: 160,
+              rotationSpeed: 0.0027
+            ),
+            InfiniteScrollingBackground(
+              iconCount: 10,
+              minSize: 60,
+              maxSize: 160,
+              rotationSpeed: -0.0017
+            ),
+            InfiniteScrollingBackground(
+              iconCount: 10,
+              minOpacity: 0.3,
+              maxOpacity: 0.5,
+              minSize: 40,
+              maxSize: 80,
+              rotationSpeed: -0.0023
+            ),
             Positioned(
               left: (screenWidth * 0.5) - (logoSize * 0.5),
               top: screenHeight * 0.1,

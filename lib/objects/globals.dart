@@ -10,6 +10,9 @@ import 'package:presentation/models/user_model.dart';
 import '../processes/image_service.dart';
 import '../processes/feedback_service.dart';
 
+import 'dart:ui' as ui;
+import 'dart:async';
+
 late final num pixelRatio;
 
 enum Mood {
@@ -34,6 +37,34 @@ Mood moodFromValue(int value) {
       default: return Mood.happy;
     }
   }
+
+// Add this Map to store preloaded ui.Image objects
+Map<Mood, ui.Image?> preloadedMoodIcons = {
+  Mood.happy: null,
+  Mood.sad: null,
+  Mood.angry: null,
+  Mood.disgusted: null,
+  Mood.afraid: null,
+  Mood.calm: null,
+  Mood.worried: null,
+};
+
+Future<void> preloadMoodIcons() async {
+  for (final mood in Mood.values) {
+    final assetImage = getMoodIcon(mood);
+    final ImageStream stream = assetImage.resolve(const ImageConfiguration());
+    final Completer<ui.Image> completer = Completer<ui.Image>();
+    
+    late ImageStreamListener listener;
+    listener = ImageStreamListener((ImageInfo info, bool _) {
+      completer.complete(info.image);
+      stream.removeListener(listener);
+    });
+    
+    stream.addListener(listener);
+    preloadedMoodIcons[mood] = await completer.future;
+  }
+}
 
 AssetImage getMoodIcon (Mood mood) {
   switch (mood) {

@@ -18,6 +18,7 @@ import 'screens/sign_in.dart';
 import 'screens/loading_screen.dart';
 
 import 'screens/notifications_screen.dart';
+import 'screens/scrolling_background.dart';
 
 import 'package:camera/camera.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fbauth;
@@ -76,6 +77,7 @@ void main() async {
   await feedbackService.initialize();
 
   MapLibreMap.useHybridComposition = true;
+  preloadMoodIcons();
   
   runApp(Root(key: rootKey));
 }
