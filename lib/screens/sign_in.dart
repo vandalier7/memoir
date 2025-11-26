@@ -415,15 +415,21 @@ class _LogInState extends State<LogIn> {
                       widget.onLoadingChanged(true);
                       
                       try {
-                        await loginUser(
+                        final success = await loginUser(
                           widget.emailController.text.trim(),
-                          widget.passwordController.text.trim()
+                          widget.passwordController.text.trim(),
+                          context
                         );  
-                        toggleLoading(true);
-                        await Future.delayed(Duration(seconds: 1));
-                        if (!context.mounted) return;
+
                         
-                        Navigator.pushNamed(context, '/map');
+                        if (success)
+                        {
+                          toggleLoading(true);
+                          await Future.delayed(Duration(seconds: 1));
+                          if (!context.mounted) return;
+                          
+                          Navigator.pushNamed(context, '/map');
+                        }
                         
                       } on FirebaseAuthException catch (e) {
                         // Handle Firebase Auth specific errors
@@ -441,31 +447,21 @@ class _LogInState extends State<LogIn> {
                         } else {
                           errorMessage = 'Login failed: ${e.code}';
                         }
-                        
-                        // Show error using SnackBar
-                        // ScaffoldMessenger.of(context).showSnackBar(
-                        //   SnackBar(
-                        //     content: Text(errorMessage),
-                        //     backgroundColor: Colors.red,
-                        //     duration: Duration(seconds: 4),
-                        //   ),
-                        // );
 
-                        // Show error through _errorMessage
                         setState(() {
                           _errorMessage = errorMessage;
                         });
                         
                       } catch (e) {
                         // Handle any other errors
-                        if (!context.mounted) return;
+                        // if (!context.mounted) return;
                         
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('An unexpected error occurred: $e'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
+                        // ScaffoldMessenger.of(context).showSnackBar(
+                        //   SnackBar(
+                        //     content: Text('An unexpected error occurred: $e'),
+                        //     backgroundColor: Colors.red,
+                        //   ),
+                        // );
                       } finally {
                         if (mounted) {
                           setState(() {
@@ -474,6 +470,7 @@ class _LogInState extends State<LogIn> {
                           widget.onLoadingChanged(false);
                         }
                       }
+                      
                     }
                   },
                   style: ElevatedButton.styleFrom(
@@ -752,10 +749,37 @@ class _SignUpState extends State<SignUp> {
                           widget.emailController.text.trim(),
                           widget.passwordController.text.trim()
                         );
-                        toggleLoading(true);
-                        await Future.delayed(Duration(seconds: 1));
-                        if (!context.mounted) return;
-                        Navigator.pushNamed(context, '/map');
+
+                        if (mounted) {
+                          showDialog(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (context) => AlertDialog(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadiusGeometry.circular(8)
+                                  ),
+                                  title: Text('Verify Your Email'),
+                                  content: Text(
+                                    'We sent a verification link to ${widget.emailController.text.trim()}\n\n'
+                                    'Please check your email and click the link to verify your account before signing in.'
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () {
+                                        Navigator.pop(context);
+                                        Navigator.pushReplacementNamed(context, '/sign-in');
+                                      },
+                                      child: Text('OK', style: TextStyle(color: Theme.of(context).colorScheme.tertiary),),
+                                    ),
+                                  ],
+                                ),
+                              );
+                        }
+
+                        // toggleLoading(true);
+                        // await Future.delayed(Duration(seconds: 1));
+                        // if (!context.mounted) return;
+                        // Navigator.pushNamed(context, '/map');
                       } on FirebaseAuthException catch (e) {
                         // Handle Firebase Auth specific errors
                         if (!context.mounted) return;

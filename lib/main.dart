@@ -96,6 +96,96 @@ class RootState extends State<Root> {
     });
   }
 
+  Widget _getHomeScreen() {
+    final currentUser = fbauth.FirebaseAuth.instance.currentUser;
+    
+    if (currentUser == null) {
+      return SignInCard();
+    }
+    
+    // Check if email is verified
+    if (!currentUser.emailVerified) {
+      return _buildEmailVerificationScreen();
+    }
+    
+    return MyScaffold();
+  }
+
+  Widget _buildEmailVerificationScreen() {
+    toggleLoading(false);
+    return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      body: Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.email_outlined, 
+                size: 80, 
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              SizedBox(height: 24),
+              Text(
+                'Verify Your Email',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Please check your email and click the verification link to continue.\nCan\'t find it? Please check your Spam folder.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey),
+              ),
+              SizedBox(height: 32),
+              ElevatedButton(
+                onPressed: () async {
+                  // Refresh user to check if they verified
+                  await fbauth.FirebaseAuth.instance.currentUser?.reload();
+                  
+                  final user = fbauth.FirebaseAuth.instance.currentUser;
+                  if (user?.emailVerified == true) {
+                    // Load user data
+                    storageService.listenUserMemories();
+                    final userName = await databaseService.getUserName(user!.uid);
+                    activeUsername = userName ?? 'Unknown User';
+                    await refreshFriendsAndFollowers();
+                  }
+                  
+                  setState(() {}); // Rebuild to check verification
+                },
+                child: Text('I\'ve Verified My Email'),
+              ),
+              SizedBox(height: 16),
+              TextButton(
+                onPressed: () async {
+                  // Resend verification email
+                  try {
+                    await fbauth.FirebaseAuth.instance.currentUser
+                        ?.sendEmailVerification();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Verification email sent!')),
+                    );
+                  } catch (e) {
+                    print('Error: $e');
+                  }
+                },
+                child: Text('Resend Verification Email'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  await fbauth.FirebaseAuth.instance.signOut();
+                  setState(() {});
+                },
+                child: Text('Sign Out'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -111,7 +201,7 @@ class RootState extends State<Root> {
         );
       },
       // Directly show the main map screen wrapper (MyScaffold)
-      home:  fbauth.FirebaseAuth.instance.currentUser != null ? MyScaffold() : SignInCard(), 
+      home:  _getHomeScreen(), 
       // 🔗 Routes for navigation
         routes: {
         '/sign-in': (context) => const SignInCard(),
