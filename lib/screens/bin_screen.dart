@@ -68,13 +68,16 @@ class _BinScreenState extends State<BinScreen> {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete Images Permanently?'),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadiusGeometry.circular(12)
+        ),
+        title: Text('Delete Image${selectedImages.length > 1 ? 's' : ''}?'),
         content: Text(
-            'Are you sure you want to delete ${selectedImages.length} images permanently? This cannot be undone.'),
+            'Are you sure you want to delete ${selectedImages.length} image${selectedImages.length > 1 ? 's' : ''} permanently? This cannot be undone.'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancel')),
+              child: Text('Cancel', style: TextStyle(color: Colors.red.withValues(alpha: 0.8), fontWeight: FontWeight.w400))),
           TextButton(
             onPressed: () async {
               Navigator.pop(dialogContext);
@@ -102,7 +105,7 @@ class _BinScreenState extends State<BinScreen> {
                         '${selectedImages.length} images deleted permanently.')));
               }
             },
-            child: const Text('Confirm Delete', style: TextStyle(color: Colors.red)),
+            child: const Text('Delete', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
