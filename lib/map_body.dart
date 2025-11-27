@@ -398,50 +398,6 @@ class MapState extends State<MapBody> {
     updateMapHold(false);
   }
 
-  void _newAddMemory(LatLng position, bool isHead) async {
-    final info = await getAddressFromLocation(position, locIQ);
-    unfilteredMemories.add(MemoryData(
-          position: position,
-          addressString: info,
-          mood: Mood.happy,
-          decay: mapZoom - 3,
-          imageUrl: null,
-          head: isHead
-        ));
-  }
-
-  void _addMultipleMemories(LatLng position) async {
-    final info = await getAddressFromLocation(position, locIQ);
-    final count = _random.nextInt(5) + 1;
-    
-    final List<String> addressSuffixes = [
-      "First visit",
-      "Great times",
-      "Another day",
-      "Special moment",
-      "Passing by",
-      "Memorable day",
-      "Quick stop",
-      "Long stay"
-    ];
-
-    setState(() {
-      for (int i = 0; i < count; i++) {
-        final randomMood = _random.nextBool() ? Mood.happy : Mood.sad;
-        final suffix = addressSuffixes[_random.nextInt(addressSuffixes.length)];
-        
-        memories.add(MemoryData(
-          position: position,
-          addressString: "$info - $suffix",
-          mood: randomMood,
-          decay: mapZoom,
-          imageUrl: null,
-        ));
-      }
-    });
-    updateMapHold(false);
-  }
-
   // Expose location error state for MapButtons
   bool get showLocationError => hasLocationError;
 
@@ -553,6 +509,10 @@ class MapState extends State<MapBody> {
                   positionCount += 1;
                 }
               }
+
+              if (positionCount == 0) {
+                return SizedBox();
+              }
               
               return Positioned(
                 left: screenPoint.x / pixelRatio! - 30,
@@ -597,7 +557,7 @@ class MapState extends State<MapBody> {
                   opacity: isHoldingMap ? 0.0 : 1.0,
                   duration: Duration(milliseconds: 100),
                   child: UserPin(
-                    memories: nearbyMemoryPosition != null 
+                    memories: nearbyMemoryPosition != null && groupedMemories.containsKey(nearbyMemoryPosition)
                         ? groupedMemories[nearbyMemoryPosition]! 
                         : [],
                     showPreviews: false,
