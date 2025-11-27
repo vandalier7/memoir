@@ -45,7 +45,7 @@ class _BinScreenState extends State<BinScreen> {
       }
 
       if (_isMultiSelectMode && _selectedIds.isEmpty) {
-        _isMultiSelectMode = false;
+        // _isMultiSelectMode = false;
       }
     });
   }
@@ -337,10 +337,23 @@ class _BinScreenState extends State<BinScreen> {
                 padding: EdgeInsets.zero,
               ),
               child: _isMultiSelectMode
-                  ? Text(
-                      '${_selectedIds.length}',
-                      style: const TextStyle(color: Color.fromARGB(255, 250, 132, 154)),
-                    )
+                  ? SizedBox(
+                    width: 40,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.delete, color: Color.fromARGB(255, 250, 132, 154)),
+                        SizedBox(width: 4,),
+                        Text(
+                          '${_selectedIds.length}',
+                          style: const TextStyle(color: Color.fromARGB(255, 250, 132, 154)),
+                        ),
+                      ],
+                  )
+                  )
+                    
+                  
+                  
                   : const Icon(Icons.delete, color: Color.fromARGB(255, 250, 132, 154)),
             ),
           ),
@@ -429,7 +442,7 @@ class _BinGridTile extends StatelessWidget {
                 // Selection overlay
                 Container(
                   color: isSelected
-                      ? _kPrimarySelectionColor.withOpacity(0.4)
+                      ? _kPrimarySelectionColor.withOpacity(0.2)
                       : Colors.transparent,
                 ),
 
@@ -461,7 +474,7 @@ class _BinGridTile extends StatelessWidget {
                       Icon(Icons.access_time_sharp, color: timeObject.inMinutes >= 60 ? Colors.white : const Color.fromARGB(255, 236, 105, 96), size: 16),
                       const SizedBox(width: 5),
                       Text(
-                        isSelected ? '' : remainingTime,
+                        remainingTime,
                         style: TextStyle(
                             color: timeObject.inMinutes >= 60 ? Colors.white : const Color.fromARGB(255, 236, 105, 96),
                             fontSize: 10,
