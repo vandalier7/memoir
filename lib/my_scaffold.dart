@@ -118,6 +118,7 @@ class MyState extends State<MyScaffold> {
           activeMemories = memoriesAtLocation;
           selectedMemory = targetMemory;
           isClosing = false;
+          hasActiveMemory = true;
           activeMemoryIndex = index;
         });
       }
