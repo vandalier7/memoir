@@ -62,7 +62,7 @@ class MapState extends State<MapBody> {
       final Set<LatLng> clustered = {};
       final double clusterThresholdPixels = 50.0;
       
-      final groupedMemories = groupMemoriesByPosition(memories);
+      final groupedMemories = groupMemoriesByPosition(memories.toList());
       final positions = groupedMemories.keys.toList();
       final nearbyPos = _findNearbyMemoryPosition();
       
@@ -403,7 +403,7 @@ class MapState extends State<MapBody> {
 
   @override
   Widget build(BuildContext context) {
-    final groupedMemories = groupMemoriesByPosition(memories);
+    final groupedMemories = groupMemoriesByPosition(memories.toList());
     final nearbyMemoryPosition = currentPosition != null ? _findNearbyMemoryPosition() : null;
     
     final Set<LatLng> clusteredPositions = {};

@@ -110,7 +110,7 @@ const double clusterRadius = 30; // meters
 const double clearanceRadius = 30; // pixels in screenSpace
 
 List<CameraDescription> cameras = [];
-List<MemoryData> memories = [];
+Set<MemoryData> memories = {};
 List<MemoryData> myMemories = [];
 List<MemoryData> unfilteredMemories = [];
 
