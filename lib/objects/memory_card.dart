@@ -2099,7 +2099,7 @@ Widget _buildCommentSkeleton() {
                                 await commentsService.deleteComment(comment.id);
                                 _repliesCache.remove(comment.id);
                                 _expandedReplies.remove(comment.id);
-                                // await _loadComments();
+                                await _loadComments();
                                 setState(() => _commentsCount--);
                               } catch (e) {
                                 print('Error deleting comment: $e');

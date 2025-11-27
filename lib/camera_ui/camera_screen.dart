@@ -128,6 +128,10 @@ void _switchCamera() async {
     final image = await _controller!.takePicture();
 
     if (!mounted) return;
+    setState(() {
+      _controller?.setFlashMode(FlashMode.off);
+      _isFlashOn = false;
+    });
     
     // Navigate to preview immediately
     Navigator.pushNamed(context, '/preview', arguments: image.path);
