@@ -140,6 +140,7 @@ class SignInState extends State<SignIn> with SingleTickerProviderStateMixin{
   
   bool _isLoading = false;
   
+  
   void _setLoading(bool loading) {
     setState(() {
       _isLoading = loading;
@@ -280,7 +281,7 @@ class LogIn extends StatefulWidget {
 class _LogInState extends State<LogIn> {
   bool _isLoading = false;
   String? _errorMessage;
-
+  bool _obscurePassword = true;
 
   @override
   Widget build(BuildContext context) {
@@ -345,50 +346,66 @@ class _LogInState extends State<LogIn> {
             child: Text("Password", textAlign: TextAlign.left, style: TextStyle(fontWeight: FontWeight.bold),),
           ),
           Container(
-            padding: EdgeInsets.symmetric(horizontal: 20),
-            child: SizedBox(
-              height: 55,
-              child: TextFormField(
-                controller: widget.passwordController,
-                validator: (value) => validateLength(value, 0, "password"),
-                enabled: !_isLoading,
-                obscureText: true,
-                style: TextStyle(
-                    fontSize: 14
-                ),
-                decoration: InputDecoration(
-                  errorStyle: TextStyle(fontSize: 10, overflow: TextOverflow.fade),
-                  isDense: true,
-                  contentPadding: EdgeInsets.symmetric(vertical: 7),
-                  prefixIcon: Icon(Icons.lock_outline),
-                  prefixIconConstraints: const BoxConstraints(
-                    minWidth: 40,
-                    minHeight: 20,
-                  ),
-                  
-                  iconColor: const Color.fromARGB(255, 146, 146, 146),
-                  hintText: "●●●●●●●●●",
-                  hintStyle: TextStyle(
-                    color: const Color.fromARGB(255, 146, 146, 146),
-                    fontSize: 14
-                  ),
-                  
-                  floatingLabelBehavior: FloatingLabelBehavior.always,
-                  floatingLabelStyle: TextStyle(color: Theme.of(context).primaryColor),
-                  filled: true,
-                  fillColor: const Color.fromARGB(255, 247, 247, 247),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(5),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(5),
-                    borderSide: BorderSide(strokeAlign: BorderSide.strokeAlignOutside, color: Colors.black54),
-                  ),
-                ),
+    padding: EdgeInsets.symmetric(horizontal: 20),
+    child: SizedBox(
+      height: 55,
+      child: TextFormField(
+        controller: widget.passwordController,
+        validator: (value) => validateLength(value, 0, "password"),
+        enabled: !_isLoading,
+        obscureText: _obscurePassword, // Use the state variable
+        style: TextStyle(fontSize: 14),
+        decoration: InputDecoration(
+          errorStyle: TextStyle(fontSize: 10, overflow: TextOverflow.fade),
+          isDense: true,
+          contentPadding: EdgeInsets.symmetric(vertical: 7),
+          prefixIcon: Icon(Icons.lock_outline),
+          prefixIconConstraints: const BoxConstraints(
+            minWidth: 40,
+            minHeight: 20,
+          ),
+          // Add suffix icon for toggle
+          suffixIcon: GestureDetector(
+            onTap: () {
+              setState(() {
+                _obscurePassword = !_obscurePassword;
+              });
+            },
+            child: Container(
+              color: Colors.transparent,
+              child: Icon(
+                _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                size: 18,
+                color: Color.fromARGB(255, 146, 146, 146),
               ),
             )
           ),
+          suffixIconConstraints: const BoxConstraints(
+            minWidth: 40,
+            minHeight: 30,
+          ),
+          iconColor: const Color.fromARGB(255, 146, 146, 146),
+          hintText: "●●●●●●●●●",
+          hintStyle: TextStyle(
+            color: const Color.fromARGB(255, 146, 146, 146),
+            fontSize: 14
+          ),
+          floatingLabelBehavior: FloatingLabelBehavior.always,
+          floatingLabelStyle: TextStyle(color: Theme.of(context).primaryColor),
+          filled: true,
+          fillColor: const Color.fromARGB(255, 247, 247, 247),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(5),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(5),
+            borderSide: BorderSide(strokeAlign: BorderSide.strokeAlignOutside, color: Colors.black54),
+          ),
+        ),
+      ),
+    )
+  ),
           if (_errorMessage != null) 
             Center(
               child: Padding(
@@ -567,6 +584,7 @@ class SignUp extends StatefulWidget {
 class _SignUpState extends State<SignUp> {
   bool _isLoading = false;
   String? _errorMessage;
+  bool _obscurePassword = true;
 
   @override
   Widget build(BuildContext context) {
@@ -684,7 +702,7 @@ class _SignUpState extends State<SignUp> {
                 controller: widget.passwordController,
                 enabled: !_isLoading,
                 validator: (value) => validatePassword(value),
-                obscureText: true,
+                obscureText: _obscurePassword,
                 style: TextStyle(
                     fontSize: 14
                 ),
@@ -698,6 +716,25 @@ class _SignUpState extends State<SignUp> {
                     minWidth: 40,
                     minHeight: 20,
                   ),
+                  suffixIcon: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _obscurePassword = !_obscurePassword;
+                    });
+                  },
+                  child: Container(
+                    color: Colors.transparent,
+                    child: Icon(
+                      _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                      size: 18,
+                      color: Color.fromARGB(255, 146, 146, 146),
+                    ),
+                  )
+                ),
+                suffixIconConstraints: const BoxConstraints(
+                  minWidth: 40,
+                  minHeight: 30,
+                ),
                   
                   iconColor: const Color.fromARGB(255, 146, 146, 146),
                   hintText: "●●●●●●●●●",
