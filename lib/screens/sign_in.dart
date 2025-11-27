@@ -59,14 +59,20 @@ class SignInCard extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: SizedBox(
-                      height: logoSize,
-                      width: logoSize,
-                      child: Image.asset("assets/logo.png"),
-                    )
-                  ),
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: [BoxShadow(blurRadius: 3, spreadRadius: 1, color: Colors.black.withAlpha(50))]
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: SizedBox(
+                        height: logoSize,
+                        width: logoSize,
+                        child: Image.asset("assets/logo.png"),
+                      )
+                    ),
+                  )
                 ],
               )
             ),
@@ -77,6 +83,7 @@ class SignInCard extends StatelessWidget {
                     color: Colors.transparent,
                     child: Text("Memoir", textAlign: TextAlign.center, style: TextStyle(
                       color: Theme.of(context).colorScheme.onSurface,
+                      
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                     ),
@@ -94,7 +101,7 @@ class SignInCard extends StatelessWidget {
                 transform: Matrix4.translationValues(0, translateY, 0),
                 // ensure transform origin is center (default)
                 child: Card(
-                  elevation: 20,
+                  elevation: 4,
                   color: Theme.of(context).colorScheme.onTertiary,
                   child: const SizedBox(
                     height: 465,
@@ -780,9 +787,26 @@ class _SignUpState extends State<SignUp> {
                                     borderRadius: BorderRadiusGeometry.circular(8)
                                   ),
                                   title: Text('Verify Your Email'),
-                                  content: Text(
-                                    'We sent a verification link to ${widget.emailController.text.trim()}\n\n'
-                                    'Please check your email and click the link to verify your account before signing in.'
+                                  content: RichText(
+                                    text: TextSpan(
+                                      style: const TextStyle(
+                                        color: Colors.black,
+                                        fontSize: 16,
+                                      ),
+                                      children: [
+                                        TextSpan(
+                                          text:
+                                              'We sent a verification link to ${widget.emailController.text.trim()}\n\nPlease check your email or ',
+                                        ),
+                                        const TextSpan(
+                                          text: 'spam',
+                                          style: TextStyle(fontWeight: FontWeight.bold),
+                                        ),
+                                        const TextSpan(
+                                          text: ', and click the link to verify your account before signing in.',
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                   actions: [
                                     TextButton(
