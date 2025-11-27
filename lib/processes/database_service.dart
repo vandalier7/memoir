@@ -5,6 +5,7 @@ import 'package:presentation/objects/globals.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../objects/globals.dart';
 import '../models/user_model.dart';
+import 'dart:math';
  
 
 class DatabaseService {
@@ -478,6 +479,30 @@ Future<List<UserModel>> getFollowingDetailed(String userId) async {
   return following;
 }
 
+  Future<LatLng?> getClosestMemoryLocation(LatLng userLocation, double clusterRadius) async {
+  try {
+    // Use PostGIS to find the closest memory within radius
+    // clusterRadius should be in meters
+    final result = await _supabase
+        .rpc('find_closest_memory', params: {
+          'user_lat': userLocation.latitude,
+          'user_lng': userLocation.longitude,
+          'radius_meters': clusterRadius,
+        })
+        .maybeSingle();
+
+    if (result == null) {
+      return null;
+    }
+
+    return LatLng(
+      result['latitude'] as double,
+      result['longitude'] as double,
+    );
+  } catch (e) {
+    print('❌ Error getting closest memory location: $e');
+    return null;
+  }
 }
 
-// Global instance
+}

@@ -547,7 +547,7 @@ class MapState extends State<MapBody> {
                     CameraUpdate.newLatLng(targetPosition),
                     duration: Duration(milliseconds: 1000));
                 
-                if (nearbyMemoryPosition != null) {
+                if (nearbyMemoryPosition != null && groupedMemories.containsKey(nearbyMemoryPosition)) {
                   showMemories(groupedMemories[nearbyMemoryPosition]!);
                 }
               },

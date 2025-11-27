@@ -374,6 +374,8 @@ class StorageService {
       for (var doc in snapshot.docs) {
         final data = doc.data();
         final userId = data['userId'] as String?;
+
+        if (userId == currentUserId) {continue;}
         
         // Fetch username for this memory's owner
         final userName = userId != null ? await _getUserName(userId) : null;

@@ -206,7 +206,9 @@ final List<Map<String, dynamic>> moods = [
     }
 
     snack.showSnackBar(const SnackBar(content: Text('Uploading...')));
-    LatLng positionToUse = nearestMemoryPosition ?? currentPosition!;
+    LatLng myPosition = nearestMemoryPosition ?? currentPosition!;
+    LatLng? closestMemoryPosition = await databaseService.getClosestMemoryLocation(myPosition, clusterRadius);
+    LatLng positionToUse = closestMemoryPosition ?? myPosition;
 
     try{
       // Get current location and address
