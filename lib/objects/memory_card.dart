@@ -1000,22 +1000,7 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
                           ),
                           // The actual content - PageView of complete cards
                           Expanded(
-                            child: Listener(
-                              onPointerDown: (_) {
-                                // User started touching - cancel any pending fade-ins
-                                _statsVisibilityTimer?.cancel();
-                                setState(() => _showStats = false);
-                              },
-                              onPointerUp: (_) {
-                                // User let go - schedule fade-in
-                                _statsVisibilityTimer?.cancel();
-                                _statsVisibilityTimer = Timer(const Duration(milliseconds: 300), () {
-                                  if (mounted) {
-                                    _loadMemoryStats();
-                                  }
-                                });
-                              },
-                              child: PageView.builder(
+                            child: PageView.builder(
                                 controller: _pageController,
                                 onPageChanged: (index) {
                                   setState(() {
@@ -1040,7 +1025,6 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
                                 },
                               ),
                             ),
-                          ),
                         ],
                       ),
                     ),
@@ -1106,6 +1090,22 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
       children: [
         // Image
         Positioned.fill(
+        child: Listener(
+          onPointerDown: (_) {
+            // User touched the image - hide stats
+            _statsVisibilityTimer?.cancel();
+            setState(() => _showStats = false);
+          },
+          onPointerUp: (_) {
+            // User let go - schedule fade-in
+            _statsVisibilityTimer?.cancel();
+            _statsVisibilityTimer = Timer(const Duration(milliseconds: 300), () {
+              if (mounted) {
+                _loadMemoryStats();
+              }
+            });
+          },
+        
           child: memory.imageUrl != null && memory.imageUrl!.isNotEmpty
               ? CachedNetworkImage(
                   imageUrl: memory.imageUrl!,
@@ -1138,6 +1138,7 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
                   ),
                 ),
         ),
+      ),
 
         // Tap area to collapse description (covers entire screen except buttons)
         if (isCurrentPage && _isDescriptionExpanded)
