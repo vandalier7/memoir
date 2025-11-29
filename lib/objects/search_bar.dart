@@ -2,11 +2,12 @@ import 'package:presentation/processes/notifications_service.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:supabase_flutter/supabase_flutter.dart'; // ✅ Added
-import '../processes/database_service.dart'; // ✅ Added
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../processes/database_service.dart';
 import '../app_theme.dart';
 import 'search_result.dart';
 import 'notification_button.dart';
+import 'feed_button.dart';
 import 'globals.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:presentation/my_scaffold.dart';
@@ -27,13 +28,11 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
   final TextEditingController _searchController = TextEditingController();
   bool _shouldPreventFocus = false;
 
-  // User search results from database
   List<Map<String, dynamic>> _userResults = [];
   bool _isSearching = false;
   Timer? _debounceTimer;
   String _lastSearchQuery = '';
 
-  // ✅ Get Current User ID for the Stream
   final String _currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
   @override
@@ -44,7 +43,6 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
     _searchController.addListener(_onSearchChanged);
   }
 
-  // ... [Keep your existing dispose, didChangeDependencies, focus/search logic] ...
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -144,118 +142,125 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          // 🔍 SEARCH BAR
-          Container(
-            height: 56,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.95), // Updated from withOpacity
-              borderRadius: BorderRadius.circular(200),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.1),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                const SizedBox(width: 16),
-                // 🔤 Search field
-                Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    focusNode: _internalFocusNode,
-                    enableInteractiveSelection: true,
-                    decoration: const InputDecoration(
-                      hintText: "Search",
-                      hintStyle: TextStyle(color: Colors.grey),
-                      border: InputBorder.none,
-                    ),
-                  ),
-                ),
-                
-                // 👤 ACCOUNT BUTTON (Updated to show Profile Picture)
-                GestureDetector(
-                  onTap: () async {
-                    FocusScope.of(context).unfocus();
-                    _internalFocusNode.unfocus();
-                    
-                    setState(() {
-                      _shouldPreventFocus = true;
-                      _isFocused = false;
-                    });
+          // Top row with Feed button and Search bar
+          Row(
+            children: [
+              // 🔥 FEED BUTTON (placeholder)
+              FeedButton(),
 
-                    if (widget.hasActiveMemory) {
-                      await Future.delayed(Duration(milliseconds: 450));
-                    }
-                    
-                    Navigator.pushNamed(
-                      context,
-                      "/account",
-                      arguments: storageService.currentUserId
-                    ).then((_) {
-                      FocusScope.of(context).unfocus();
-                      Future.delayed(const Duration(milliseconds: 100), () {
-                        if (mounted) {
+              const SizedBox(width: 8),
+
+              // 🔍 SEARCH BAR
+              Expanded(
+                child: Container(
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.95),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 16),
+                      // 🔤 Search field
+                      Expanded(
+                        child: TextField(
+                          controller: _searchController,
+                          focusNode: _internalFocusNode,
+                          enableInteractiveSelection: true,
+                          decoration: const InputDecoration(
+                            hintText: "Search",
+                            hintStyle: TextStyle(color: Colors.grey),
+                            border: InputBorder.none,
+                          ),
+                        ),
+                      ),
+                      
+                      // 👤 ACCOUNT BUTTON
+                      GestureDetector(
+                        onTap: () async {
+                          FocusScope.of(context).unfocus();
+                          _internalFocusNode.unfocus();
+                          
                           setState(() {
-                            _shouldPreventFocus = false;
+                            _shouldPreventFocus = true;
+                            _isFocused = false;
                           });
-                        }
-                      });
-                    });
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.only(right: 9),
 
-                    // ✅ STREAM BUILDER HERE
-                    child: StreamBuilder<Map<String, dynamic>>(
-                      stream: DatabaseService().getUserStream(_currentUserId),
-                      builder: (context, snapshot) {
-                        String? avatarUrl;
-                        if (snapshot.hasData) {
-                          avatarUrl = snapshot.data!['profile_pic_url'];
-                        }
+                          if (widget.hasActiveMemory) {
+                            await Future.delayed(Duration(milliseconds: 450));
+                          }
+                          
+                          Navigator.pushNamed(
+                            context,
+                            "/account",
+                            arguments: storageService.currentUserId
+                          ).then((_) {
+                            FocusScope.of(context).unfocus();
+                            Future.delayed(const Duration(milliseconds: 100), () {
+                              if (mounted) {
+                                setState(() {
+                                  _shouldPreventFocus = false;
+                                });
+                              }
+                            });
+                          });
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: StreamBuilder<Map<String, dynamic>>(
+                            stream: DatabaseService().getUserStream(_currentUserId),
+                            builder: (context, snapshot) {
+                              String? avatarUrl;
+                              if (snapshot.hasData) {
+                                avatarUrl = snapshot.data!['profile_pic_url'];
+                              }
 
-                        return Container(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: memoirTheme.outline,
-                                blurRadius: 0,
-                                spreadRadius: 3
-                              ),
-                              BoxShadow(
-                                color: const Color.fromARGB(255, 255, 255, 255).withValues(alpha: 1),
-                                blurRadius: 0,
-                                spreadRadius: 1
-                              ),
-                            ]
+                              return Container(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: memoirTheme.outline,
+                                      blurRadius: 0,
+                                      spreadRadius: 3
+                                    ),
+                                    BoxShadow(
+                                      color: const Color.fromARGB(255, 255, 255, 255).withValues(alpha: 1),
+                                      blurRadius: 0,
+                                      spreadRadius: 1
+                                    ),
+                                  ]
+                                ),
+                                child: CircleAvatar(
+                                  radius: 18,
+                                  backgroundColor: memoirTheme.primary.withValues(alpha: 0.2),
+                                  backgroundImage: avatarUrl != null 
+                                      ?  CachedNetworkImageProvider("$avatarUrl")
+                                      : const AssetImage('assets/temp.png'),
+                                ),
+                              );
+                            },
                           ),
-                          child: CircleAvatar(
-                            radius: 20,
-                            backgroundColor: memoirTheme.primary.withValues(alpha: 0.2), // Lighter bg behind image
-                            // If URL exists, use it. If not, show default icon.
-                            backgroundImage: avatarUrl != null 
-                                ?  CachedNetworkImageProvider("$avatarUrl")
-                                : const AssetImage('assets/temp.png'),
-
-                          ),
-                        );
-                      },
-                    ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
 
           const SizedBox(height: 10),
 
           // ✨ SEARCH RESULTS CARD
           if (_isFocused && (_userResults.isNotEmpty || _isSearching))
-            // ... [Rest of your search results code remains exactly the same] ...
             GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () {},
@@ -371,51 +376,53 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
 
           // Notification and Filter buttons row
           Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 🔔 NOTIFICATION BUTTON WITH BADGE
-            NotificationButton(hasActiveMemory: widget.hasActiveMemory),
-    
-    // const SizedBox(width: 8),
-
-    // ✨ FILTERS BUTTON
-    GestureDetector(
-      onTap: () {
-        debugPrint("Filters button tapped");
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: memoirTheme.surface,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 6,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.layers, size: 15, color: memoirTheme.onSurface),
-            const SizedBox(width: 6),
-            Text(
-              "Filters",
-              style: TextStyle(
-                color: memoirTheme.onSurface,
-                fontWeight: FontWeight.w400,
-                fontSize: 13,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 🔔 NOTIFICATION BUTTON WITH BADGE
+              Column(
+                children: [
+                  NotificationButton(hasActiveMemory: widget.hasActiveMemory),
+                ],
               ),
-            ),
-          ],
-        ),
-      ),
-    ),
-  ],
-),
+
+              // ✨ FILTERS BUTTON
+              GestureDetector(
+                onTap: () {
+                  debugPrint("Filters button tapped");
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: memoirTheme.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 6,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.layers, size: 15, color: memoirTheme.onSurface),
+                      const SizedBox(width: 6),
+                      Text(
+                        "Filters",
+                        style: TextStyle(
+                          color: memoirTheme.onSurface,
+                          fontWeight: FontWeight.w400,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
