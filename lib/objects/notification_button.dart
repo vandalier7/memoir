@@ -161,7 +161,7 @@ class _NotificationButtonState extends State<NotificationButton> with SingleTick
                       ],
                     ),
                     child: Icon(
-                      Icons.notifications_outlined,
+                      Icons.forum_outlined,
                       size: 18,
                       color: memoirTheme.onSurface,
                     ),
