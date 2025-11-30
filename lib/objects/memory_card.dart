@@ -30,6 +30,7 @@ class MemoryCard extends StatefulWidget {
     double yOffsetPixels,
     int durationMs,
     bool showPreviewAfter,
+    bool exclusiveView
   })? onAnimateCamera;
 
   const MemoryCard({
@@ -1436,7 +1437,8 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
                             await widget.onAnimateCamera!(
                               target: widget.memories[_currentIndex].position,
                               showPreviewAfter: false,
-                              durationMs: 1200
+                              durationMs: 1200,
+                              exclusiveView: true
                             );
                             isAnimating = false;
 

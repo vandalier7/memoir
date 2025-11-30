@@ -236,13 +236,18 @@ class MapState extends State<MapBody> {
     }
   }
 
+  bool exclusive = false;
+  LatLng? exclusivePos;
+  bool locked = false;
   Future<void> animateCameraWithOffset({
     required LatLng target,
     double xOffsetPixels = 0,
     double yOffsetPixels = 180,
     int durationMs = 700,
-    bool showPreviewAfter = false
+    bool showPreviewAfter = false,
+    bool exclusiveView = false
   }) async {
+    
     final currentCameraPos = await mapController.queryCameraPosition();
     if (currentCameraPos == null) return;
 
@@ -254,14 +259,20 @@ class MapState extends State<MapBody> {
     final offsetLatLng = await mapController
         .toLatLng(Point(offsetScreenX.toDouble(), offsetScreenY.toDouble()));
     updateMapHold(true);
+    if (exclusiveView) {
+      exclusivePos = target;
+      locked = true;
+    }
     isAnimatingToMemory = showPreviewAfter;
 
     await mapController.animateCamera(
         CameraUpdate.newLatLng(offsetLatLng),
         duration: Duration(milliseconds: durationMs));
   }
+
+
   LatLng? screenCenter;
-  void updateMapHold(bool value) async{
+  void updateMapHold(bool value) async {
     // Skip position-based filtering if no current position
     final positionToUse = currentPosition != null 
         ? (nearestMemoryPosition ?? currentPosition!)
@@ -274,10 +285,27 @@ class MapState extends State<MapBody> {
     setState(() {
       isHoldingMap = value;
       
+      if (value) {
+        exclusive = false;
+      }
 
       if (!value) {
+
+        // if (exclusivePos != null) {screenSpaceClusters.clear();}
         memories.clear();
         for (MemoryData memory in [...myMemories, ...unfilteredMemories]) {
+          if (exclusivePos != null) {
+
+            if (memory.position == exclusivePos) {
+              memories.add(memory);
+              
+              continue;
+            }
+            else {
+              continue;
+            }
+          }
+
           if (!myMemories.contains(memory) && !isWithinPixelThreshold(pos1: screenCenter ?? memory.position, pos2: memory.position, pixelThreshold: 400, currentZoom: mapZoom)) {
             continue;
           }
@@ -332,6 +360,14 @@ class MapState extends State<MapBody> {
               }
             }
           }
+        }
+        if (locked) {
+          locked = false;
+          
+        }
+        else if (exclusivePos != null){
+          exclusive = true;
+          exclusivePos = null;
         }
       }
     });
@@ -475,7 +511,7 @@ class MapState extends State<MapBody> {
             entry.key,
             mapController,
             isHoldingMap,
-            !clusteredPositions.contains(entry.key),
+            !clusteredPositions.contains(entry.key) || exclusive,
             updateMapHold,
             decay: entry.value.first.decay,
             finalDecay: entry.value.first.finalDecay,
@@ -510,7 +546,7 @@ class MapState extends State<MapBody> {
                 }
               }
 
-              if (positionCount == 0) {
+              if (positionCount <= 1) {
                 return SizedBox();
               }
               
@@ -530,7 +566,7 @@ class MapState extends State<MapBody> {
           ),
 
       // UserPin - only show if location is available
-      if (screenPoint != null && currentPosition != null)
+      if (screenPoint != null && currentPosition != null && !exclusive)
         Positioned(
           left: screenPoint!.x / pixelRatio - 27,
           top: screenPoint!.y / pixelRatio - 67,
