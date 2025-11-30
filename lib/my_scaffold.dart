@@ -284,6 +284,8 @@ class MyState extends State<MyScaffold> {
                 isClosing: isClosing,
                 initialIndex: feedIndex,
                 updateFeedIndex: updateFeedIndex,
+                asFeed: true,
+                onAnimateCamera: _mapKey.currentState?.animateCameraWithOffset,
               ),
           ],
         ),

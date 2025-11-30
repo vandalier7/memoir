@@ -1,4 +1,6 @@
 //memory_card.dart
+// import 'dart:nativewrappers/_internal/vm/lib/ffi_allocation_patch.dart';
+
 import 'package:presentation/objects/globals.dart';
 import 'package:presentation/app_theme.dart';
 import 'package:presentation/processes/comment_service.dart';
@@ -10,6 +12,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'memory.dart';
 import 'dart:async';
 import '../skeletons/general_skeleton.dart';
+// import 'package:geolocator/geolocator.dart';
+import 'package:maplibre_gl/maplibre_gl.dart';
 
 class MemoryCard extends StatefulWidget {
   final List<MemoryData> memories;
@@ -19,6 +23,14 @@ class MemoryCard extends StatefulWidget {
   final int? initialIndex;
   final int? targetCommentId;
   final void Function(int index)? updateFeedIndex;
+  final bool asFeed;
+  final Future<void> Function({
+    required LatLng target,
+    double xOffsetPixels,
+    double yOffsetPixels,
+    int durationMs,
+    bool showPreviewAfter,
+  })? onAnimateCamera;
 
   const MemoryCard({
     super.key,
@@ -28,7 +40,9 @@ class MemoryCard extends StatefulWidget {
     this.isClosing = false,
     this.initialIndex,
     this.targetCommentId,
-    this.updateFeedIndex
+    this.updateFeedIndex,
+    this.asFeed = false,
+    this.onAnimateCamera
   });
 
   @override
@@ -37,6 +51,10 @@ class MemoryCard extends StatefulWidget {
 
 class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateMixin {
   bool showAddress = false;
+  bool displayAddressString = false;
+  String lastAddressString = "";
+  LatLng? currentLocation;
+  bool isAnimating = false;
 
   Map<int, bool> _expandedReplies = {};
   Map<int, List<CommentData>> _repliesCache = {};
@@ -78,6 +96,11 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
 
   final TextEditingController _commentController = TextEditingController();
   
+  void recordCurrentLocation(MemoryData memory) {
+    lastAddressString = memory.addressString;
+    currentLocation = memory.position;
+  }
+
   String _getMemoryRelativeTime(DateTime timestamp) {
     final now = DateTime.now();
     final difference = now.difference(timestamp);
@@ -103,6 +126,11 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
+
+    if (widget.asFeed) {
+      displayAddressString = false;
+      showAddress = false;
+    }
 
     if (widget.initialIndex != null) {
       _currentIndex = widget.initialIndex!;
@@ -136,7 +164,10 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
         if (status == AnimationStatus.completed) {
           // Slide animation finished, show address
           setState(() {
-            showAddress = true;
+            if (!widget.asFeed) {
+              showAddress = true;
+            }
+            
           });
           _precacheAdjacentImages();
         } else if (status == AnimationStatus.reverse) {
@@ -966,12 +997,21 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
                 height: 28,
                 
                   child: GestureDetector(
-                    onTap: () {}, // Prevents tap from propagating to background
+                    onTap: () {
+                      if (widget.onAnimateCamera != null) {
+                        widget.onAnimateCamera!(
+                          target: widget.memories[_currentIndex].position,
+                          showPreviewAfter: false
+                        );
+                      }
+                    }, // Prevents tap from propagating to background
                     child: AnimatedOpacity(
                       opacity: showAddress ? 1.0 : 0.0,
                       duration: Duration(milliseconds: 300),
                       child: GestureDetector(
-                        onTap: () {},
+                        onTap: () {
+                          
+                        },
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
                           decoration: BoxDecoration(
@@ -987,12 +1027,23 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
                             ],
                           ),
                           child: Text(
-                            widget.memories[_currentIndex]
-                                .addressString
+                            widget.asFeed ?
+
+                            lastAddressString
                                 .split(',')
                                 .take(2)
                                 .join(',')
-                                .trim(),
+                                .trim()
+                            
+                            :
+
+                            widget.memories[_currentIndex].addressString
+                            .split(',')
+                                .take(2)
+                                .join(',')
+                                .trim()
+                                
+                            ,
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 14,
@@ -1054,7 +1105,7 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
                                     _replyingToUserName = null;
                                     _commentController.clear();
                                   });
-                                  
+                                  showAddress = false;
                                   // Prefetch adjacent pages in background
                                   _prefetchAdjacentMemoryStats();
                                   _precacheAdjacentImages();
@@ -1364,6 +1415,42 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
             ),
           ),
         ),
+
+        if (widget.asFeed)
+          Positioned(
+            right: 3,
+            top: 8,
+            child: _buildActionButton(
+              icon: Icons.my_location_rounded,
+              label: '',
+              onTap: () async {
+                if (isAnimating) return;
+                if (widget.onAnimateCamera != null) {
+                            setState(
+                              () {
+                                displayAddressString = true;
+                              }
+                            );
+                            recordCurrentLocation(widget.memories[_currentIndex]);
+                            isAnimating = true;
+                            await widget.onAnimateCamera!(
+                              target: widget.memories[_currentIndex].position,
+                              showPreviewAfter: false,
+                              durationMs: 1200
+                            );
+                            isAnimating = false;
+
+
+                            if (!mounted) return;
+                            setState(
+                              () {
+                                showAddress = true;
+                              }
+                            );
+                          }
+              },
+            ),
+          ),
 
         // Options button at top right
         if (isCurrentPage && memory.userId == storageService.currentUserId)
