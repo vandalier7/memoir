@@ -27,11 +27,29 @@ class MyState extends State<MyScaffold> {
   int? targetCommentId;
   int _memoryCardKey = 0;
   bool hasActiveMemory = false;
+  bool showFeed = false;
+  int feedIndex = 0;
 
   final _textFocusNode = FocusNode();
   final _searchBarKey = GlobalKey(); // Add this key
 
   final String currentUserId = Supabase.instance.client.auth.currentUser?.id ?? '';
+
+  void updateFeedIndex(int index) {
+    feedIndex = index;
+  }
+
+  void showFeedView(bool value) {
+    setState(() {
+      showFeed = value;
+      if (value) {
+        isClosing = false;
+        hasActiveMemory = false;
+        activeMemories = null;
+        selectedMemory = null;
+      }
+    });
+  }
 
   void showMemory(List<MemoryData> memories, MemoryData selected, int index) {
     setState(() {
@@ -40,6 +58,7 @@ class MyState extends State<MyScaffold> {
       selectedMemory = selected;
       isClosing = false;
       activeMemoryIndex = index;
+      showFeed = false;
     });
   }
 
@@ -237,7 +256,7 @@ class MyState extends State<MyScaffold> {
             ),
 
             // ✅ Single, clean search bar
-            SearchBarWidget(focusNode: _textFocusNode, key: _searchBarKey, hasActiveMemory: hasActiveMemory),
+            SearchBarWidget(focusNode: _textFocusNode, key: _searchBarKey, hasActiveMemory: hasActiveMemory, showFeed: showFeedView,),
 
             MapButtons(
               onRetryLocation: retryLocation,
@@ -246,7 +265,7 @@ class MyState extends State<MyScaffold> {
               ),
 
             // 🧠 Memory card overlay
-            if (activeMemories != null)
+            if (activeMemories != null && !showFeed)
               MemoryCard(
                 key: ValueKey('memory_card_$_memoryCardKey'),
                 memories: activeMemories!,
@@ -255,6 +274,16 @@ class MyState extends State<MyScaffold> {
                 isClosing: isClosing,
                 initialIndex: activeMemoryIndex,
                 targetCommentId: targetCommentId,
+              ),
+            if (activeMemories == null && showFeed)
+              MemoryCard(
+                // key: ValueKey('memory_card_$_memoryCardKey'),
+                memories: unfilteredMemories,
+                selectedMemory: unfilteredMemories[0],
+                onClose: () => showFeedView(false),
+                isClosing: isClosing,
+                initialIndex: feedIndex,
+                updateFeedIndex: updateFeedIndex,
               ),
           ],
         ),

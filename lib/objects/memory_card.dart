@@ -18,6 +18,7 @@ class MemoryCard extends StatefulWidget {
   final bool isClosing;
   final int? initialIndex;
   final int? targetCommentId;
+  final void Function(int index)? updateFeedIndex;
 
   const MemoryCard({
     super.key,
@@ -27,6 +28,7 @@ class MemoryCard extends StatefulWidget {
     this.isClosing = false,
     this.initialIndex,
     this.targetCommentId,
+    this.updateFeedIndex
   });
 
   @override
@@ -136,6 +138,7 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
           setState(() {
             showAddress = true;
           });
+          _precacheAdjacentImages();
         } else if (status == AnimationStatus.reverse) {
           // Animation reversed (closing), hide address
           setState(() {
@@ -831,6 +834,42 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
     }
   }
 
+  Future<void> _precacheAdjacentImages() async {
+    // Precache images 2 positions away in both directions
+    final indicesToCache = <int>[];
+    
+    // Previous 2 images
+    if (_currentIndex - 2 >= 0) {
+      indicesToCache.add(_currentIndex - 2);
+    }
+    if (_currentIndex - 1 >= 0) {
+      indicesToCache.add(_currentIndex - 1);
+    }
+    
+    // Next 2 images
+    if (_currentIndex + 1 < widget.memories.length) {
+      indicesToCache.add(_currentIndex + 1);
+    }
+    if (_currentIndex + 2 < widget.memories.length) {
+      indicesToCache.add(_currentIndex + 2);
+    }
+    
+    // Precache images
+    for (final index in indicesToCache) {
+      final imageUrl = widget.memories[index].imageUrl;
+      if (imageUrl != null && imageUrl.isNotEmpty) {
+        try {
+          await precacheImage(
+            CachedNetworkImageProvider(imageUrl),
+            context,
+          );
+        } catch (e) {
+          print('Error precaching image at index $index: $e');
+        }
+      }
+    }
+  }
+
   Future<void> _prefetchAdjacentMemoryStats() async {
     // Prefetch previous memory
     if (_currentIndex > 0) {
@@ -1018,6 +1057,10 @@ class _MemoryCardState extends State<MemoryCard> with SingleTickerProviderStateM
                                   
                                   // Prefetch adjacent pages in background
                                   _prefetchAdjacentMemoryStats();
+                                  _precacheAdjacentImages();
+                                  if (widget.updateFeedIndex != null) {
+                                    widget.updateFeedIndex!(index);
+                                  }
                                 },
                                 itemCount: widget.memories.length,
                                 itemBuilder: (context, index) {

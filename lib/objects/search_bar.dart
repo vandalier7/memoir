@@ -15,8 +15,9 @@ import 'package:presentation/my_scaffold.dart';
 class SearchBarWidget extends StatefulWidget {
   final FocusNode? focusNode;
   final bool hasActiveMemory;
+  final void Function(bool value) showFeed;
 
-  const SearchBarWidget({super.key, this.focusNode, required this.hasActiveMemory});
+  const SearchBarWidget({super.key, this.focusNode, required this.hasActiveMemory, required this.showFeed});
 
   @override
   State<SearchBarWidget> createState() => _SearchBarWidgetState();
@@ -146,7 +147,10 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
           Row(
             children: [
               // 🔥 FEED BUTTON (placeholder)
-              FeedButton(),
+              GestureDetector(
+                onTap: () => widget.showFeed(true),
+                child: FeedButton(),
+              ),
 
               const SizedBox(width: 8),
 
