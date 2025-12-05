@@ -4,6 +4,7 @@ import 'settings_screen.dart';
 import '../app_theme.dart'; // for memoirTheme
 import '../processes/auth.dart';
 import '../objects/globals.dart';
+import '../objects/text.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -362,7 +363,7 @@ class _AccountScreenState extends State<AccountScreen> {
                   },
                   child: Container(
                     width: double.infinity,
-                    height: 160,
+                    height: 900,
                     decoration: BoxDecoration(
                       color: memoirTheme.surface.withOpacity(0.6),
                       borderRadius: BorderRadius.circular(16),
@@ -371,10 +372,7 @@ class _AccountScreenState extends State<AccountScreen> {
                       ),
                     ),
                     child: const Center(
-                      child: Text(
-                        "Activity Preview (coming soon)",
-                        style: TextStyle(color: Colors.grey),
-                      ),
+                      child: MemoirDescriptionScrollView()
                     ),
                   ),
                 ),
@@ -382,6 +380,7 @@ class _AccountScreenState extends State<AccountScreen> {
                 const SizedBox(height: 40),
 
                 // 🧾 Placeholder for additional info
+                if (false)
                 Container(
                   width: double.infinity,
                   height: 300,
